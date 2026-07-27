@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import {
   LayoutDashboard, Calendar, Inbox, AlertTriangle, BarChart3, Settings as SettingsIcon,
-  Moon, Sun, Sparkles,
+  Moon, Sun, Sparkles, Mic,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Dashboard } from '@/components/orchestrator/Dashboard';
@@ -15,6 +16,7 @@ import { BacklogIncubator } from '@/components/orchestrator/BacklogIncubator';
 import { TriagePanel } from '@/components/orchestrator/TriagePanel';
 import { StatsView } from '@/components/orchestrator/StatsView';
 import { SettingsPanel } from '@/components/orchestrator/SettingsPanel';
+import { VoiceInput } from '@/components/orchestrator/VoiceInput';
 import { useTheme } from 'next-themes';
 
 function useMounted() {
@@ -36,6 +38,7 @@ export default function Home() {
   const todayScore = useAppStore((s) => s.todayScore);
   const { theme, setTheme } = useTheme();
   const mounted = useMounted();
+  const [captureOpen, setCaptureOpen] = useState(false);
 
   const triageCount = useMemo(() => tasks.filter((t) => t.status === 'triage_review').length, [tasks]);
   const backlogCount = useMemo(() => tasks.filter((t) => t.status === 'backlog').length, [tasks]);
@@ -68,6 +71,13 @@ export default function Home() {
                 <span className="text-[10px] font-medium text-muted-foreground">SCORE</span>
                 <span className="text-sm font-bold tabular-nums">{todayScore}</span>
               </div>
+              <Button
+                variant="ghost" size="icon" aria-label="Quick capture"
+                onClick={() => setCaptureOpen(true)}
+                className="size-9"
+              >
+                <Mic className="size-4" />
+              </Button>
               {mounted && (
                 <Button
                   variant="ghost" size="icon" aria-label="Toggle theme"
@@ -81,6 +91,23 @@ export default function Home() {
           </div>
         </div>
       </header>
+
+      {/* Quick Capture Sheet */}
+      <Sheet open={captureOpen} onOpenChange={setCaptureOpen}>
+        <SheetContent side="bottom" className="max-h-[40vh]">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Mic className="size-4" /> Quick Capture
+            </SheetTitle>
+            <SheetDescription>
+              Speak or type a task — e.g. &ldquo;Add design new poster to Incubator list&rdquo;
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-4">
+            <VoiceInput />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Main */}
       <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-4">

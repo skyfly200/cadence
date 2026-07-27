@@ -14,7 +14,6 @@ import { TaskFormDialog } from './TaskFormDialog';
 import { TimerPanel } from './TimerPanel';
 import { CapacityPanel } from './CapacityPanel';
 import { GamificationPanel } from './GamificationPanel';
-import { VoiceInput } from './VoiceInput';
 import { cn } from '@/lib/utils';
 import { CATEGORY_COLORS, type Task } from '@/lib/types';
 import { formatDuration } from '@/lib/time-utils';
@@ -50,19 +49,6 @@ export function Dashboard() {
 
   return (
     <div className="space-y-4">
-      {/* Voice capture */}
-      <Card className="p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold mb-1">Quick Capture</h3>
-            <p className="text-xs text-muted-foreground">Type a task or tap the mic and speak — e.g. &ldquo;Add design new poster to Incubator list&rdquo;</p>
-          </div>
-          <div className="flex-1 min-w-0">
-            <VoiceInput />
-          </div>
-        </div>
-      </Card>
-
       {/* Triage alert */}
       {triageTasks.length > 0 && (
         <Card className="p-4 border-amber-500/40 bg-amber-500/5">
