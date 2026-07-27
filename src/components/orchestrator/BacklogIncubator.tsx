@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
-  DndContext, PointerSensor, useSensor, useSensors,
-  useDraggable, useDroppable, type DragEndEvent,
+  DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
+  useDraggable, useDroppable, useDndContext,
+  type DragStartEvent, type DragOverEvent, type DragEndEvent,
 } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,15 +24,30 @@ import {
 import { formatDuration } from '@/lib/time-utils';
 import { useToast } from '@/hooks/use-toast';
 
-/* ── Shared compact table row (used by list & matrix views) ── */
-function TaskRow({ task, onEdit, draggable = false }: {
-  task: Task; onEdit: (t: Task) => void; draggable?: boolean;
-}) {
+const CATEGORIES: EisenhowerCategory[] = ['do_first', 'schedule', 'delegate', 'eliminate'];
+
+/* ═══════════════════════════════════════════════════════════════
+   Floating drag overlay — shows what you're dragging
+   ═══════════════════════════════════════════════════════════════ */
+function DragOverlayCard({ task }: { task: Task }) {
+  const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
+  return (
+    <div className="flex items-center gap-2 rounded-md border bg-background shadow-lg px-2 py-1.5 max-w-[280px] opacity-90 rotate-2 scale-105">
+      <GripVertical className="size-3 text-muted-foreground shrink-0" />
+      <span className="text-xs font-medium truncate">{task.title}</span>
+      <span className={cn('inline-block rounded px-1 py-px font-medium shrink-0 text-[10px]', catColor)}>{task.category}</span>
+      <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{formatDuration(task.estimatedMinutes)}</span>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Shared compact table row — list view (buttons hover-only)
+   ═══════════════════════════════════════════════════════════════ */
+function TaskRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
   const completeTask = useAppStore((s) => s.completeTask);
   const deleteTask = useAppStore((s) => s.deleteTask);
-  const updateTask = useAppStore((s) => s.updateTask);
   const startTimer = useAppStore((s) => s.startTimer);
-
   const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
 
   return (
@@ -59,10 +75,7 @@ function TaskRow({ task, onEdit, draggable = false }: {
         {formatDuration(task.estimatedMinutes)}
       </td>
       <td className="px-1.5 py-1.5">
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-100">
-          {draggable && (
-            <GripVertical className="size-3 text-muted-foreground/50 cursor-grab active:cursor-grabbing" />
-          )}
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           {task.status !== 'completed' && (
             <Button size="icon" variant="ghost" className="size-5" onClick={() => void startTimer(task.id, 'pomodoro')} aria-label="Start timer">
               <Play className="size-2.5" />
@@ -80,66 +93,21 @@ function TaskRow({ task, onEdit, draggable = false }: {
   );
 }
 
-/* ── Draggable task row for matrix ── */
-function DraggableTaskRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `task:${task.id}`,
-    data: { task },
-  });
-  return (
-    <tr
-      ref={setNodeRef}
-      className={cn(
-        'group border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors cursor-grab active:cursor-grabbing',
-        isDragging && 'opacity-30',
-      )}
-      {...attributes}
-      {...listeners}
-    >
-      <td className="px-1.5 py-1.5 w-6">
-        <GripVertical className="size-3 text-muted-foreground/60 mx-auto" />
-      </td>
-      <td className="px-1.5 py-1.5 min-w-0">
-        <span className="block text-xs font-medium truncate max-w-[200px] sm:max-w-[320px]">
-          {task.title}
-        </span>
-      </td>
-      <td className="px-1.5 py-1.5 text-[10px] whitespace-nowrap">
-        <span className={cn('inline-block rounded px-1 py-px font-medium', CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin)}>
-          {task.category}
-        </span>
-      </td>
-      <td className="px-1.5 py-1.5 text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
-        {formatDuration(task.estimatedMinutes)}
-      </td>
-      <td className="px-1.5 py-1.5">
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity md:opacity-100">
-          <Button size="icon" variant="ghost" className="size-5" onClick={(e) => { e.stopPropagation(); void useAppStore.getState().startTimer(task.id, 'pomodoro'); }} aria-label="Start timer">
-            <Play className="size-2.5" />
-          </Button>
-          <Button size="icon" variant="ghost" className="size-5" onClick={(e) => { e.stopPropagation(); onEdit(task); }} aria-label="Edit">
-            <Pencil className="size-2.5" />
-          </Button>
-          <Button size="icon" variant="ghost" className="size-5 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); void useAppStore.getState().deleteTask(task.id); }} aria-label="Delete">
-            <Trash2 className="size-2.5" />
-          </Button>
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-/* ── Draggable wrapper for dnd-kit (used by list view for timeline drops) ── */
+/* ═══════════════════════════════════════════════════════════════
+   Draggable wrapper for list view (timeline drops)
+   ═══════════════════════════════════════════════════════════════ */
 function DraggableListRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `task:${task.id}` });
   return (
     <div ref={setNodeRef} className={cn(isDragging && 'opacity-30')} {...attributes} {...listeners}>
-      <table className="w-full"><tbody><TaskRow task={task} onEdit={onEdit} draggable /></tbody></table>
+      <table className="w-full"><tbody><TaskRow task={task} onEdit={onEdit} /></tbody></table>
     </div>
   );
 }
 
-/* ── Table header ── */
+/* ═══════════════════════════════════════════════════════════════
+   Table header for list view
+   ═══════════════════════════════════════════════════════════════ */
 const TABLE_HEAD = (
   <thead>
     <tr className="border-b border-border text-[10px] text-muted-foreground uppercase tracking-wide">
@@ -152,98 +120,334 @@ const TABLE_HEAD = (
   </thead>
 );
 
-/* ── Eisenhower quadrant as droppable mini-table ── */
-function QuadrantTable({ tasks, onEdit, category }: {
+/* ═══════════════════════════════════════════════════════════════
+   Matrix quadrant row — draggable item + insertion droppable
+   ═══════════════════════════════════════════════════════════════ */
+function MatrixRow({
+  task, index, category, onEdit,
+  isDraggingItem, showInsertBefore, showInsertAfter,
+}: {
+  task: Task; index: number; category: EisenhowerCategory;
+  onEdit: (t: Task) => void;
+  isDraggingItem: boolean;
+  showInsertBefore: boolean;
+  showInsertAfter: boolean;
+}) {
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id: `task:${task.id}`,
+    data: { task, category, index },
+  });
+  const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
+
+  return (
+    <>
+      {/* Insertion line above this row */}
+      {showInsertBefore && (
+        <tr>
+          <td colSpan={5} className="px-0 py-0">
+            <div className="h-0.5 bg-primary rounded-full mx-1" />
+          </td>
+        </tr>
+      )}
+      <tr
+        ref={setNodeRef}
+        className={cn(
+          'group border-b border-border/50 last:border-0 hover:bg-muted/30 transition-all duration-200 cursor-grab active:cursor-grabbing',
+          isDraggingItem && 'opacity-30 scale-[0.97] -translate-y-0.5',
+        )}
+        {...attributes}
+        {...listeners}
+      >
+        <td className="px-1.5 py-1.5 w-6">
+          <GripVertical className="size-3 text-muted-foreground/60 mx-auto" />
+        </td>
+        <td className="px-1.5 py-1.5 min-w-0">
+          <span className="block text-xs font-medium truncate max-w-[200px] sm:max-w-[320px]">{task.title}</span>
+        </td>
+        <td className="px-1.5 py-1.5 text-[10px] whitespace-nowrap">
+          <span className={cn('inline-block rounded px-1 py-px font-medium', catColor)}>{task.category}</span>
+        </td>
+        <td className="px-1.5 py-1.5 text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+          {formatDuration(task.estimatedMinutes)}
+        </td>
+        <td className="px-1.5 py-1.5">
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button size="icon" variant="ghost" className="size-5" onClick={(e) => { e.stopPropagation(); void useAppStore.getState().startTimer(task.id, 'pomodoro'); }} aria-label="Start timer">
+              <Play className="size-2.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="size-5" onClick={(e) => { e.stopPropagation(); onEdit(task); }} aria-label="Edit">
+              <Pencil className="size-2.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="size-5 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); void useAppStore.getState().deleteTask(task.id); }} aria-label="Delete">
+              <Trash2 className="size-2.5" />
+            </Button>
+          </div>
+        </td>
+      </tr>
+      {/* Insertion line below last row (no more rows) */}
+      {showInsertAfter && (
+        <tr>
+          <td colSpan={5} className="px-0 py-0">
+            <div className="h-0.5 bg-primary rounded-full mx-1" />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Quadrant card — droppable zone containing matrix rows
+   ═══════════════════════════════════════════════════════════════ */
+function QuadrantTable({
+  tasks, onEdit, category,
+  hoveredCategory, insertIndex,
+}: {
   tasks: Task[]; onEdit: (t: Task) => void; category: EisenhowerCategory;
+  hoveredCategory: EisenhowerCategory | null;
+  insertIndex: number | null;
 }) {
   const meta = EISENHOWER_LABELS[category];
   const { isOver, setNodeRef } = useDroppable({ id: `quadrant:${category}` });
+  const active = useDndContext();
+  const activeId = active.active ? String(active.active.id) : null;
+
+  const isHovered = hoveredCategory === category;
 
   return (
     <Card
       ref={setNodeRef}
-      className={cn('p-2 transition-colors', isOver && 'ring-2 ring-primary/50 bg-primary/5')}
+      className={cn(
+        'p-2 transition-all duration-200',
+        isHovered && 'ring-2 ring-primary/40 bg-primary/[0.03] shadow-sm',
+        isOver && !isHovered && 'ring-2 ring-primary/30 bg-primary/[0.02]',
+      )}
     >
       <div className="flex items-center justify-between mb-1 px-1">
         <span className="text-[11px] font-semibold">{meta.label}</span>
         <span className="text-[9px] text-muted-foreground tabular-nums">{tasks.length}</span>
       </div>
       {tasks.length === 0 ? (
-        <p className="text-[10px] text-muted-foreground italic py-2 text-center">Drop tasks here</p>
+        <div className={cn(
+          'py-3 text-center transition-colors duration-200',
+          isHovered && 'bg-primary/10 rounded-md',
+        )}>
+          <p className={cn('text-[10px] italic', isHovered ? 'text-primary' : 'text-muted-foreground')}>
+            {isHovered ? 'Drop here' : 'No tasks'}
+          </p>
+        </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left"><tbody>
-            {tasks.map((t) => (
-              <DraggableTaskRow key={t.id} task={t} onEdit={onEdit} />
-            ))}
-          </tbody></table>
+          <table className="w-full text-left">
+            <tbody>
+              {tasks.map((t, idx) => (
+                <MatrixRow
+                  key={t.id}
+                  task={t}
+                  index={idx}
+                  category={category}
+                  onEdit={onEdit}
+                  isDraggingItem={activeId === `task:${t.id}`}
+                  showInsertBefore={isHovered && insertIndex === idx}
+                  showInsertAfter={isHovered && insertIndex === tasks.length && idx === tasks.length - 1}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </Card>
   );
 }
 
-/* ── Eisenhower Matrix with axis labels + drag between quadrants ── */
+/* ═══════════════════════════════════════════════════════════════
+   Eisenhower Matrix — full DnD with overlay + insertion
+   ═══════════════════════════════════════════════════════════════ */
 function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) => void }) {
   const updateTask = useAppStore((s) => s.updateTask);
   const { toast } = useToast();
 
+  // Build grouped lookup
   const grouped = useMemo(() => {
     const map: Record<EisenhowerCategory, Task[]> = { do_first: [], schedule: [], delegate: [], eliminate: [] };
     for (const t of tasks) map[t.eisenhowerCategory].push(t);
     return map;
   }, [tasks]);
 
+  // Track drag state
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [hoveredCategory, setHoveredCategory] = useState<EisenhowerCategory | null>(null);
+  const [insertIndex, setInsertIndex] = useState<number | null>(null);
+
+  // Temporarily reordered state during drag — synced back after drop
+  const [liveTasks, setLiveTasks] = useState<Task[]>(tasks);
+
+  useEffect(() => {
+    setLiveTasks(tasks);
+  }, [tasks]);
+
+  // Compute live grouped from liveTasks
+  const liveGrouped = useMemo(() => {
+    const map: Record<EisenhowerCategory, Task[]> = { do_first: [], schedule: [], delegate: [], eliminate: [] };
+    for (const t of liveTasks) map[t.eisenhowerCategory].push(t);
+    return map;
+  }, [liveTasks]);
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragStart = useCallback((e: DragStartEvent) => {
+    const id = String(e.active.id);
+    if (id.startsWith('task:')) {
+      const t = tasks.find((x) => x.id === id.slice(5));
+      setActiveTask(t ?? null);
+    }
+  }, [tasks]);
+
+  const handleDragOver = useCallback((e: DragOverEvent) => {
+    const overId = e.over ? String(e.over.id) : null;
+    if (!overId || !activeTask) {
+      setHoveredCategory(null);
+      setInsertIndex(null);
+      return;
+    }
+
+    // Determine which quadrant we're over
+    let targetCategory: EisenhowerCategory | null = null;
+    let targetIndex: number | null = null;
+
+    if (overId.startsWith('quadrant:')) {
+      targetCategory = overId.slice(9) as EisenhowerCategory;
+      targetIndex = liveGrouped[targetCategory].length; // append at end
+    } else if (overId.startsWith('task:')) {
+      const overTaskId = overId.slice(5);
+      for (const cat of CATEGORIES) {
+        const idx = liveGrouped[cat].findIndex((t) => t.id === overTaskId);
+        if (idx !== -1) {
+          targetCategory = cat;
+          const overRect = e.over?.rect;
+          const activeRect = e.active?.rect?.current.translated;
+          if (overRect && activeRect) {
+            const activeCenterY = activeRect.top + activeRect.height / 2;
+            const overCenterY = overRect.top + overRect.height / 2;
+            targetIndex = activeCenterY < overCenterY ? idx : idx + 1;
+          } else {
+            targetIndex = idx + 1;
+          }
+          break;
+        }
+      }
+    }
+
+    setHoveredCategory(targetCategory);
+    setInsertIndex(targetIndex);
+
+    // Live reorder preview — move the dragged task in liveTasks
+    if (targetCategory && targetIndex !== null && activeTask) {
+      setLiveTasks((prev) => {
+        // Remove from current position
+        const filtered = prev.filter((t) => t.id !== activeTask.id);
+        // Insert at target position
+        const newCatList = filtered.filter((t) => t.eisenhowerCategory === targetCategory);
+        const otherTasks = filtered.filter((t) => t.eisenhowerCategory !== targetCategory);
+        const clampedIdx = Math.min(targetIndex, newCatList.length);
+        newCatList.splice(clampedIdx, 0, { ...activeTask, eisenhowerCategory: targetCategory });
+        return [...otherTasks, ...newCatList];
+      });
+    }
+  }, [activeTask, liveGrouped]);
 
   const handleDragEnd = useCallback(async (e: DragEndEvent) => {
     const { active, over } = e;
-    if (!over) return;
+    setActiveTask(null);
+    setHoveredCategory(null);
+    setInsertIndex(null);
+
+    if (!over || !activeTask) {
+      setLiveTasks(tasks); // reset
+      return;
+    }
+
     const overId = String(over.id);
-    if (!overId.startsWith('quadrant:')) return;
+    let newCategory: EisenhowerCategory | null = null;
 
-    const activeId = String(active.id);
-    if (!activeId.startsWith('task:')) return;
+    if (overId.startsWith('quadrant:')) {
+      newCategory = overId.slice(9) as EisenhowerCategory;
+    } else if (overId.startsWith('task:')) {
+      const overTaskId = overId.slice(5);
+      for (const cat of CATEGORIES) {
+        if (liveGrouped[cat].some((t) => t.id === overTaskId)) {
+          newCategory = cat;
+          break;
+        }
+      }
+    }
 
-    const newCategory = overId.slice(9) as EisenhowerCategory;
-    const taskId = activeId.slice(5);
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task || task.eisenhowerCategory === newCategory) return;
+    if (!newCategory) {
+      setLiveTasks(tasks);
+      return;
+    }
 
-    await updateTask(taskId, { eisenhowerCategory: newCategory });
-    toast({
-      title: 'Moved',
-      description: `${task.title} → ${EISENHOWER_LABELS[newCategory].label}`,
-    });
-  }, [tasks, updateTask, toast]);
+    if (activeTask.eisenhowerCategory === newCategory) {
+      setLiveTasks(tasks); // same quadrant, no change needed
+      return;
+    }
+
+    const newLabel = EISENHOWER_LABELS[newCategory].label;
+    await updateTask(activeTask.id, { eisenhowerCategory: newCategory });
+    toast({ title: 'Moved', description: `${activeTask.title} → ${newLabel}` });
+  }, [activeTask, tasks, liveGrouped, updateTask, toast]);
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
       <div className="grid grid-cols-[auto_1fr_1fr] grid-rows-[auto_1fr_1fr] gap-1.5 items-start">
-        {/* Column headers — Urgent / Not Urgent */}
+        {/* Column headers */}
         <div />
         <div className="text-[10px] font-semibold text-muted-foreground text-center pb-0.5">⚡ Urgent</div>
         <div className="text-[10px] font-semibold text-muted-foreground text-center pb-0.5">🌙 Not Urgent</div>
 
-        {/* Row 1 — Important: Do First | Schedule */}
+        {/* Row 1 — Important */}
         <div className="flex items-center justify-center">
           <span className="text-[10px] font-semibold text-muted-foreground -rotate-90 whitespace-nowrap origin-center">★ Important</span>
         </div>
-        <QuadrantTable tasks={grouped.do_first} onEdit={onEdit} category="do_first" />
-        <QuadrantTable tasks={grouped.schedule} onEdit={onEdit} category="schedule" />
+        <QuadrantTable
+          tasks={liveGrouped.do_first} onEdit={onEdit} category="do_first"
+          hoveredCategory={hoveredCategory} insertIndex={insertIndex}
+        />
+        <QuadrantTable
+          tasks={liveGrouped.schedule} onEdit={onEdit} category="schedule"
+          hoveredCategory={hoveredCategory} insertIndex={insertIndex}
+        />
 
-        {/* Row 2 — Not Important: Delegate | Eliminate */}
+        {/* Row 2 — Less Important */}
         <div className="flex items-center justify-center">
           <span className="text-[10px] font-semibold text-muted-foreground -rotate-90 whitespace-nowrap origin-center">☆ Less Impt.</span>
         </div>
-        <QuadrantTable tasks={grouped.delegate} onEdit={onEdit} category="delegate" />
-        <QuadrantTable tasks={grouped.eliminate} onEdit={onEdit} category="eliminate" />
+        <QuadrantTable
+          tasks={liveGrouped.delegate} onEdit={onEdit} category="delegate"
+          hoveredCategory={hoveredCategory} insertIndex={insertIndex}
+        />
+        <QuadrantTable
+          tasks={liveGrouped.eliminate} onEdit={onEdit} category="eliminate"
+          hoveredCategory={hoveredCategory} insertIndex={insertIndex}
+        />
       </div>
+
+      {/* Floating overlay */}
+      <DragOverlay dropAnimation={{ duration: 200 }}>
+        {activeTask ? <DragOverlayCard task={activeTask} /> : null}
+      </DragOverlay>
     </DndContext>
   );
 }
 
-/* ── Main component ── */
+/* ═══════════════════════════════════════════════════════════════
+   Main component
+   ═══════════════════════════════════════════════════════════════ */
 interface Props {
   variant: 'backlog' | 'incubator';
 }
