@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Intentional Daily Orchestrator",
+  title: "Cadence",
   description: "Capacity-aware daily planner with resilient timers, drag-and-drop timeline, and process-based gamification.",
   keywords: ["daily planner", "time blocking", "pomodoro", "Eisenhower matrix", "productivity"],
 };

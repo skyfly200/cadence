@@ -57,7 +57,7 @@ export default function Home() {
                 <Sparkles className="size-5" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-sm font-bold tracking-tight truncate sm:text-base">Intentional Daily Orchestrator</h1>
+                <h1 className="text-sm font-bold tracking-tight truncate sm:text-base">Cadence</h1>
                 <p className="text-[11px] text-muted-foreground hidden sm:block">
                   Capacity-aware planning · resilient timers · process-based scoring
                 </p>
