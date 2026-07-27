@@ -40,6 +40,7 @@ interface AppState {
   updateTask: (id: string, patch: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   completeTask: (id: string, actualMinutes?: number) => Promise<void>;
+  uncompleteTask: (id: string) => Promise<void>;
 
   // Time blocks
   createTimeBlock: (input: Partial<TimeBlock>) => Promise<TimeBlock | null>;
@@ -93,6 +94,11 @@ const api = {
   async del(url: string): Promise<void> {
     const r = await fetch(url, { method: 'DELETE' });
     if (!r.ok) throw new Error(`${url}: ${r.status}`);
+  },
+  async delete_<T>(url: string): Promise<T> {
+    const r = await fetch(url, { method: 'DELETE' });
+    if (!r.ok) throw new Error(`${url}: ${r.status}`);
+    return r.json();
   },
 };
 
@@ -187,6 +193,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       await get().computeDailyScore();
     } catch (e) {
       console.error('completeTask failed', e);
+    }
+  },
+
+  uncompleteTask: async (id) => {
+    try {
+      const t = await api.delete_<Task>(`/api/tasks/${id}/complete`);
+      set({ tasks: get().tasks.map((x) => (x.id === id ? t : x)) });
+      await get().recalcScheduledFocus();
+      await get().computeDailyScore();
+    } catch (e) {
+      console.error('uncompleteTask failed', e);
     }
   },
 

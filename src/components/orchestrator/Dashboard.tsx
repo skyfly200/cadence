@@ -17,9 +17,31 @@ import { cn } from '@/lib/utils';
 import { CATEGORY_COLORS, EISENHOWER_LABELS, type Task } from '@/lib/types';
 import { formatDuration } from '@/lib/time-utils';
 
+function CompletedRow({ task }: { task: Task }) {
+  const uncompleteTask = useAppStore((s) => s.uncompleteTask);
+  return (
+    <div className="group flex items-center justify-between text-[11px] py-1 border-b border-border/40 last:border-0">
+      <div className="flex items-center gap-1.5 min-w-0">
+        <Checkbox
+          checked
+          onCheckedChange={() => void uncompleteTask(task.id)}
+          className="size-3.5 shrink-0"
+          aria-label={`Undo complete ${task.title}`}
+        />
+        <span className="line-through text-muted-foreground truncate">{task.title}</span>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <span className={cn('text-[9px] rounded px-1 py-px', CATEGORY_COLORS[task.category])}>{task.category}</span>
+        {task.actualMinutes > 0 && <span className="text-[9px] text-emerald-600 tabular-nums">{formatDuration(task.actualMinutes)}</span>}
+      </div>
+    </div>
+  );
+}
+
 function DraggableTodayTask({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `task:${task.id}` });
   const completeTask = useAppStore((s) => s.completeTask);
+  const uncompleteTask = useAppStore((s) => s.uncompleteTask);
   const deleteTask = useAppStore((s) => s.deleteTask);
   const startTimer = useAppStore((s) => s.startTimer);
   const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
@@ -28,7 +50,7 @@ function DraggableTodayTask({ task, onEdit }: { task: Task; onEdit: (t: Task) =>
     <div ref={setNodeRef} className={cn(isDragging && 'opacity-30', 'flex items-center gap-2 px-2 py-1.5 rounded-md border border-border/50 bg-background hover:bg-muted/30 transition-colors group')} {...attributes} {...listeners}>
       <Checkbox
         checked={task.status === 'completed'}
-        onCheckedChange={(v) => v && void completeTask(task.id)}
+        onCheckedChange={(v) => v ? void completeTask(task.id) : void uncompleteTask(task.id)}
         className="size-3.5 shrink-0"
         aria-label={`Complete ${task.title}`}
       />
@@ -117,7 +139,7 @@ export function Dashboard() {
             )}
           </Card>
 
-          {/* Completed — single-line rows */}
+          {/* Completed — single-line rows with undo */}
           {completedToday.length > 0 && (
             <Card className="p-3 mt-2">
               <div className="flex items-center gap-1.5 mb-1.5">
@@ -127,13 +149,7 @@ export function Dashboard() {
               </div>
               <div className="space-y-0">
                 {completedToday.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between text-[11px] py-1 border-b border-border/40 last:border-0">
-                    <span className="line-through text-muted-foreground truncate mr-2">{t.title}</span>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className={cn('text-[9px] rounded px-1 py-px', CATEGORY_COLORS[t.category])}>{t.category}</span>
-                      {t.actualMinutes > 0 && <span className="text-[9px] text-emerald-600 tabular-nums">{formatDuration(t.actualMinutes)}</span>}
-                    </div>
-                  </div>
+                  <CompletedRow key={t.id} task={t} />
                 ))}
               </div>
             </Card>

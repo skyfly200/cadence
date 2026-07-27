@@ -236,12 +236,10 @@ export function TimelineView() {
     return () => clearTimeout(timer);
   }, []);
 
-  const nowRow = timeToGridRow(now);
-  const nowVisibleRow = toVisibleRow(nowRow);
-  const nowTopPx = (nowVisibleRow - 1) * ROW_HEIGHT;
-  const visibleStartPx = 0;
-  const visibleEndPx = VISIBLE_SLOTS * ROW_HEIGHT;
-  const nowVisible = nowTopPx >= visibleStartPx && nowTopPx <= visibleEndPx;
+  // Exact pixel position for the red line using actual minutes (not truncated to slot)
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowTopPx = ((nowMinutes - TIMELINE_START_HOUR * 60) / SLOT_MINUTES) * ROW_HEIGHT;
+  const nowVisible = nowTopPx >= 0 && nowTopPx <= VISIBLE_SLOTS * ROW_HEIGHT;
 
   const gridHeight = VISIBLE_SLOTS * ROW_HEIGHT;
 

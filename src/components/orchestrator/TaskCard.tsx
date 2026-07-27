@@ -24,6 +24,7 @@ interface Props {
 
 export function TaskCard({ task, compact = false, draggable = false, showActions = true, onEdit }: Props) {
   const completeTask = useAppStore((s) => s.completeTask);
+  const uncompleteTask = useAppStore((s) => s.uncompleteTask);
   const deleteTask = useAppStore((s) => s.deleteTask);
   const updateTask = useAppStore((s) => s.updateTask);
   const startTimer = useAppStore((s) => s.startTimer);
@@ -31,7 +32,8 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
   const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
   const eisen = EISENHOWER_LABELS[task.eisenhowerCategory];
 
-  const handleComplete = () => void completeTask(task.id);
+  const handleToggleComplete = (checked: boolean) =>
+    checked ? void completeTask(task.id) : void uncompleteTask(task.id);
   const handleDelete = () => void deleteTask(task.id);
   const handleStartTimer = () => void startTimer(task.id, 'pomodoro');
 
@@ -47,7 +49,7 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
       >
         <Checkbox
           checked={task.status === 'completed'}
-          onCheckedChange={(v) => v && handleComplete()}
+          onCheckedChange={handleToggleComplete}
           className="shrink-0"
           aria-label={`Complete ${task.title}`}
         />
@@ -107,7 +109,7 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
       <div className="flex items-start gap-2">
         <Checkbox
           checked={task.status === 'completed'}
-          onCheckedChange={(v) => v && handleComplete()}
+          onCheckedChange={handleToggleComplete}
           className="mt-0.5"
           aria-label={`Complete ${task.title}`}
         />

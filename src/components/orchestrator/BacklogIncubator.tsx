@@ -46,6 +46,7 @@ function DragOverlayCard({ task }: { task: Task }) {
    ═══════════════════════════════════════════════════════════════ */
 function TaskRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
   const completeTask = useAppStore((s) => s.completeTask);
+  const uncompleteTask = useAppStore((s) => s.uncompleteTask);
   const deleteTask = useAppStore((s) => s.deleteTask);
   const startTimer = useAppStore((s) => s.startTimer);
   const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
@@ -55,7 +56,7 @@ function TaskRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
       <td className="px-1.5 py-1.5 w-6">
         <Checkbox
           checked={task.status === 'completed'}
-          onCheckedChange={(v) => v && void completeTask(task.id)}
+          onCheckedChange={(v) => v ? void completeTask(task.id) : void uncompleteTask(task.id)}
           className="size-3.5"
           aria-label={`Complete ${task.title}`}
         />
@@ -137,6 +138,8 @@ function MatrixRow({
     id: `task:${task.id}`,
     data: { task, category, index },
   });
+  const completeTask = useAppStore((s) => s.completeTask);
+  const uncompleteTask = useAppStore((s) => s.uncompleteTask);
   const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
 
   return (
@@ -144,7 +147,7 @@ function MatrixRow({
       {/* Insertion line above this row */}
       {showInsertBefore && (
         <tr>
-          <td colSpan={5} className="px-0 py-0">
+          <td colSpan={6} className="px-0 py-0">
             <div className="h-0.5 bg-primary rounded-full mx-1" />
           </td>
         </tr>
@@ -158,11 +161,23 @@ function MatrixRow({
         {...attributes}
         {...listeners}
       >
-        <td className="px-1.5 py-1.5 w-6">
+        <td className="px-1 py-1.5 w-4">
           <GripVertical className="size-3 text-muted-foreground/60 mx-auto" />
         </td>
+        <td className="px-1 py-1.5 w-5">
+          <Checkbox
+            checked={task.status === 'completed'}
+            onCheckedChange={(v) => { if (v) completeTask(task.id); else uncompleteTask(task.id); }}
+            className="size-3.5"
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Complete ${task.title}`}
+          />
+        </td>
         <td className="px-1.5 py-1.5 min-w-0">
-          <span className="block text-xs font-medium truncate max-w-[200px] sm:max-w-[320px]">{task.title}</span>
+          <span className={cn(
+            'block text-xs font-medium truncate max-w-[200px] sm:max-w-[320px]',
+            task.status === 'completed' && 'line-through text-muted-foreground',
+          )}>{task.title}</span>
         </td>
         <td className="px-1.5 py-1.5 text-[10px] whitespace-nowrap">
           <span className={cn('inline-block rounded px-1 py-px font-medium', catColor)}>{task.category}</span>
@@ -187,7 +202,7 @@ function MatrixRow({
       {/* Insertion line below last row (no more rows) */}
       {showInsertAfter && (
         <tr>
-          <td colSpan={5} className="px-0 py-0">
+          <td colSpan={6} className="px-0 py-0">
             <div className="h-0.5 bg-primary rounded-full mx-1" />
           </td>
         </tr>
