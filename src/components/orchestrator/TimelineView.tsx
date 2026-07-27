@@ -22,6 +22,12 @@ import { useToast } from '@/hooks/use-toast';
 const TIMELINE_START_HOUR = 5; // show 5am onwards
 const VISIBLE_HOURS = 19; // through midnight
 const ROW_HEIGHT = 32; // px
+const VISIBLE_ROW_OFFSET = TIMELINE_START_HOUR * 2; // 10 slots before visible range
+const VISIBLE_SLOTS = VISIBLE_HOURS * 2; // 38 visible 30-min slots
+
+function toVisibleRow(absoluteRow: number): number {
+  return absoluteRow - VISIBLE_ROW_OFFSET;
+}
 
 function BlockColor(block: TimeBlock): string {
   if (block.isAnchor && block.anchorType) {
@@ -45,7 +51,8 @@ function DraggableBlock({ block }: DraggableBlockProps) {
 
   const start = new Date(block.startTime);
   const end = new Date(block.endTime);
-  const startRow = timeToGridRow(start);
+  const absRow = timeToGridRow(start);
+  const visibleStartRow = toVisibleRow(absRow);
   const rowSpan = durationToRows(blockDurationMinutes(block.startTime, block.endTime));
 
   const colorClass = BlockColor(block);
@@ -60,7 +67,7 @@ function DraggableBlock({ block }: DraggableBlockProps) {
         block.isAnchor ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing hover:shadow-md',
       )}
       style={{
-        gridRow: `${startRow} / span ${rowSpan}`,
+        gridRow: `${visibleStartRow} / span ${rowSpan}`,
       }}
       {...attributes}
       {...listeners}
@@ -95,6 +102,7 @@ function SlotDropZone({ slotIndex }: { slotIndex: number }) {
   const { isOver, setNodeRef } = useDroppable({
     id: `slot:${slotIndex}`,
   });
+  const visibleSlotRow = slotIndex - VISIBLE_ROW_OFFSET + 1;
   return (
     <div
       ref={setNodeRef}
@@ -102,7 +110,7 @@ function SlotDropZone({ slotIndex }: { slotIndex: number }) {
         'border-t border-border/40 transition-colors',
         isOver && 'bg-primary/15',
       )}
-      style={{ gridRow: slotIndex + 1 }}
+      style={{ gridRow: visibleSlotRow }}
     />
   );
 }
@@ -132,12 +140,13 @@ export function TimelineView() {
   }, [settings, timeBlocks, generateAnchors]);
 
   const hourLabels = useMemo(() => {
-    const labels: { row: number; label: string }[] = [];
+    const labels: { visibleRow: number; label: string }[] = [];
     for (let h = TIMELINE_START_HOUR; h < TIMELINE_START_HOUR + VISIBLE_HOURS; h++) {
       const hour = h % 24;
       const ampm = hour < 12 ? 'AM' : 'PM';
       const display = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-      labels.push({ row: hour * 2 + 1, label: `${display} ${ampm}` });
+      const absRow = hour * 2 + 1;
+      labels.push({ visibleRow: toVisibleRow(absRow), label: `${display} ${ampm}` });
     }
     return labels;
   }, []);
@@ -214,20 +223,21 @@ export function TimelineView() {
   useEffect(() => {
     const timer = setTimeout(() => {
       const now = new Date();
-      const row = timeToGridRow(now);
-      const px = (row - TIMELINE_START_HOUR * 2) * ROW_HEIGHT;
+      const absRow = timeToGridRow(now);
+      const px = (toVisibleRow(absRow) - 1) * ROW_HEIGHT;
       scrollRef.current?.scrollTo({ top: Math.max(0, px - 120), behavior: 'smooth' });
     }, 150);
     return () => clearTimeout(timer);
   }, []);
 
   const nowRow = timeToGridRow(new Date());
-  const nowTopPx = (nowRow - 1) * ROW_HEIGHT;
+  const nowVisibleRow = toVisibleRow(nowRow);
+  const nowTopPx = (nowVisibleRow - 1) * ROW_HEIGHT;
   const visibleStartPx = 0;
-  const visibleEndPx = VISIBLE_HOURS * 2 * ROW_HEIGHT;
+  const visibleEndPx = VISIBLE_SLOTS * ROW_HEIGHT;
   const nowVisible = nowTopPx >= visibleStartPx && nowTopPx <= visibleEndPx;
 
-  const gridHeight = VISIBLE_HOURS * 2 * ROW_HEIGHT;
+  const gridHeight = VISIBLE_SLOTS * ROW_HEIGHT;
 
   return (
     <Card className="p-0 overflow-hidden flex flex-col h-full">
@@ -249,16 +259,16 @@ export function TimelineView() {
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div className="grid" style={{
             gridTemplateColumns: '3.5rem 1fr',
-            gridTemplateRows: `repeat(${SLOTS_PER_DAY}, ${ROW_HEIGHT}px)`,
+            gridTemplateRows: `repeat(${VISIBLE_SLOTS}, ${ROW_HEIGHT}px)`,
             height: `${gridHeight}px`,
           }}>
             {/* Hour labels column */}
-            <div className="relative col-start-1 row-start-1" style={{ gridRow: `1 / span ${SLOTS_PER_DAY}` }}>
+            <div className="relative col-start-1 row-start-1" style={{ gridRow: `1 / span ${VISIBLE_SLOTS}` }}>
               {hourLabels.map((h) => (
                 <div
-                  key={h.row}
+                  key={h.visibleRow}
                   className="absolute right-2 text-[10px] text-muted-foreground font-medium tabular-nums"
-                  style={{ top: `${(h.row - 1 - TIMELINE_START_HOUR * 2) * ROW_HEIGHT - 7}px` }}
+                  style={{ top: `${(h.visibleRow - 1) * ROW_HEIGHT - 7}px` }}
                 >
                   {h.label}
                 </div>
@@ -269,8 +279,8 @@ export function TimelineView() {
             <div
               className="relative col-start-2 row-start-1 border-l grid"
               style={{
-                gridRow: `1 / span ${SLOTS_PER_DAY}`,
-                gridTemplateRows: `repeat(${SLOTS_PER_DAY}, ${ROW_HEIGHT}px)`,
+                gridRow: `1 / span ${VISIBLE_SLOTS}`,
+                gridTemplateRows: `repeat(${VISIBLE_SLOTS}, ${ROW_HEIGHT}px)`,
               }}
             >
               {/* Drop zones (visible slots only) */}
@@ -281,9 +291,10 @@ export function TimelineView() {
               {/* Blocks — rendered as grid items spanning rows */}
               {timeBlocks.map((b) => {
                 const start = new Date(b.startTime);
-                const startRow = timeToGridRow(start);
+                const absRow = timeToGridRow(start);
+                const visibleRow = toVisibleRow(absRow);
                 // Only render if within visible range
-                if (startRow < TIMELINE_START_HOUR * 2 || startRow > (TIMELINE_START_HOUR + VISIBLE_HOURS) * 2) return null;
+                if (visibleRow < 1 || visibleRow > VISIBLE_SLOTS) return null;
                 return <DraggableBlock key={b.id} block={b} />;
               })}
 
@@ -291,7 +302,7 @@ export function TimelineView() {
               {nowVisible && (
                 <div
                   className="absolute left-0 right-0 border-t-2 border-rose-500 pointer-events-none z-20"
-                  style={{ top: `${nowTopPx - TIMELINE_START_HOUR * 2 * ROW_HEIGHT}px` }}
+                  style={{ top: `${nowTopPx}px` }}
                 >
                   <span className="absolute -left-1 -top-1.5 size-2.5 rounded-full bg-rose-500 shadow" />
                   <span className="absolute right-1 -top-3 text-[9px] font-semibold text-rose-600 bg-background px-1 rounded shadow-sm">

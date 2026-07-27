@@ -58,3 +58,37 @@ Stage Summary:
 - Voice input no longer fails silently. Users get immediate, clear feedback.
 - Real microphone transcription works via MediaRecorder → z-ai-web-dev-sdk ASR backend.
 - Text fallback always works. Lint clean, no console errors.
+
+---
+Task ID: 1
+Agent: Main
+Task: Fix timeline items not lining up with their times
+
+Work Log:
+- Diagnosed root cause: The CSS Grid had 48 rows (00:00–24:00) but hour labels used absolute positioning offset for the visible range (5AM+), creating a 320px misalignment between labels and blocks
+- Introduced `VISIBLE_ROW_OFFSET`, `VISIBLE_SLOTS`, and `toVisibleRow()` helper to convert absolute grid rows to visible-range rows
+- Changed outer grid from 48 rows to 38 visible rows (5AM–midnight)
+- Updated DraggableBlock to use visible rows: `gridRow: ${toVisibleRow(absRow) / span ${rowSpan}}`
+- Fixed SlotDropZone to use `slotIndex - VISIBLE_ROW_OFFSET + 1`
+- Fixed hour labels to position using `(h.visibleRow - 1) * ROW_HEIGHT - 7`
+- Fixed current-time indicator to use `nowTopPx` directly (already in visible coords)
+- Fixed scroll-to-current-time to use `(toVisibleRow(absRow) - 1) * ROW_HEIGHT`
+- Fixed SlotDropZone syntax error (duplicate return statements from prior edit)
+
+Stage Summary:
+- Timeline grid now uses 38 rows (visible only) instead of 48, eliminating the coordinate system mismatch
+- All blocks, labels, drop zones, and current-time indicator share the same coordinate system
+- Verified via agent-browser: 2PM label at 569px, Breakfast block at 578px (569+7 text center = 576 ≈ 576+2px margin). Alignment confirmed.
+
+---
+Task ID: 2
+Agent: Main  
+Task: Shrink Quick Capture (already completed in prior session, verified)
+
+Work Log:
+- Confirmed page.tsx already has mic button in header bar with Sheet popup
+- Confirmed Dashboard.tsx no longer renders VoiceInput inline
+- Verified via agent-browser: clicking mic button opens "Quick Capture" dialog with voice input, transcript field, and command tips
+
+Stage Summary:
+- Quick Capture shrink was already implemented. Verified working correctly.
