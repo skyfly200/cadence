@@ -7,22 +7,43 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Clock, Play, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, Clock, Play, CheckCircle2, AlertCircle, Pencil, Trash2 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { TaskCard } from './TaskCard';
 import { TaskFormDialog } from './TaskFormDialog';
 import { TimerPanel } from './TimerPanel';
 import { CapacityPanel } from './CapacityPanel';
 import { GamificationPanel } from './GamificationPanel';
 import { cn } from '@/lib/utils';
-import { CATEGORY_COLORS, type Task } from '@/lib/types';
+import { CATEGORY_COLORS, EISENHOWER_LABELS, type Task } from '@/lib/types';
 import { formatDuration } from '@/lib/time-utils';
 
 function DraggableTodayTask({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `task:${task.id}` });
+  const completeTask = useAppStore((s) => s.completeTask);
+  const deleteTask = useAppStore((s) => s.deleteTask);
+  const startTimer = useAppStore((s) => s.startTimer);
+  const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
+
   return (
-    <div ref={setNodeRef} className={cn(isDragging && 'opacity-30')} {...attributes} {...listeners}>
-      <TaskCard task={task} onEdit={onEdit} draggable />
+    <div ref={setNodeRef} className={cn(isDragging && 'opacity-30', 'flex items-center gap-2 px-2 py-1.5 rounded-md border border-border/50 bg-background hover:bg-muted/30 transition-colors group')} {...attributes} {...listeners}>
+      <Checkbox
+        checked={task.status === 'completed'}
+        onCheckedChange={(v) => v && void completeTask(task.id)}
+        className="size-3.5 shrink-0"
+        aria-label={`Complete ${task.title}`}
+      />
+      <span className={cn('flex-1 min-w-0 text-xs font-medium truncate', task.status === 'completed' && 'line-through text-muted-foreground')}>
+        {task.title}
+      </span>
+      <span className={cn('text-[9px] rounded px-1 py-px font-medium shrink-0', catColor)}>{task.category}</span>
+      <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{formatDuration(task.estimatedMinutes)}</span>
+      <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        {task.status !== 'completed' && (
+          <Button size="icon" variant="ghost" className="size-5" onClick={() => void startTimer(task.id, 'pomodoro')} aria-label="Start"><Play className="size-2.5" /></Button>
+        )}
+        <Button size="icon" variant="ghost" className="size-5" onClick={() => onEdit(task)} aria-label="Edit"><Pencil className="size-2.5" /></Button>
+        <Button size="icon" variant="ghost" className="size-5 text-destructive hover:text-destructive" onClick={() => void deleteTask(task.id)} aria-label="Delete"><Trash2 className="size-2.5" /></Button>
+      </div>
     </div>
   );
 }
@@ -30,7 +51,6 @@ function DraggableTodayTask({ task, onEdit }: { task: Task; onEdit: (t: Task) =>
 export function Dashboard() {
   const tasks = useAppStore((s) => s.tasks);
   const capacity = useAppStore((s) => s.capacity);
-  const startTimer = useAppStore((s) => s.startTimer);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
@@ -42,68 +62,54 @@ export function Dashboard() {
   const triageTasks = useMemo(() => tasks.filter((t) => t.status === 'triage_review'), [tasks]);
 
   const totalEstimated = todayTasks.reduce((s, t) => s + t.estimatedMinutes, 0);
-  const totalActual = completedToday.reduce((s, t) => s + t.actualMinutes, 0);
   const maxFocus = capacity?.maxAllowedFocusMinutes ?? 270;
   const budgetPct = Math.min(100, Math.round((totalEstimated / maxFocus) * 100));
   const overBudget = totalEstimated > maxFocus;
 
   return (
-    <div className="space-y-4">
-      {/* Triage alert */}
+    <div className="space-y-3">
+      {/* Triage alert — compact banner */}
       {triageTasks.length > 0 && (
-        <Card className="p-4 border-amber-500/40 bg-amber-500/5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="size-5 text-amber-600" />
-              <div>
-                <p className="text-sm font-medium">{triageTasks.length} task{triageTasks.length !== 1 ? 's' : ''} need triage</p>
-                <p className="text-xs text-muted-foreground">Rolled over from previous days — review before planning today.</p>
-              </div>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => setActiveTab('triage')}>Review now</Button>
+        <div className="flex items-center justify-between gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+          <div className="flex items-center gap-1.5">
+            <AlertCircle className="size-3.5 text-amber-600 shrink-0" />
+            <span className="text-xs font-medium">{triageTasks.length} task{triageTasks.length !== 1 ? 's' : ''} need triage</span>
           </div>
-        </Card>
+          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => setActiveTab('triage')}>Review</Button>
+        </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Today list (main, spans 2) */}
-        <div className="lg:col-span-2 space-y-3">
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3 className="text-sm font-semibold">Today&apos;s Plan</h3>
-                <p className="text-xs text-muted-foreground">
-                  {todayTasks.length} scheduled · {completedToday.length} done · {formatDuration(totalEstimated)} planned
-                </p>
+      <div className="grid gap-3 lg:grid-cols-3">
+        {/* Today list */}
+        <div className="lg:col-span-2">
+          <Card className="p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-semibold">Today&apos;s Plan</h3>
+                <span className="text-[10px] text-muted-foreground">{todayTasks.length} scheduled · {completedToday.length} done</span>
               </div>
-              <Button size="sm" onClick={() => { setEditTask(null); setCreateOpen(true); }}>
-                <Plus className="size-3" /> Add task
+              <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => { setEditTask(null); setCreateOpen(true); }}>
+                <Plus className="size-3" /> Add
               </Button>
             </div>
 
-            <div className="mb-3">
-              <div className="flex items-center justify-between text-xs mb-1">
+            <div className="mb-2">
+              <div className="flex items-center justify-between text-[10px] mb-0.5">
                 <span className="text-muted-foreground">Focus budget</span>
-                <span className={cn('font-medium', overBudget && 'text-rose-600')}>
+                <span className={cn('font-medium tabular-nums', overBudget && 'text-rose-600')}>
                   {formatDuration(totalEstimated)} / {formatDuration(maxFocus)}
                 </span>
               </div>
-              <Progress value={budgetPct} className={cn('h-2', overBudget && '[&>div]:bg-rose-500')} />
-              {overBudget && (
-                <p className="mt-1 text-[11px] text-rose-600">
-                  Over by {formatDuration(totalEstimated - maxFocus)} — move low-priority items back to backlog.
-                </p>
-              )}
+              <Progress value={budgetPct} className={cn('h-1.5', overBudget && '[&>div]:bg-rose-500')} />
             </div>
 
             {todayTasks.length === 0 ? (
-              <div className="py-8 text-center">
-                <Clock className="size-8 mx-auto text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">Nothing scheduled yet.</p>
-                <p className="text-xs text-muted-foreground mt-1">Drag tasks from the Backlog onto the Timeline.</p>
+              <div className="py-6 text-center">
+                <Clock className="size-5 mx-auto text-muted-foreground/40 mb-1" />
+                <p className="text-[11px] text-muted-foreground">Nothing scheduled. Drag from backlog or add above.</p>
               </div>
             ) : (
-              <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+              <div className="space-y-0.5 max-h-[360px] overflow-y-auto">
                 {todayTasks.map((t) => (
                   <DraggableTodayTask key={t.id} task={t} onEdit={(t) => { setEditTask(t); setCreateOpen(true); }} />
                 ))}
@@ -111,22 +117,21 @@ export function Dashboard() {
             )}
           </Card>
 
+          {/* Completed — single-line rows */}
           {completedToday.length > 0 && (
-            <Card className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle2 className="size-4 text-emerald-600" />
-                <h3 className="text-sm font-semibold">Completed Today</h3>
-                <Badge variant="outline" className="text-[10px]">{completedToday.length}</Badge>
+            <Card className="p-3 mt-2">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <CheckCircle2 className="size-3 text-emerald-600" />
+                <h3 className="text-xs font-semibold">Completed</h3>
+                <Badge variant="outline" className="text-[9px] px-1">{completedToday.length}</Badge>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0">
                 {completedToday.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between text-xs py-1.5 border-b last:border-0">
-                    <span className="line-through text-muted-foreground">{t.title}</span>
-                    <div className="flex items-center gap-1.5">
-                      <Badge variant="outline" className={cn('text-[10px]', CATEGORY_COLORS[t.category])}>{t.category}</Badge>
-                      {t.actualMinutes > 0 && (
-                        <span className="text-[10px] text-emerald-700 dark:text-emerald-400">{formatDuration(t.actualMinutes)}</span>
-                      )}
+                  <div key={t.id} className="flex items-center justify-between text-[11px] py-1 border-b border-border/40 last:border-0">
+                    <span className="line-through text-muted-foreground truncate mr-2">{t.title}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className={cn('text-[9px] rounded px-1 py-px', CATEGORY_COLORS[t.category])}>{t.category}</span>
+                      {t.actualMinutes > 0 && <span className="text-[9px] text-emerald-600 tabular-nums">{formatDuration(t.actualMinutes)}</span>}
                     </div>
                   </div>
                 ))}
@@ -135,8 +140,8 @@ export function Dashboard() {
           )}
         </div>
 
-        {/* Sidebar: capacity, timer, score */}
-        <div className="space-y-3">
+        {/* Sidebar */}
+        <div className="space-y-2">
           <CapacityPanel />
           <TimerPanel />
           <GamificationPanel />

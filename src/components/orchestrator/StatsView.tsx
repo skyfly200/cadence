@@ -2,8 +2,7 @@
 
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Trophy, Target, Anchor, Flame, TrendingUp, Calendar } from 'lucide-react';
+import { Trophy, Target, TrendingUp, Flame, Calendar, Anchor } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { formatDuration } from '@/lib/time-utils';
 import { cn } from '@/lib/utils';
@@ -27,7 +26,6 @@ export function StatsView() {
   });
   const maxCompleted = Math.max(1, ...completedByDay.map((x) => x.count));
 
-  // Realism score: tasks completed today where actual is within ±20% of estimated
   const completedToday = completed.filter(
     (t) => t.completedAt && new Date(t.completedAt).toDateString() === new Date().toDateString()
   );
@@ -37,10 +35,8 @@ export function StatsView() {
     return ratio >= 0.8 && ratio <= 1.2;
   });
   const realismPct = completedToday.length > 0 ? Math.round((realistic.length / completedToday.length) * 100) : 0;
-
   const totalFocusMin = tasks.reduce((s, t) => s + t.actualMinutes, 0);
 
-  // Category breakdown
   const byCategory: Record<string, { count: number; minutes: number }> = {};
   for (const t of completed) {
     if (!byCategory[t.category]) byCategory[t.category] = { count: 0, minutes: 0 };
@@ -51,84 +47,63 @@ export function StatsView() {
   const maxCatMin = Math.max(1, ...catEntries.map(([, v]) => v.minutes));
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <Trophy className="size-5 text-amber-500" />
-            <span className="text-2xl font-bold tabular-nums">{todayScore}</span>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">Today&apos;s score</p>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <Target className="size-5 text-purple-500" />
-            <span className="text-2xl font-bold tabular-nums">{realismPct}%</span>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">Realism (±20% of estimate)</p>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <TrendingUp className="size-5 text-emerald-500" />
-            <span className="text-2xl font-bold tabular-nums">{completed.length}</span>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">Total completed</p>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <Flame className="size-5 text-orange-500" />
-            <span className="text-2xl font-bold tabular-nums">{formatDuration(totalFocusMin)}</span>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">Total focus logged</p>
-        </Card>
+    <div className="space-y-3">
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+        {[
+          { icon: Trophy, color: 'text-amber-500', value: String(todayScore), label: 'Score' },
+          { icon: Target, color: 'text-purple-500', value: `${realismPct}%`, label: 'Realism' },
+          { icon: TrendingUp, color: 'text-emerald-500', value: String(completed.length), label: 'Completed' },
+          { icon: Flame, color: 'text-orange-500', value: formatDuration(totalFocusMin), label: 'Focus' },
+        ].map(({ icon: Icon, color, value, label }) => (
+          <Card key={label} className="p-2.5 flex items-center gap-2">
+            <Icon className={cn('size-4 shrink-0', color)} />
+            <div className="min-w-0">
+              <div className="text-lg font-bold tabular-nums leading-none">{value}</div>
+              <div className="text-[9px] text-muted-foreground mt-0.5">{label}</div>
+            </div>
+          </Card>
+        ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="p-4">
-          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <Calendar className="size-4" /> Completions — last 7 days
+      <div className="grid gap-3 lg:grid-cols-2">
+        {/* 7-day bar chart */}
+        <Card className="p-2.5">
+          <h3 className="text-[11px] font-semibold mb-2 flex items-center gap-1.5">
+            <Calendar className="size-3" /> Last 7 days
           </h3>
-          <div className="flex items-end justify-between gap-2 h-40">
+          <div className="flex items-end justify-between gap-1.5 h-28">
             {completedByDay.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full flex items-end justify-center" style={{ height: '120px' }}>
+              <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                <span className="text-[9px] font-medium tabular-nums">{d.count}</span>
+                <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
                   <div
-                    className="w-full max-w-[2rem] rounded-t bg-primary/80 transition-all hover:bg-primary"
-                    style={{ height: `${(d.count / maxCompleted) * 100}%`, minHeight: d.count > 0 ? '8px' : '2px' }}
-                    title={`${d.count} completed`}
+                    className="w-full max-w-[1.25rem] rounded-t bg-primary/70"
+                    style={{ height: `${(d.count / maxCompleted) * 100}%`, minHeight: d.count > 0 ? '4px' : '1px' }}
                   />
                 </div>
-                <span className="text-[10px] text-muted-foreground tabular-nums">
-                  {d.date.toLocaleDateString('en', { weekday: 'short' })}
-                </span>
-                <span className="text-[10px] font-medium tabular-nums">{d.count}</span>
+                <span className="text-[8px] text-muted-foreground">{d.date.toLocaleDateString('en', { weekday: 'short' })}</span>
               </div>
             ))}
           </div>
         </Card>
 
-        <Card className="p-4">
-          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <Anchor className="size-4" /> Focus by category
+        {/* Category breakdown */}
+        <Card className="p-2.5">
+          <h3 className="text-[11px] font-semibold mb-2 flex items-center gap-1.5">
+            <Anchor className="size-3" /> Focus by category
           </h3>
           {catEntries.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-8 text-center">No completed tasks yet.</p>
+            <p className="text-[10px] text-muted-foreground py-4 text-center">No data yet.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {catEntries.map(([cat, v]) => (
-                <div key={cat}>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-medium">{cat}</span>
-                    <span className="text-muted-foreground tabular-nums">
-                      {v.count} tasks · {formatDuration(v.minutes)}
-                    </span>
+                <div key={cat} className="flex items-center gap-2 text-[10px]">
+                  <span className="w-14 truncate font-medium">{cat}</span>
+                  <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full bg-primary/60" style={{ width: `${(v.minutes / maxCatMin) * 100}%` }} />
                   </div>
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary/70"
-                      style={{ width: `${(v.minutes / maxCatMin) * 100}%` }}
-                    />
-                  </div>
+                  <span className="tabular-nums text-muted-foreground w-16 text-right">{v.count} · {formatDuration(v.minutes)}</span>
                 </div>
               ))}
             </div>
@@ -136,28 +111,36 @@ export function StatsView() {
         </Card>
       </div>
 
-      <Card className="p-4">
-        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-          <Trophy className="size-4 text-amber-500" /> Scoring events (today)
-        </h3>
-        {gamification.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-6 text-center">No scoring events yet. Complete tasks, finish triage, and respect anchors to earn points.</p>
-        ) : (
-          <div className="space-y-1 max-h-64 overflow-y-auto">
-            {gamification.map((g) => (
-              <div key={g.id} className="flex items-center justify-between py-1.5 border-b last:border-0 text-xs">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Badge variant="outline" className="text-[10px] capitalize">{g.type.replace('_', ' ')}</Badge>
-                  <span className="text-muted-foreground truncate">{g.note ?? '—'}</span>
-                </div>
-                <span className={cn('font-semibold tabular-nums', g.points > 0 ? 'text-emerald-600' : 'text-rose-600')}>
-                  {g.points > 0 ? '+' : ''}{g.points}
-                </span>
-              </div>
-            ))}
+      {/* Scoring events table */}
+      {gamification.length > 0 && (
+        <Card className="p-2.5">
+          <h3 className="text-[11px] font-semibold mb-2 flex items-center gap-1.5">
+            <Trophy className="size-3 text-amber-500" /> Scoring events
+          </h3>
+          <div className="max-h-40 overflow-y-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-border text-[9px] text-muted-foreground uppercase tracking-wide">
+                  <th className="px-1.5 py-0.5">Type</th>
+                  <th className="px-1.5 py-0.5">Note</th>
+                  <th className="px-1.5 py-0.5 text-right">Pts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gamification.map((g) => (
+                  <tr key={g.id} className="border-b border-border/30 last:border-0">
+                    <td className="px-1.5 py-1 text-[10px] capitalize text-muted-foreground">{g.type.replace('_', ' ')}</td>
+                    <td className="px-1.5 py-1 text-[10px] truncate max-w-[200px] text-muted-foreground">{g.note ?? '—'}</td>
+                    <td className={cn('px-1.5 py-1 text-[10px] font-semibold tabular-nums text-right', g.points > 0 ? 'text-emerald-600' : 'text-rose-600')}>
+                      {g.points > 0 ? '+' : ''}{g.points}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }

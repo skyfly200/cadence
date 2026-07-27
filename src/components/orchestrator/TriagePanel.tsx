@@ -1,11 +1,9 @@
 'use client';
 
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarClock, Lightbulb, Trash2, AlertTriangle } from 'lucide-react';
+import { CalendarClock, Lightbulb, Trash2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CATEGORY_COLORS, EISENHOWER_LABELS } from '@/lib/types';
 import { formatDuration } from '@/lib/time-utils';
@@ -25,83 +23,83 @@ export function TriagePanel() {
   const handleResolve = async (taskId: string, action: 'schedule_today' | 'incubator' | 'delete', title: string) => {
     await resolveTriageItem(taskId, action);
     setResolved((r) => r + 1);
-    const labels = { schedule_today: 'scheduled for today', incubator: 'sent to incubator', delete: 'deleted' };
-    toast({ title: `Task ${labels[action]}`, description: title });
+    const labels = { schedule_today: '→ today', incubator: '→ incubator', delete: 'deleted' };
+    toast({ title: `${title} ${labels[action]}` });
   };
 
   const completeTriage = async () => {
     await setCapacity({ triageCompleted: true, triageStreak: (capacity?.triageStreak ?? 0) + 1 });
     await awardPoints('triage_streak', 15, 'Completed morning triage ritual');
-    toast({ title: 'Triage complete', description: '+15 points · streak extended' });
+    toast({ title: 'Triage complete', description: '+15 pts · streak++' });
   };
 
   if (triageTasks.length === 0 && resolved === 0) {
     return (
-      <Card className="p-6 text-center">
-        <CalendarClock className="size-8 mx-auto text-emerald-500 mb-2" />
-        <h3 className="text-sm font-semibold">No rollover triage</h3>
-        <p className="text-xs text-muted-foreground mt-1">
-          Unfinished tasks move here at midnight for explicit review — never auto-rolled.
-        </p>
-      </Card>
+      <div className="py-6 text-center text-xs text-muted-foreground">
+        <CheckCircle2 className="size-4 mx-auto mb-1 text-emerald-500" />
+        No rollover triage — unfinished tasks move here at midnight for review.
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <Card className="p-4 border-amber-500/30 bg-amber-500/5">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="size-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold">Morning Triage Queue</h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              {triageTasks.length} task{triageTasks.length !== 1 ? 's' : ''} rolled over from yesterday. Decide what stays, what incubates, what goes.
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {triageTasks.map((task) => {
-          const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
-          const eisen = EISENHOWER_LABELS[task.eisenhowerCategory];
-          return (
-            <Card key={task.id} className="p-4">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <h4 className="text-sm font-medium">{task.title}</h4>
-                {task.rolledOverCount > 0 && (
-                  <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-500/40 bg-amber-500/10 shrink-0">
-                    ×{task.rolledOverCount} rollover
-                  </Badge>
-                )}
-              </div>
-              {task.notes && <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{task.notes}</p>}
-              <div className="flex flex-wrap items-center gap-1.5 mb-3">
-                <Badge variant="outline" className={cn('text-[10px]', catColor)}>{task.category}</Badge>
-                <Badge variant="outline" className="text-[10px]">{formatDuration(task.estimatedMinutes)}</Badge>
-                <Badge variant="outline" className="text-[10px]">{eisen.short}</Badge>
-              </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                <Button size="sm" variant="default" className="h-8 text-xs" onClick={() => handleResolve(task.id, 'schedule_today', task.title)}>
-                  <CalendarClock className="size-3" /> Today
-                </Button>
-                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => handleResolve(task.id, 'incubator', task.title)}>
-                  <Lightbulb className="size-3" /> Incubate
-                </Button>
-                <Button size="sm" variant="ghost" className="h-8 text-xs text-destructive hover:text-destructive" onClick={() => handleResolve(task.id, 'delete', task.title)}>
-                  <Trash2 className="size-3" /> Delete
-                </Button>
-              </div>
-            </Card>
-          );
-        })}
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold">{triageTasks.length} task{triageTasks.length !== 1 ? 's' : ''} to triage</span>
+        {triageTasks.length > 0 && (
+          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => void completeTriage()}>
+            Complete triage (+15 pts)
+          </Button>
+        )}
       </div>
 
-      {triageTasks.length > 0 && (
-        <Button onClick={() => void completeTriage()} className="w-full">
-          Mark triage complete (+15 pts · streak++)
-        </Button>
-      )}
+      <div className="rounded-md border overflow-hidden">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b border-border text-[10px] text-muted-foreground uppercase tracking-wide">
+              <th className="px-2 py-1">Task</th>
+              <th className="px-2 py-1">Cat</th>
+              <th className="px-2 py-1">Est</th>
+              <th className="px-2 py-1">Eis</th>
+              <th className="px-2 py-1 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {triageTasks.map((task) => {
+              const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
+              const eisen = EISENHOWER_LABELS[task.eisenhowerCategory];
+              return (
+                <tr key={task.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+                  <td className="px-2 py-1.5 min-w-0">
+                    <div className="text-xs font-medium truncate max-w-[200px] sm:max-w-[280px]">{task.title}</div>
+                    {task.notes && <div className="text-[10px] text-muted-foreground truncate">{task.notes}</div>}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span className={cn('text-[9px] rounded px-1 py-px font-medium', catColor)}>{task.category}</span>
+                  </td>
+                  <td className="px-2 py-1.5 text-[10px] text-muted-foreground tabular-nums">{formatDuration(task.estimatedMinutes)}</td>
+                  <td className="px-2 py-1.5">
+                    <span className="inline-block rounded border border-border/60 px-1 py-px text-[9px] text-muted-foreground">{eisen.short}</span>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <div className="flex items-center justify-end gap-0.5">
+                      <Button size="sm" variant="default" className="h-5 text-[9px] px-1.5 gap-0.5" onClick={() => handleResolve(task.id, 'schedule_today', task.title)}>
+                        <CalendarClock className="size-2.5" /> Today
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-5 text-[9px] px-1.5 gap-0.5" onClick={() => handleResolve(task.id, 'incubator', task.title)}>
+                        <Lightbulb className="size-2.5" /> Incubate
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-5 text-[9px] px-1.5 text-destructive hover:text-destructive gap-0.5" onClick={() => handleResolve(task.id, 'delete', task.title)}>
+                        <Trash2 className="size-2.5" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -110,19 +110,19 @@ export default function Home() {
       </Dialog>
 
       {/* Main */}
-      <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <main className="flex-1 mx-auto w-full max-w-7xl px-3 py-2">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-2">
           <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto">
-            <TabsTrigger value="dashboard" className="flex flex-col sm:flex-row gap-1 py-2 text-xs">
-              <LayoutDashboard className="size-3.5" />
+            <TabsTrigger value="dashboard" className="flex flex-col sm:flex-row gap-0.5 py-1.5 text-[10px] sm:text-xs">
+              <LayoutDashboard className="size-3" />
               <span>Dashboard</span>
             </TabsTrigger>
-            <TabsTrigger value="timeline" className="flex flex-col sm:flex-row gap-1 py-2 text-xs">
-              <Calendar className="size-3.5" />
+            <TabsTrigger value="timeline" className="flex flex-col sm:flex-row gap-0.5 py-1.5 text-[10px] sm:text-xs">
+              <Calendar className="size-3" />
               <span>Timeline</span>
             </TabsTrigger>
-            <TabsTrigger value="backlog" className="flex flex-col sm:flex-row gap-1 py-2 text-xs relative">
-              <Inbox className="size-3.5" />
+            <TabsTrigger value="backlog" className="flex flex-col sm:flex-row gap-0.5 py-1.5 text-[10px] sm:text-xs relative">
+              <Inbox className="size-3" />
               <span>Backlog</span>
               {backlogCount > 0 && (
                 <span className="absolute -top-1 -right-1 size-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center font-bold">
@@ -130,8 +130,8 @@ export default function Home() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="incubator" className="flex flex-col sm:flex-row gap-1 py-2 text-xs">
-              <Sparkles className="size-3.5" />
+            <TabsTrigger value="incubator" className="flex flex-col sm:flex-row gap-0.5 py-1.5 text-[10px] sm:text-xs">
+              <Sparkles className="size-3" />
               <span>Incubator</span>
               {incubatorCount > 0 && (
                 <span className="absolute -top-1 -right-1 size-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center font-bold">
@@ -139,8 +139,8 @@ export default function Home() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="triage" className="flex flex-col sm:flex-row gap-1 py-2 text-xs relative">
-              <AlertTriangle className="size-3.5" />
+            <TabsTrigger value="triage" className="flex flex-col sm:flex-row gap-0.5 py-1.5 text-[10px] sm:text-xs relative">
+              <AlertTriangle className="size-3" />
               <span>Triage</span>
               {triageCount > 0 && (
                 <span className="absolute -top-1 -right-1 size-4 rounded-full bg-amber-500 text-white text-[9px] flex items-center justify-center font-bold">
@@ -148,8 +148,8 @@ export default function Home() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="stats" className="flex flex-col sm:flex-row gap-1 py-2 text-xs">
-              <BarChart3 className="size-3.5" />
+            <TabsTrigger value="stats" className="flex flex-col sm:flex-row gap-0.5 py-1.5 text-[10px] sm:text-xs">
+              <BarChart3 className="size-3" />
               <span>Stats</span>
             </TabsTrigger>
           </TabsList>
@@ -175,8 +175,8 @@ export default function Home() {
         </Tabs>
 
         {/* Settings collapses into a small card at the bottom */}
-        <details className="mt-6 group">
-          <summary className="cursor-pointer inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground">
+        <details className="mt-4 group">
+          <summary className="cursor-pointer inline-flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground">
             <SettingsIcon className="size-3.5" />
             Settings & anchor configuration
           </summary>
@@ -188,7 +188,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t bg-background mt-auto">
-        <div className="mx-auto max-w-7xl px-4 py-3">
+        <div className="mx-auto max-w-7xl px-3 py-2">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-muted-foreground">
             <p>Local-first · capacity-aware · no auto-rollover</p>
             <p className="flex items-center gap-1">

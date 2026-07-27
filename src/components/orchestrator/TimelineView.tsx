@@ -6,7 +6,6 @@ import {
   useDraggable, useDroppable, type DragStartEvent, type DragEndEvent,
 } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Trash2, Lock, Calendar, Plus } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import {
@@ -248,18 +247,15 @@ export function TimelineView() {
 
   return (
     <Card className="p-0 overflow-hidden flex flex-col h-full">
-      <div className="flex items-center justify-between p-3 border-b shrink-0">
-        <div>
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            <Calendar className="size-4" /> Today&apos;s Timeline
-          </h3>
-          <p className="text-xs text-muted-foreground">Drag tasks from the backlog · anchors are locked</p>
+      <div className="flex items-center justify-between px-2.5 py-1.5 border-b shrink-0">
+        <div className="flex items-center gap-1.5">
+          <Calendar className="size-3.5" />
+          <h3 className="text-[11px] font-semibold">Timeline</h3>
+          <span className="text-[9px] text-muted-foreground">drag tasks · anchors locked</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs">
-            {timeBlocks.filter((b) => !b.isAnchor).length} scheduled · {timeBlocks.filter((b) => b.isAnchor).length} anchors
-          </Badge>
-        </div>
+        <span className="text-[9px] text-muted-foreground tabular-nums">
+          {timeBlocks.filter((b) => !b.isAnchor).length} scheduled · {timeBlocks.filter((b) => b.isAnchor).length} anchors
+        </span>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ maxHeight: '70vh' }}>

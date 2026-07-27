@@ -3,8 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Play, Pause, Square, Timer as TimerIcon, Brain } from 'lucide-react';
+import { Play, Square, Timer as TimerIcon, Brain } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { formatSeconds } from '@/lib/time-utils';
 import { cn } from '@/lib/utils';
@@ -23,30 +22,21 @@ export function TimerPanel() {
   const [now, setNow] = useState(Date.now());
   const persistRef = useRef<number | null>(null);
 
-  // Resilient ticking — uses delta from startTimestamp, survives tab sleep
   useEffect(() => {
-    const id = setInterval(() => {
-      setNow(Date.now());
-      tickTimer();
-    }, TICK_MS);
+    const id = setInterval(() => { setNow(Date.now()); tickTimer(); }, TICK_MS);
     return () => clearInterval(id);
   }, [tickTimer]);
 
-  // Persist active timer to localStorage every 5s for crash recovery
   useEffect(() => {
     if (activeTimer) {
       persistRef.current = window.setInterval(() => {
-        try {
-          localStorage.setItem(PERSIST_KEY, JSON.stringify(activeTimer));
-        } catch { /* noop */ }
+        try { localStorage.setItem(PERSIST_KEY, JSON.stringify(activeTimer)); } catch { /* noop */ }
       }, 5000) as unknown as number;
     } else {
       if (persistRef.current) clearInterval(persistRef.current);
       try { localStorage.removeItem(PERSIST_KEY); } catch { /* noop */ }
     }
-    return () => {
-      if (persistRef.current) clearInterval(persistRef.current);
-    };
+    return () => { if (persistRef.current) clearInterval(persistRef.current); };
   }, [activeTimer]);
 
   const task = activeTimer ? tasks.find((t) => t.id === activeTimer.taskId) : null;
@@ -59,73 +49,58 @@ export function TimerPanel() {
 
   const handleStop = (interrupted: boolean) => {
     void stopTimer(interrupted);
-    toast({ title: interrupted ? 'Session interrupted' : 'Session complete', description: `${formatSeconds(elapsed)} of focus logged` });
+    toast({ title: interrupted ? 'Stopped' : 'Complete', description: formatSeconds(elapsed) });
   };
 
   return (
-    <Card className={cn('p-4', activeTimer && 'ring-2 ring-primary/40')}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          {activeTimer?.type === 'pomodoro' ? <TimerIcon className="size-4" /> : <Brain className="size-4" />}
-          <h3 className="text-sm font-semibold">Focus Timer</h3>
+    <Card className={cn('p-2.5', activeTimer && 'ring-1 ring-primary/40')}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          {activeTimer?.type === 'pomodoro' ? <TimerIcon className="size-3.5" /> : <Brain className="size-3.5" />}
+          <span className="text-[11px] font-semibold">Timer</span>
         </div>
-        {activeTimer && (
-          <Badge variant="outline" className="text-[10px] capitalize">
-            {activeTimer.type.replace('_', ' ')}
-          </Badge>
-        )}
+        {activeTimer && <span className="text-[9px] text-muted-foreground capitalize">{activeTimer.type.replace('_', ' ')}</span>}
       </div>
 
       {activeTimer && task ? (
-        <div className="space-y-3">
-          <p className="text-xs text-muted-foreground truncate">
-            Working on: <span className="font-medium text-foreground">{task.title}</span>
+        <div className="space-y-2">
+          <p className="text-[10px] text-muted-foreground truncate">
+            {task.title}
           </p>
           <div className="text-center">
-            <div className="font-mono text-4xl font-bold tabular-nums">
-              {formatSeconds(elapsed)}
-            </div>
+            <div className="font-mono text-2xl font-bold tabular-nums leading-none">{formatSeconds(elapsed)}</div>
             {remaining !== null && (
-              <div className={cn('mt-1 text-xs', remaining < 60 ? 'text-rose-600' : 'text-muted-foreground')}>
-                {remaining > 0 ? `${formatSeconds(remaining)} remaining` : 'completing…'}
+              <div className={cn('mt-0.5 text-[10px]', remaining < 60 ? 'text-rose-600' : 'text-muted-foreground')}>
+                {remaining > 0 ? `${formatSeconds(remaining)} left` : 'done'}
               </div>
             )}
           </div>
-          <div className="flex justify-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => handleStop(true)}>
-              <Square className="size-3" /> Stop & discard
+          <div className="flex justify-center gap-1.5">
+            <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => handleStop(true)}>
+              <Square className="size-2.5" /> Stop
             </Button>
-            <Button size="sm" onClick={() => handleStop(false)}>
-              <Pause className="size-3" /> Complete
+            <Button size="sm" className="h-6 text-[10px] px-2" onClick={() => handleStop(false)}>
+              Complete
             </Button>
           </div>
         </div>
       ) : (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">No active session. Pick a task and press Start.</p>
-          <div className="flex flex-col gap-2">
-            <Button
-              size="sm" variant="outline"
-              onClick={() => {
-                const t = tasks.find((x) => x.status === 'today');
-                if (!t) {
-                  toast({ title: 'No tasks scheduled for today', variant: 'destructive' });
-                  return;
-                }
-                void startTimer(t.id, 'pomodoro');
-              }}
-            >
-              <TimerIcon className="size-3" /> Start Pomodoro (next today task)
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-muted-foreground">No active session.</p>
+          <div className="flex flex-col gap-1">
+            <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => {
+              const t = tasks.find((x) => x.status === 'today');
+              if (!t) { toast({ title: 'No today tasks', variant: 'destructive' }); return; }
+              void startTimer(t.id, 'pomodoro');
+            }}>
+              <TimerIcon className="size-2.5" /> Start Pomodoro
             </Button>
-            <Button
-              size="sm" variant="ghost"
-              onClick={() => {
-                const t = tasks.find((x) => x.status === 'today');
-                if (!t) return;
-                void startTimer(t.id, 'open_flow');
-              }}
-            >
-              <Brain className="size-3" /> Open Flow (untimed)
+            <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => {
+              const t = tasks.find((x) => x.status === 'today');
+              if (!t) return;
+              void startTimer(t.id, 'open_flow');
+            }}>
+              <Brain className="size-2.5" /> Open Flow
             </Button>
           </div>
         </div>
