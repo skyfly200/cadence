@@ -100,39 +100,37 @@ export function VoiceInput() {
         }
         setState('transcribing');
         try {
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            const base64 = reader.result as string;
-            try {
-              const r = await fetch('/api/voice/transcribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ audio: base64, mimeType: mimeType || 'audio/webm' }),
-              });
-              const data = await r.json();
-              if (!r.ok) throw new Error(data?.error || 'Transcription failed');
-              const text = (data?.text ?? '').trim();
-              if (text) {
-                setTranscript(text);
-                setState('idle');
-                toast({ title: 'Transcribed', description: text.slice(0, 80) + (text.length > 80 ? '…' : '') });
-              } else {
-                setState('error');
-                setErrorMsg('Transcription returned empty text. Try speaking more clearly.');
-              }
-            } catch (err) {
-              setState('error');
-              setErrorMsg(err instanceof Error ? err.message : 'Transcription failed');
-            }
-          };
-          reader.onerror = () => {
+          // Read blob as ArrayBuffer → convert to clean base64 (no data: prefix issues)
+          const arrayBuffer = await blob.arrayBuffer();
+          const uint8 = new Uint8Array(arrayBuffer);
+          // Use chunked btoa to avoid stack overflow on large recordings
+          const chunkSize = 0x8000; // 32KB chunks
+          let binary = '';
+          for (let i = 0; i < uint8.length; i += chunkSize) {
+            const chunk = uint8.subarray(i, i + chunkSize);
+            binary += String.fromCharCode.apply(null, Array.from(chunk));
+          }
+          const base64 = btoa(binary);
+
+          const r = await fetch('/api/voice/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audio: base64, mimeType: mimeType || 'audio/webm' }),
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data?.error || 'Transcription failed');
+          const text = (data?.text ?? '').trim();
+          if (text) {
+            setTranscript(text);
+            setState('idle');
+            toast({ title: 'Transcribed', description: text.slice(0, 80) + (text.length > 80 ? '…' : '') });
+          } else {
             setState('error');
-            setErrorMsg('Could not read audio data.');
-          };
-          reader.readAsDataURL(blob);
+            setErrorMsg('Transcription returned empty text. Try speaking more clearly.');
+          }
         } catch (err) {
           setState('error');
-          setErrorMsg(err instanceof Error ? err.message : 'Unknown recording error');
+          setErrorMsg(err instanceof Error ? err.message : 'Transcription failed');
         }
       };
       recorder.start();

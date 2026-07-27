@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 // Transcribe audio base64 via z-ai-web-dev-sdk ASR
-// Accepts: { audio: <base64 string>, mimeType: "audio/webm"|"audio/wav"|... }
+// Accepts: { audio: <base64 string>, mimeType?: string }
 // Returns: { text: string }
 export async function POST(req: NextRequest) {
   try {
@@ -16,13 +16,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'audio (base64) required' }, { status: 400 });
     }
 
-    // Strip data-URL prefix if present
-    const base64 = audio.replace(/^data:audio\/[a-z]+;base64,/, '');
+    // Strip data-URL prefix if present (handles any mime type + params)
+    const base64 = audio.replace(/^data:[^;]*;base64,/, '');
+
+    // Quick sanity check: valid base64 only contains [A-Za-z0-9+/=]
+    if (!/^[A-Za-z0-9+/=\s]+$/.test(base64)) {
+      return NextResponse.json(
+        { error: `Invalid base64 data. First 20 chars: "${base64.slice(0, 20)}"`, text: '' },
+        { status: 400 },
+      );
+    }
 
     const zai = await ZAI.create();
     const response = await zai.audio.asr.create({
       file_base64: base64,
-      // mime type hint not strictly required by SDK, but include if provided
       ...(mimeType ? { mime_type: mimeType } : {}),
     });
 
