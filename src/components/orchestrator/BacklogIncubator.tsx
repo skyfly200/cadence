@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Inbox, Lightbulb, Plus, Search, Grid2x2, List as ListIcon,
-  Pencil, Trash2, Clock, Play, ArrowUpRight,
+  Pencil, Trash2, Play, ArrowUpRight,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { TaskFormDialog } from './TaskFormDialog';
@@ -130,6 +130,38 @@ function QuadrantTable({ tasks, onEdit, category }: { tasks: Task[]; onEdit: (t:
   );
 }
 
+/* ── Eisenhower Matrix with axis labels ── */
+function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) => void }) {
+  const grouped = useMemo(() => {
+    const map: Record<EisenhowerCategory, Task[]> = { do_first: [], schedule: [], delegate: [], eliminate: [] };
+    for (const t of tasks) map[t.eisenhowerCategory].push(t);
+    return map;
+  }, [tasks]);
+
+  return (
+    <div className="grid grid-cols-[auto_1fr_1fr] grid-rows-[auto_1fr_1fr] gap-1.5 items-start">
+      {/* Column headers — Urgent / Not Urgent */}
+      <div />
+      <div className="text-[10px] font-semibold text-muted-foreground text-center pb-0.5">⚡ Urgent</div>
+      <div className="text-[10px] font-semibold text-muted-foreground text-center pb-0.5">🌙 Not Urgent</div>
+
+      {/* Row 1 — Important: Do First | Schedule */}
+      <div className="flex items-center justify-center">
+        <span className="text-[10px] font-semibold text-muted-foreground -rotate-90 whitespace-nowrap origin-center">★ Important</span>
+      </div>
+      <QuadrantTable tasks={grouped.do_first} onEdit={onEdit} category="do_first" />
+      <QuadrantTable tasks={grouped.schedule} onEdit={onEdit} category="schedule" />
+
+      {/* Row 2 — Not Important: Delegate | Eliminate */}
+      <div className="flex items-center justify-center">
+        <span className="text-[10px] font-semibold text-muted-foreground -rotate-90 whitespace-nowrap origin-center">☆ Less Impt.</span>
+      </div>
+      <QuadrantTable tasks={grouped.delegate} onEdit={onEdit} category="delegate" />
+      <QuadrantTable tasks={grouped.eliminate} onEdit={onEdit} category="eliminate" />
+    </div>
+  );
+}
+
 /* ── Main component ── */
 interface Props {
   variant: 'backlog' | 'incubator';
@@ -187,11 +219,7 @@ export function BacklogIncubator({ variant }: Props) {
           {query ? 'No matches' : 'Empty — add tasks above or capture via voice'}
         </div>
       ) : isBacklog && view === 'matrix' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {(['do_first', 'schedule', 'delegate', 'eliminate'] as EisenhowerCategory[]).map((q) => (
-            <QuadrantTable key={q} tasks={filtered.filter((t) => t.eisenhowerCategory === q)} onEdit={(t) => { setEditTask(t); setCreateOpen(true); }} category={q} />
-          ))}
-        </div>
+        <EisenhowerMatrix tasks={filtered} onEdit={(t) => { setEditTask(t); setCreateOpen(true); }} />
       ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
