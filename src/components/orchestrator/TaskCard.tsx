@@ -42,7 +42,7 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
     return (
       <Card
         className={cn(
-          'group flex items-center gap-2 px-2.5 py-1.5 transition-all hover:shadow-md',
+          'group flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1.5 sm:py-2 transition-all hover:shadow-md',
           draggable && 'cursor-grab active:cursor-grabbing',
           task.status === 'completed' && 'opacity-60',
         )}
@@ -50,7 +50,7 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
         <Checkbox
           checked={task.status === 'completed'}
           onCheckedChange={handleToggleComplete}
-          className="shrink-0"
+          className="size-3.5 sm:size-4 shrink-0"
           aria-label={`Complete ${task.title}`}
         />
         <span className={cn(
@@ -59,7 +59,7 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
         )}>
           {task.title}
         </span>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="hidden sm:flex items-center gap-1 shrink-0">
           <Badge variant="outline" className={cn('text-[9px] px-1.5 py-0', catColor)}>
             {task.category}
           </Badge>
@@ -75,22 +75,22 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
         {showActions && (
           <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
             {task.status !== 'completed' && (
-              <Button size="icon" variant="ghost" className="size-6" onClick={handleStartTimer} aria-label="Start timer">
-                <Play className="size-2.5" />
+              <Button size="icon" variant="ghost" className="size-6 sm:size-7" onClick={handleStartTimer} aria-label="Start timer">
+                <Play className="size-3" />
               </Button>
             )}
             {onEdit && (
-              <Button size="icon" variant="ghost" className="size-6" onClick={() => onEdit(task)} aria-label="Edit">
-                <Pencil className="size-2.5" />
+              <Button size="icon" variant="ghost" className="size-6 sm:size-7" onClick={() => onEdit(task)} aria-label="Edit">
+                <Pencil className="size-3" />
               </Button>
             )}
             {task.status !== 'today' && task.status !== 'completed' && (
-              <Button size="icon" variant="ghost" className="size-6" onClick={() => void updateTask(task.id, { status: 'today' })} title="Move to today" aria-label="Move to today">
-                <ArrowUpRight className="size-2.5" />
+              <Button size="icon" variant="ghost" className="size-6 sm:size-7" onClick={() => void updateTask(task.id, { status: 'today' })} title="Move to today" aria-label="Move to today">
+                <ArrowUpRight className="size-3" />
               </Button>
             )}
-            <Button size="icon" variant="ghost" className="size-6 text-destructive hover:text-destructive" onClick={handleDelete} aria-label="Delete">
-              <Trash2 className="size-2.5" />
+            <Button size="icon" variant="ghost" className="size-6 sm:size-7 text-destructive hover:text-destructive" onClick={handleDelete} aria-label="Delete">
+              <Trash2 className="size-3" />
             </Button>
           </div>
         )}
@@ -101,7 +101,7 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
   return (
     <Card
       className={cn(
-        'group relative p-3 transition-all hover:shadow-md',
+        'group relative p-2.5 sm:p-3 transition-all hover:shadow-md',
         draggable && 'cursor-grab active:cursor-grabbing',
         task.status === 'completed' && 'opacity-60',
       )}
@@ -110,7 +110,7 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
         <Checkbox
           checked={task.status === 'completed'}
           onCheckedChange={handleToggleComplete}
-          className="mt-0.5"
+          className="mt-0.5 size-4 sm:size-4"
           aria-label={`Complete ${task.title}`}
         />
         <div className="min-w-0 flex-1">
@@ -132,7 +132,7 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
           {task.notes && (
             <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{task.notes}</p>
           )}
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <div className="mt-1.5 sm:mt-2 flex flex-wrap items-center gap-1 sm:gap-1.5">
             <Badge variant="outline" className={cn('text-[10px] font-medium', catColor)}>
               {task.category}
             </Badge>
@@ -144,7 +144,7 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
                 {formatDuration(task.actualMinutes)} done
               </Badge>
             )}
-            <Badge variant="outline" className="text-[10px]" title={`${eisen.label}: ${eisen.urgent ? 'urgent' : 'not urgent'} / ${eisen.important ? 'important' : 'not important'}`}>
+            <Badge variant="outline" className="text-[10px] hidden sm:inline-flex" title={`${eisen.label}: ${eisen.urgent ? 'urgent' : 'not urgent'} / ${eisen.important ? 'important' : 'not important'}`}>
               {eisen.short}
             </Badge>
           </div>
@@ -152,27 +152,27 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
       </div>
 
       {showActions && (
-        <div className="mt-2 flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        <div className="mt-1.5 sm:mt-2 flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
           {task.status !== 'completed' && (
-            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={handleStartTimer}>
+            <Button size="sm" variant="ghost" className="h-7 sm:h-7 text-xs" onClick={handleStartTimer}>
               <Play className="size-3" /> Start
             </Button>
           )}
           {onEdit && (
-            <Button size="sm" variant="ghost" className="h-7" onClick={() => onEdit(task)} aria-label="Edit">
+            <Button size="sm" variant="ghost" className="h-7 sm:h-7" onClick={() => onEdit(task)} aria-label="Edit">
               <Pencil className="size-3" />
             </Button>
           )}
           {task.status !== 'today' && task.status !== 'completed' && (
             <Button
-              size="sm" variant="ghost" className="h-7 text-xs"
+              size="sm" variant="ghost" className="h-7 sm:h-7 text-xs"
               onClick={() => void updateTask(task.id, { status: 'today' })}
               title="Move to today"
             >
               <ArrowUpRight className="size-3" /> Today
             </Button>
           )}
-          <Button size="sm" variant="ghost" className="h-7 text-destructive hover:text-destructive" onClick={handleDelete} aria-label="Delete">
+          <Button size="sm" variant="ghost" className="h-7 sm:h-7 text-destructive hover:text-destructive" onClick={handleDelete} aria-label="Delete">
             <Trash2 className="size-3" />
           </Button>
         </div>

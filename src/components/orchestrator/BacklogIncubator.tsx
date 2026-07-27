@@ -54,40 +54,40 @@ function TaskRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
 
   return (
     <tr className="group border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-      <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 w-6">
+      <td className="px-1 md:px-1.5 py-1 md:py-1.5 w-6 sm:w-7">
         <Checkbox
           checked={task.status === 'completed'}
           onCheckedChange={(v) => v ? void completeTask(task.id) : void uncompleteTask(task.id)}
-          className="size-3.5"
+          className="size-3.5 sm:size-4"
           aria-label={`Complete ${task.title}`}
         />
       </td>
-      <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 min-w-0">
+      <td className="px-1 md:px-1.5 py-1 md:py-1.5 min-w-0">
         <span className={cn(
-          'block text-xs font-medium truncate max-w-[200px] sm:max-w-[320px] lg:max-w-[480px]',
+          'block text-xs font-medium truncate max-w-[150px] xs:max-w-[220px] sm:max-w-[320px] md:max-w-[480px] lg:max-w-[600px]',
           task.status === 'completed' && 'line-through text-muted-foreground',
         )}>
           {task.title}
         </span>
       </td>
-      <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 text-[10px] whitespace-nowrap">
+      <td className="px-1 md:px-1.5 py-1 md:py-1.5 text-[10px] whitespace-nowrap hidden xs:table-cell">
         <span className={cn('inline-block rounded px-1 py-px font-medium', catColor)}>{task.category}</span>
       </td>
-      <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+      <td className="px-1 md:px-1.5 py-1 md:py-1.5 text-[10px] text-muted-foreground tabular-nums whitespace-nowrap hidden sm:table-cell">
         {formatDuration(task.estimatedMinutes)}
       </td>
-      <td className="px-1 lg:px-1.5 py-0.5 lg:py-1">
+      <td className="px-1 md:px-1.5 py-1 md:py-1.5">
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           {task.status !== 'completed' && (
-            <Button size="icon" variant="ghost" className="size-5" onClick={() => void startTimer(task.id, 'pomodoro')} aria-label="Start timer">
-              <Play className="size-2.5" />
+            <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={() => void startTimer(task.id, 'pomodoro')} aria-label="Start timer">
+              <Play className="size-3" />
             </Button>
           )}
-          <Button size="icon" variant="ghost" className="size-5" onClick={() => onEdit(task)} aria-label="Edit">
-            <Pencil className="size-2.5" />
+          <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={() => onEdit(task)} aria-label="Edit">
+            <Pencil className="size-3" />
           </Button>
-          <Button size="icon" variant="ghost" className="size-5 text-destructive hover:text-destructive" onClick={() => void deleteTask(task.id)} aria-label="Delete">
-            <Trash2 className="size-2.5" />
+          <Button size="icon" variant="ghost" className="size-6 sm:size-6 text-destructive hover:text-destructive" onClick={() => void deleteTask(task.id)} aria-label="Delete">
+            <Trash2 className="size-3" />
           </Button>
         </div>
       </td>
@@ -113,11 +113,11 @@ function DraggableListRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => v
 const TABLE_HEAD = (
   <thead>
     <tr className="border-b border-border text-[10px] text-muted-foreground uppercase tracking-wide">
-      <th className="px-1 lg:px-1.5 py-0.5 text-left w-6"></th>
-      <th className="px-1 lg:px-1.5 py-0.5 text-left">Task</th>
-      <th className="px-1 lg:px-1.5 py-0.5 text-left">Cat</th>
-      <th className="px-1 lg:px-1.5 py-0.5 text-left">Est</th>
-      <th className="px-1 lg:px-1.5 py-0.5 text-right w-24"></th>
+      <th className="px-1 md:px-1.5 py-0.5 text-left w-6 sm:w-7"></th>
+      <th className="px-1 md:px-1.5 py-0.5 text-left">Task</th>
+      <th className="px-1 md:px-1.5 py-0.5 text-left hidden xs:table-cell">Cat</th>
+      <th className="px-1 md:px-1.5 py-0.5 text-left hidden sm:table-cell">Est</th>
+      <th className="px-1 md:px-1.5 py-0.5 text-right w-20 sm:w-24"></th>
     </tr>
   </thead>
 );
@@ -161,40 +161,40 @@ function MatrixRow({
         {...attributes}
         {...listeners}
       >
-        <td className="px-0.5 lg:px-1 py-0.5 lg:py-1 w-4">
+        <td className="px-0.5 md:px-1 py-1 md:py-1.5 w-4 sm:w-5">
           <GripVertical className="size-3 text-muted-foreground/60 mx-auto" />
         </td>
-        <td className="px-0.5 lg:px-1 py-0.5 lg:py-1 w-5">
+        <td className="px-0.5 md:px-1 py-1 md:py-1.5 w-5 sm:w-6">
           <Checkbox
             checked={task.status === 'completed'}
             onCheckedChange={(v) => { if (v) completeTask(task.id); else uncompleteTask(task.id); }}
-            className="size-3.5"
+            className="size-3.5 sm:size-4"
             onClick={(e) => e.stopPropagation()}
             aria-label={`Complete ${task.title}`}
           />
         </td>
-        <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 min-w-0">
+        <td className="px-1 md:px-1.5 py-1 md:py-1.5 min-w-0">
           <span className={cn(
-            'block text-xs font-medium truncate max-w-[200px] sm:max-w-[320px] lg:max-w-[400px]',
+            'block text-xs font-medium truncate max-w-[120px] xs:max-w-[180px] sm:max-w-[260px] md:max-w-[400px] lg:max-w-[500px]',
             task.status === 'completed' && 'line-through text-muted-foreground',
           )}>{task.title}</span>
         </td>
-        <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 text-[10px] whitespace-nowrap">
+        <td className="px-1 md:px-1.5 py-1 md:py-1.5 text-[10px] whitespace-nowrap hidden xs:table-cell">
           <span className={cn('inline-block rounded px-1 py-px font-medium', catColor)}>{task.category}</span>
         </td>
-        <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+        <td className="px-1 md:px-1.5 py-1 md:py-1.5 text-[10px] text-muted-foreground tabular-nums whitespace-nowrap hidden sm:table-cell">
           {formatDuration(task.estimatedMinutes)}
         </td>
-        <td className="px-1 lg:px-1.5 py-0.5 lg:py-1">
+        <td className="px-1 md:px-1.5 py-1 md:py-1.5">
           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button size="icon" variant="ghost" className="size-5" onClick={(e) => { e.stopPropagation(); void useAppStore.getState().startTimer(task.id, 'pomodoro'); }} aria-label="Start timer">
-              <Play className="size-2.5" />
+            <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={(e) => { e.stopPropagation(); void useAppStore.getState().startTimer(task.id, 'pomodoro'); }} aria-label="Start timer">
+              <Play className="size-3" />
             </Button>
-            <Button size="icon" variant="ghost" className="size-5" onClick={(e) => { e.stopPropagation(); onEdit(task); }} aria-label="Edit">
-              <Pencil className="size-2.5" />
+            <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={(e) => { e.stopPropagation(); onEdit(task); }} aria-label="Edit">
+              <Pencil className="size-3" />
             </Button>
-            <Button size="icon" variant="ghost" className="size-5 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); void useAppStore.getState().deleteTask(task.id); }} aria-label="Delete">
-              <Trash2 className="size-2.5" />
+            <Button size="icon" variant="ghost" className="size-6 sm:size-6 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); void useAppStore.getState().deleteTask(task.id); }} aria-label="Delete">
+              <Trash2 className="size-3" />
             </Button>
           </div>
         </td>
@@ -214,10 +214,11 @@ function MatrixRow({
    Quadrant card — droppable zone containing matrix rows
    ═══════════════════════════════════════════════════════════════ */
 function QuadrantTable({
-  tasks, onEdit, category,
+  tasks, onEdit, category, label,
   hoveredCategory, insertIndex,
 }: {
   tasks: Task[]; onEdit: (t: Task) => void; category: EisenhowerCategory;
+  label?: string;
   hoveredCategory: EisenhowerCategory | null;
   insertIndex: number | null;
 }) {
@@ -232,18 +233,23 @@ function QuadrantTable({
     <Card
       ref={setNodeRef}
       className={cn(
-        'p-1.5 lg:p-2 transition-all duration-200',
+        'p-1.5 sm:p-2 md:p-2.5 transition-all duration-200',
         isHovered && 'ring-2 ring-primary/40 bg-primary/[0.03] shadow-sm',
         isOver && !isHovered && 'ring-2 ring-primary/30 bg-primary/[0.02]',
       )}
     >
-      <div className="flex items-center justify-between mb-0.5 lg:mb-1 px-0.5 lg:px-1">
-        <span className="text-[11px] font-semibold">{meta.label}</span>
-        <span className="text-[9px] text-muted-foreground tabular-nums">{tasks.length}</span>
+      <div className="flex items-center justify-between mb-0.5 sm:mb-1 px-0.5 sm:px-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] sm:text-xs font-semibold">{label ?? meta.label}</span>
+          <span className="text-[8px] sm:text-[9px] text-muted-foreground leading-none">
+            {meta.urgent ? '⚡' : '🌙'} {meta.important ? '★' : '☆'}
+          </span>
+        </div>
+        <span className="text-[9px] sm:text-[10px] text-muted-foreground tabular-nums">{tasks.length}</span>
       </div>
       {tasks.length === 0 ? (
         <div className={cn(
-          'py-2 lg:py-3 text-center transition-colors duration-200',
+          'py-2 sm:py-3 md:py-4 text-center transition-colors duration-200',
           isHovered && 'bg-primary/10 rounded-md',
         )}>
           <p className={cn('text-[10px] italic', isHovered ? 'text-primary' : 'text-muted-foreground')}>
@@ -275,7 +281,7 @@ function QuadrantTable({
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Eisenhower Matrix — full DnD with overlay + insertion
+   Eisenhower Matrix — responsive: stacked on mobile, 3×3 grid on md+
    ═══════════════════════════════════════════════════════════════ */
 function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) => void }) {
   const updateTask = useAppStore((s) => s.updateTask);
@@ -402,6 +408,15 @@ function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) 
     toast({ title: 'Moved', description: `${activeTask.title} → ${newLabel}` });
   }, [activeTask, tasks, liveGrouped, updateTask, toast]);
 
+  const quadrantProps = (cat: EisenhowerCategory, label?: string) => ({
+    tasks: liveGrouped[cat],
+    onEdit,
+    category: cat,
+    label,
+    hoveredCategory,
+    insertIndex,
+  });
+
   return (
     <DndContext
       sensors={sensors}
@@ -409,7 +424,16 @@ function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) 
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-[auto_1fr_1fr] grid-rows-[auto_1fr_1fr] gap-1 lg:gap-1.5 items-start">
+      {/* Mobile: stacked vertical list — always visible */}
+      <div className="grid grid-cols-1 gap-1.5 md:hidden">
+        <QuadrantTable {...quadrantProps('do_first')} label="Do First ⚡★" />
+        <QuadrantTable {...quadrantProps('schedule')} label="Schedule 🌙★" />
+        <QuadrantTable {...quadrantProps('delegate')} label="Delegate ⚡☆" />
+        <QuadrantTable {...quadrantProps('eliminate')} label="Eliminate 🌙☆" />
+      </div>
+
+      {/* Desktop: 3×3 grid with rotated row labels */}
+      <div className="hidden md:grid grid-cols-[auto_1fr_1fr] grid-rows-[auto_1fr_1fr] gap-1.5 lg:gap-2 items-start">
         {/* Column headers */}
         <div />
         <div className="text-[10px] font-semibold text-muted-foreground text-center pb-0.5">⚡ Urgent</div>
@@ -419,27 +443,15 @@ function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) 
         <div className="flex items-center justify-center">
           <span className="text-[10px] font-semibold text-muted-foreground -rotate-90 whitespace-nowrap origin-center">★ Important</span>
         </div>
-        <QuadrantTable
-          tasks={liveGrouped.do_first} onEdit={onEdit} category="do_first"
-          hoveredCategory={hoveredCategory} insertIndex={insertIndex}
-        />
-        <QuadrantTable
-          tasks={liveGrouped.schedule} onEdit={onEdit} category="schedule"
-          hoveredCategory={hoveredCategory} insertIndex={insertIndex}
-        />
+        <QuadrantTable {...quadrantProps('do_first')} />
+        <QuadrantTable {...quadrantProps('schedule')} />
 
         {/* Row 2 — Less Important */}
         <div className="flex items-center justify-center">
           <span className="text-[10px] font-semibold text-muted-foreground -rotate-90 whitespace-nowrap origin-center">☆ Less Impt.</span>
         </div>
-        <QuadrantTable
-          tasks={liveGrouped.delegate} onEdit={onEdit} category="delegate"
-          hoveredCategory={hoveredCategory} insertIndex={insertIndex}
-        />
-        <QuadrantTable
-          tasks={liveGrouped.eliminate} onEdit={onEdit} category="eliminate"
-          hoveredCategory={hoveredCategory} insertIndex={insertIndex}
-        />
+        <QuadrantTable {...quadrantProps('delegate')} />
+        <QuadrantTable {...quadrantProps('eliminate')} />
       </div>
 
       <DragOverlay dropAnimation={{ duration: 200 }}>
@@ -477,38 +489,38 @@ export function BacklogIncubator({ variant }: Props) {
   return (
     <div className="space-y-2">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-1.5 lg:gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
         <div className="flex items-center gap-1.5 text-muted-foreground">
-          <Icon className="size-3.5" />
-          <span className="text-xs font-semibold text-foreground">{title}</span>
+          <Icon className="size-3.5 sm:size-4" />
+          <span className="text-xs sm:text-sm font-semibold text-foreground">{title}</span>
           <span className="text-[10px] tabular-nums">({filtered.length})</span>
         </div>
-        <div className="relative flex-1 min-w-[120px] max-w-xs">
+        <div className="relative flex-1 min-w-[100px] sm:min-w-[120px] max-w-xs">
           <Search className="absolute left-1.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={`Search…`}
-            className="h-6 pl-6 text-[11px] bg-muted/50 border-border/50"
+            className="h-7 sm:h-6 pl-6 text-[11px] bg-muted/50 border-border/50"
           />
         </div>
         {isBacklog && (
           <ToggleGroup type="single" value={view} onValueChange={(v) => v && setView(v as 'matrix' | 'list')} size="sm">
-            <ToggleGroupItem value="matrix" aria-label="Matrix view" className="size-6"><Grid2x2 className="size-3" /></ToggleGroupItem>
-            <ToggleGroupItem value="list" aria-label="List view" className="size-6"><ListIcon className="size-3" /></ToggleGroupItem>
+            <ToggleGroupItem value="matrix" aria-label="Matrix view" className="size-7 sm:size-6"><Grid2x2 className="size-3" /></ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="List view" className="size-7 sm:size-6"><ListIcon className="size-3" /></ToggleGroupItem>
           </ToggleGroup>
         )}
-        <Button size="sm" variant="outline" className="h-6 text-[11px] px-2 gap-1" onClick={() => setImportOpen(true)}>
-          <FileText className="size-3" /> Import
+        <Button size="sm" variant="outline" className="h-7 sm:h-6 text-[11px] px-2 sm:px-2 gap-1" onClick={() => setImportOpen(true)}>
+          <FileText className="size-3" /> <span className="hidden xs:inline">Import</span>
         </Button>
-        <Button size="sm" variant="outline" className="h-6 text-[11px] px-2 gap-1" onClick={() => { setEditTask(null); setCreateOpen(true); }}>
+        <Button size="sm" variant="outline" className="h-7 sm:h-6 text-[11px] px-2 sm:px-2 gap-1" onClick={() => { setEditTask(null); setCreateOpen(true); }}>
           <Plus className="size-3" /> Add
         </Button>
       </div>
 
       {/* Content */}
       {filtered.length === 0 ? (
-        <div className="py-6 text-center text-xs text-muted-foreground">
+        <div className="py-6 sm:py-8 text-center text-xs text-muted-foreground">
           {query ? 'No matches' : 'Empty — add tasks above or capture via voice'}
         </div>
       ) : isBacklog && view === 'matrix' ? (

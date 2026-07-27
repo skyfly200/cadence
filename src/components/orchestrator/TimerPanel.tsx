@@ -53,49 +53,49 @@ export function TimerPanel() {
   };
 
   return (
-    <Card className={cn('p-2.5', activeTimer && 'ring-1 ring-primary/40')}>
-      <div className="flex items-center justify-between mb-2">
+    <Card className={cn('p-2 sm:p-2.5', activeTimer && 'ring-1 ring-primary/40')}>
+      <div className="flex items-center justify-between mb-1.5 sm:mb-2">
         <div className="flex items-center gap-1.5">
           {activeTimer?.type === 'pomodoro' ? <TimerIcon className="size-3.5" /> : <Brain className="size-3.5" />}
-          <span className="text-[11px] font-semibold">Timer</span>
+          <span className="text-[11px] sm:text-xs font-semibold">Timer</span>
         </div>
         {activeTimer && <span className="text-[9px] text-muted-foreground capitalize">{activeTimer.type.replace('_', ' ')}</span>}
       </div>
 
       {activeTimer && task ? (
-        <div className="space-y-2">
-          <p className="text-[10px] text-muted-foreground truncate">
+        <div className="space-y-1.5 sm:space-y-2">
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
             {task.title}
           </p>
           <div className="text-center">
-            <div className="font-mono text-2xl font-bold tabular-nums leading-none">{formatSeconds(elapsed)}</div>
+            <div className="font-mono text-xl sm:text-2xl font-bold tabular-nums leading-none">{formatSeconds(elapsed)}</div>
             {remaining !== null && (
               <div className={cn('mt-0.5 text-[10px]', remaining < 60 ? 'text-rose-600' : 'text-muted-foreground')}>
                 {remaining > 0 ? `${formatSeconds(remaining)} left` : 'done'}
               </div>
             )}
           </div>
-          <div className="flex justify-center gap-1.5">
-            <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => handleStop(true)}>
-              <Square className="size-2.5" /> Stop
+          <div className="flex justify-center gap-1.5 sm:gap-2">
+            <Button size="sm" variant="outline" className="h-7 sm:h-6 text-[10px] px-2 sm:px-2" onClick={() => handleStop(true)}>
+              <Square className="size-2.5 sm:size-2.5" /> Stop
             </Button>
-            <Button size="sm" className="h-6 text-[10px] px-2" onClick={() => handleStop(false)}>
+            <Button size="sm" className="h-7 sm:h-6 text-[10px] px-2 sm:px-2" onClick={() => handleStop(false)}>
               Complete
             </Button>
           </div>
         </div>
       ) : (
         <div className="space-y-1.5">
-          <p className="text-[10px] text-muted-foreground">No active session.</p>
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground">No active session.</p>
           <div className="flex flex-col gap-1">
-            <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => {
+            <Button size="sm" variant="outline" className="h-7 sm:h-6 text-[10px] px-2 sm:px-2" onClick={() => {
               const t = tasks.find((x) => x.status === 'today');
               if (!t) { toast({ title: 'No today tasks', variant: 'destructive' }); return; }
               void startTimer(t.id, 'pomodoro');
             }}>
               <TimerIcon className="size-2.5" /> Start Pomodoro
             </Button>
-            <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => {
+            <Button size="sm" variant="ghost" className="h-7 sm:h-6 text-[10px] px-2 sm:px-2" onClick={() => {
               const t = tasks.find((x) => x.status === 'today');
               if (!t) return;
               void startTimer(t.id, 'open_flow');

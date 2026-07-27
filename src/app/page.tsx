@@ -50,31 +50,31 @@ export default function Home() {
   }, [loadData, loadSettings]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/30">
+    <div className="min-h-dvh flex flex-col bg-muted/30">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="mx-auto max-w-7xl px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
+        <div className="mx-auto max-w-7xl px-3 sm:px-4 py-2 sm:py-3">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-sm">
-                <Sparkles className="size-5" />
+              <div className="flex size-8 sm:size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-sm">
+                <Sparkles className="size-4 sm:size-5" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-sm font-bold tracking-tight truncate sm:text-base">Cadence</h1>
-                <p className="text-[11px] text-muted-foreground hidden sm:block">
+                <h1 className="text-sm font-bold tracking-tight truncate">Cadence</h1>
+                <p className="text-[10px] sm:text-[11px] text-muted-foreground hidden sm:block">
                   Capacity-aware planning · resilient timers · process-based scoring
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-1.5 rounded-full border bg-muted/50 px-3 py-1">
-                <span className="text-[10px] font-medium text-muted-foreground">SCORE</span>
-                <span className="text-sm font-bold tabular-nums">{todayScore}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="hidden xs:flex items-center gap-1.5 rounded-full border bg-muted/50 px-2.5 sm:px-3 py-1">
+                <span className="text-[9px] sm:text-[10px] font-medium text-muted-foreground">SCORE</span>
+                <span className="text-xs sm:text-sm font-bold tabular-nums">{todayScore}</span>
               </div>
               <Button
                 variant="ghost" size="icon" aria-label="Quick capture"
                 onClick={() => setCaptureOpen(true)}
-                className="size-9"
+                className="size-8 sm:size-9"
               >
                 <Mic className="size-4" />
               </Button>
@@ -82,7 +82,7 @@ export default function Home() {
                 <Button
                   variant="ghost" size="icon" aria-label="Toggle theme"
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="size-9"
+                  className="size-8 sm:size-9"
                 >
                   {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
                 </Button>
@@ -94,7 +94,7 @@ export default function Home() {
 
       {/* Quick Capture Dialog */}
       <Dialog open={captureOpen} onOpenChange={setCaptureOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md mx-3">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mic className="size-4" /> Quick Capture
@@ -110,47 +110,47 @@ export default function Home() {
       </Dialog>
 
       {/* Main */}
-      <main className="flex-1 mx-auto w-full max-w-7xl px-3 py-2">
+      <main className="flex-1 mx-auto w-full max-w-7xl px-2 sm:px-3 md:px-4 py-2">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-2">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto">
-            <TabsTrigger value="dashboard" className="flex flex-col sm:flex-row gap-0.5 py-1.5 text-[10px] sm:text-xs">
-              <LayoutDashboard className="size-3" />
-              <span>Dashboard</span>
+          <TabsList className="grid w-full grid-cols-3 xs:grid-cols-6 h-auto">
+            <TabsTrigger value="dashboard" className="flex flex-col xs:flex-row gap-0.5 py-1.5 text-[10px] xs:text-xs">
+              <LayoutDashboard className="size-3.5" />
+              <span className="truncate">Dashboard</span>
             </TabsTrigger>
-            <TabsTrigger value="timeline" className="flex flex-col sm:flex-row gap-0.5 py-1.5 text-[10px] sm:text-xs">
-              <Calendar className="size-3" />
-              <span>Timeline</span>
+            <TabsTrigger value="timeline" className="flex flex-col xs:flex-row gap-0.5 py-1.5 text-[10px] xs:text-xs">
+              <Calendar className="size-3.5" />
+              <span className="truncate">Timeline</span>
             </TabsTrigger>
-            <TabsTrigger value="backlog" className="flex flex-col sm:flex-row gap-0.5 py-1.5 text-[10px] sm:text-xs relative">
-              <Inbox className="size-3" />
-              <span>Backlog</span>
+            <TabsTrigger value="backlog" className="flex flex-col xs:flex-row gap-0.5 py-1.5 text-[10px] xs:text-xs relative">
+              <Inbox className="size-3.5" />
+              <span className="truncate">Backlog</span>
               {backlogCount > 0 && (
-                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center font-bold">
+                <span className="absolute -top-0.5 -right-0.5 size-4 sm:size-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center font-bold">
                   {backlogCount}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="incubator" className="flex flex-col sm:flex-row gap-0.5 py-1.5 text-[10px] sm:text-xs">
-              <Sparkles className="size-3" />
-              <span>Incubator</span>
+            <TabsTrigger value="incubator" className="hidden xs:flex flex-col xs:flex-row gap-0.5 py-1.5 text-[10px] xs:text-xs relative">
+              <Sparkles className="size-3.5" />
+              <span className="truncate">Incubator</span>
               {incubatorCount > 0 && (
-                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center font-bold">
+                <span className="absolute -top-0.5 -right-0.5 size-4 sm:size-4 rounded-full bg-primary text-primary-foreground text-[9px] flex items-center justify-center font-bold">
                   {incubatorCount}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="triage" className="flex flex-col sm:flex-row gap-0.5 py-1.5 text-[10px] sm:text-xs relative">
-              <AlertTriangle className="size-3" />
-              <span>Triage</span>
+            <TabsTrigger value="triage" className="hidden xs:flex flex-col xs:flex-row gap-0.5 py-1.5 text-[10px] xs:text-xs relative">
+              <AlertTriangle className="size-3.5" />
+              <span className="truncate">Triage</span>
               {triageCount > 0 && (
-                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-amber-500 text-white text-[9px] flex items-center justify-center font-bold">
+                <span className="absolute -top-0.5 -right-0.5 size-4 sm:size-4 rounded-full bg-amber-500 text-white text-[9px] flex items-center justify-center font-bold">
                   {triageCount}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="stats" className="flex flex-col sm:flex-row gap-0.5 py-1.5 text-[10px] sm:text-xs">
-              <BarChart3 className="size-3" />
-              <span>Stats</span>
+            <TabsTrigger value="stats" className="hidden xs:flex flex-col xs:flex-row gap-0.5 py-1.5 text-[10px] xs:text-xs">
+              <BarChart3 className="size-3.5" />
+              <span className="truncate">Stats</span>
             </TabsTrigger>
           </TabsList>
 
@@ -188,20 +188,20 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t bg-background mt-auto">
-        <div className="mx-auto max-w-7xl px-3 py-2">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-muted-foreground">
+        <div className="mx-auto max-w-7xl px-2 sm:px-3 md:px-4 py-2">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] text-muted-foreground">
             <p>Local-first · capacity-aware · no auto-rollover</p>
             <p className="flex items-center gap-1">
               <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              All data persists to your device via Prisma + SQLite
+              All data persists via Prisma + SQLite
             </p>
           </div>
         </div>
       </footer>
 
       {loading && (
-        <div className="fixed inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center">
-          <Card className="p-6 flex items-center gap-3">
+        <div className="fixed inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="p-4 sm:p-6 flex items-center gap-3">
             <div className="size-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             <span className="text-sm">Loading your day…</span>
           </Card>

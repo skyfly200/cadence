@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -18,6 +18,17 @@ export const metadata: Metadata = {
   title: "Cadence",
   description: "Capacity-aware daily planner with resilient timers, drag-and-drop timeline, and process-based gamification.",
   keywords: ["daily planner", "time blocking", "pomodoro", "Eisenhower matrix", "productivity"],
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
 };
 
 export default function RootLayout({

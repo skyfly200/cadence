@@ -30,16 +30,16 @@ export function CapacityPanel() {
   const over = (capacity?.scheduledFocusMinutes ?? 0) > (capacity?.maxAllowedFocusMinutes ?? 0);
 
   return (
-    <Card className={cn('p-2 lg:p-2.5 ring-1', style.ring, style.bg)}>
-      <div className="flex items-center justify-between mb-1.5 lg:mb-2">
+    <Card className={cn('p-2 sm:p-2.5 ring-1', style.ring, style.bg)}>
+      <div className="flex items-center justify-between mb-1.5 sm:mb-2">
         <div className="flex items-center gap-1.5">
           <Battery className={cn('size-3.5', style.text)} />
-          <span className="text-[11px] font-semibold">Capacity</span>
+          <span className="text-[11px] sm:text-xs font-semibold">Capacity</span>
         </div>
         <span className={cn('text-[10px] font-medium', style.text)}>{style.label}</span>
       </div>
 
-      <div className="space-y-1.5 lg:space-y-2">
+      <div className="space-y-1.5 sm:space-y-2">
         <div>
           <div className="flex items-center justify-between text-[10px] mb-0.5">
             <span className="flex items-center gap-0.5 text-muted-foreground"><Zap className="size-2.5" /> Readiness</span>
@@ -48,18 +48,18 @@ export function CapacityPanel() {
           <Slider value={[score ?? 70]} min={0} max={100} step={1} onValueChange={(v) => void setCapacity({ readinessScore: v[0] })} />
         </div>
 
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
           <div>
             <label className="text-[9px] text-muted-foreground flex items-center gap-0.5"><Moon className="size-2.5" /> Sleep hrs</label>
-            <Input type="number" step={0.5} min={0} max={14} value={capacity?.sleepHours ?? ''} onChange={(e) => void setCapacity({ sleepHours: Number(e.target.value) || null })} className="h-6 text-[11px] px-1.5 mt-0.5" />
+            <Input type="number" step={0.5} min={0} max={14} value={capacity?.sleepHours ?? ''} onChange={(e) => void setCapacity({ sleepHours: Number(e.target.value) || null })} className="h-7 sm:h-6 text-[11px] px-1.5 mt-0.5" />
           </div>
           <div>
             <label className="text-[9px] text-muted-foreground flex items-center gap-0.5"><Heart className="size-2.5" /> Energy</label>
-            <Input type="number" min={1} max={10} value={capacity?.manualEnergyRating ?? ''} onChange={(e) => void setCapacity({ manualEnergyRating: Number(e.target.value) || null })} className="h-6 text-[11px] px-1.5 mt-0.5" />
+            <Input type="number" min={1} max={10} value={capacity?.manualEnergyRating ?? ''} onChange={(e) => void setCapacity({ manualEnergyRating: Number(e.target.value) || null })} className="h-7 sm:h-6 text-[11px] px-1.5 mt-0.5" />
           </div>
         </div>
 
-        <div className="rounded bg-background/60 px-2 py-1 lg:py-1.5 border">
+        <div className="rounded bg-background/60 px-2 py-1 sm:py-1.5 border">
           <div className="flex items-center justify-between text-[10px] mb-0.5">
             <span className="text-muted-foreground">Budget</span>
             <span className={cn('font-medium tabular-nums', over ? 'text-rose-600' : '')}>

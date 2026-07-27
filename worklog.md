@@ -160,3 +160,63 @@ Stage Summary:
 - All panels and rows use responsive padding that tightens on lg+ screens, showing significantly more content
 - Notes Import feature fully functional: paste → AI parse → review → import, with editable fields and bulk creation
 - Lint clean, no console errors, all API routes 200
+
+---
+Task ID: session-4-responsive
+Agent: Main
+Task: Fix responsive design across all views — make the app fully responsive
+
+Work Log:
+- Added `viewport` export to layout.tsx with `width: device-width`, `initial-scale: 1`, theme color for light/dark
+- Added custom `xs` breakpoint (480px) to Tailwind v4 config via `--breakpoint-xs: 480px` in globals.css
+- Fixed page.tsx responsive:
+  * Tab bar: 3 cols on mobile (<480px) with stacked icons, 6 cols on xs+ (480px+) with inline icons
+  * Header: responsive padding, icon sizes, score badge hidden on smallest screens
+  * Footer: responsive padding and text sizes
+  * Main: responsive horizontal padding (px-2 sm:px-3 md:px-4)
+- Fixed BacklogIncubator.tsx Eisenhower Matrix — the most critical responsive fix:
+  * Mobile (<md): Stacked vertical layout with labeled quadrants (Do First ⚡★, Schedule 🌙★, etc.)
+  * md+ (768px+): Original 3×3 CSS grid with rotated row labels
+  * Table rows: Responsive padding, category/estimate columns hidden on small screens
+  * Touch targets: Button sizes increased from size-5 to size-6 on mobile
+  * Max-width truncation scales: 120px → 180px → 260px → 400px → 500px across breakpoints
+- Fixed TimelineView.tsx:
+  * Dynamic row height via `useRowHeight()` hook: 24px mobile, 26px tablet, 28px desktop, 30px xl+
+  * Timeline maxHeight uses `100dvh` instead of `100vh` (fixes mobile browser chrome issue)
+  * Responsive hour label column width: 2.75rem mobile, 3.5rem desktop
+  * Hour labels: show all on mobile, every 2nd on md+ (client-side detection)
+  * Block text: responsive padding and font sizes
+- Fixed Dashboard.tsx:
+  * Grid: 1 col mobile → 2 col md → 3 col lg (today list spans 2 cols on md+)
+  * Task rows: responsive padding, category/estimate hidden on smallest screens
+  * Touch targets: size-6 buttons, size-4 checkboxes
+  * Sidebar always visible below on mobile (natural stacking)
+- Fixed TriagePanel.tsx:
+  * Table overflow with min-width and responsive column visibility (Cat/Est hidden on sm-, Eis hidden on md-)
+  * Action buttons: "Today"/"Incubate" text hidden on small screens, icons only
+  * Responsive button heights: h-7 sm:h-6
+- Fixed StatsView.tsx:
+  * Stat cards: 2 col mobile → 4 col xs+ (480px+)
+  * Charts section: 1 col → 2 col md
+  * Scoring events table: min-width with overflow-x-auto
+- Fixed TaskCard.tsx:
+  * Compact view: Badges hidden on mobile, touch targets size-6
+  * Full view: Eisenhower badge hidden on mobile
+  * Responsive padding throughout
+- Fixed sidebar panels (CapacityPanel, TimerPanel, GamificationPanel):
+  * Responsive padding, font sizes, button heights
+  * Timer display: text-xl mobile → text-2xl desktop
+  * Gamification stat boxes: responsive padding and font sizes
+- Fixed SettingsPanel.tsx:
+  * Responsive grid: 2 col mobile → 3 col sm for daily rhythm, hydration col-span-2 mobile
+  * Responsive padding and button wrapping
+- Changed root container from `min-h-screen` to `min-h-dvh` for mobile viewport fix
+
+Stage Summary:
+- Complete responsive overhaul across all 11 components
+- Eisenhower Matrix properly stacks on mobile, 3×3 grid on tablet+
+- Tab bar collapses to 3 on mobile, expands to 6 on xs (480px+)
+- All touch targets meet minimum 24px (buttons) on mobile
+- dvh used throughout to fix mobile browser chrome issues
+- 4-tier breakpoint system: base → xs (480px) → sm (640px) → md (768px) → lg (1024px) → xl (1280px)
+- Lint clean, no runtime errors, browser-verified on mobile (375px), tablet (768px), desktop (1440px)

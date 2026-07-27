@@ -53,25 +53,25 @@ function SettingsForm({ initial }: { initial: FormState }) {
   };
 
   return (
-    <Card className="p-4 max-w-2xl">
-      <div className="flex items-center gap-2 mb-4">
+    <Card className="p-3 sm:p-4 max-w-2xl">
+      <div className="flex items-center gap-2 mb-3 sm:mb-4">
         <SettingsIcon className="size-4" />
         <h3 className="text-sm font-semibold">Settings</h3>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         <div>
           <h4 className="text-xs font-semibold text-muted-foreground mb-2">Daily Rhythm</h4>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Wake time</Label>
-              <Input type="time" value={form.wakeTime} onChange={(e) => setForm({ ...form, wakeTime: e.target.value })} className="h-8 text-sm" />
+              <Input type="time" value={form.wakeTime} onChange={(e) => setForm({ ...form, wakeTime: e.target.value })} className="h-8 sm:h-8 text-sm" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Sleep time</Label>
-              <Input type="time" value={form.sleepTime} onChange={(e) => setForm({ ...form, sleepTime: e.target.value })} className="h-8 text-sm" />
+              <Input type="time" value={form.sleepTime} onChange={(e) => setForm({ ...form, sleepTime: e.target.value })} className="h-8 sm:h-8 text-sm" />
             </div>
-            <div className="space-y-1">
+            <div className="col-span-2 sm:col-span-1 space-y-1">
               <Label className="text-xs">Hydration interval</Label>
               <div className="flex items-center gap-2">
                 <Slider
@@ -88,25 +88,25 @@ function SettingsForm({ initial }: { initial: FormState }) {
 
         <div>
           <h4 className="text-xs font-semibold text-muted-foreground mb-2">Anchor Blocks (meals)</h4>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Breakfast</Label>
-              <Input type="time" value={form.breakfastTime} onChange={(e) => setForm({ ...form, breakfastTime: e.target.value })} className="h-8 text-sm" />
+              <Input type="time" value={form.breakfastTime} onChange={(e) => setForm({ ...form, breakfastTime: e.target.value })} className="h-8 sm:h-8 text-sm" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Lunch</Label>
-              <Input type="time" value={form.lunchTime} onChange={(e) => setForm({ ...form, lunchTime: e.target.value })} className="h-8 text-sm" />
+              <Input type="time" value={form.lunchTime} onChange={(e) => setForm({ ...form, lunchTime: e.target.value })} className="h-8 sm:h-8 text-sm" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Dinner</Label>
-              <Input type="time" value={form.dinnerTime} onChange={(e) => setForm({ ...form, dinnerTime: e.target.value })} className="h-8 text-sm" />
+              <Input type="time" value={form.dinnerTime} onChange={(e) => setForm({ ...form, dinnerTime: e.target.value })} className="h-8 sm:h-8 text-sm" />
             </div>
           </div>
         </div>
 
         <div>
           <h4 className="text-xs font-semibold text-muted-foreground mb-2">Timer defaults</h4>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Pomodoro focus ({formatDuration(form.defaultPomodoroMinutes)})</Label>
               <Slider
@@ -126,7 +126,7 @@ function SettingsForm({ initial }: { initial: FormState }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 pt-2">
+        <div className="flex flex-wrap items-center gap-2 pt-2">
           <Button onClick={() => void save()}><Save className="size-4" /> Save settings</Button>
           <Button variant="outline" onClick={() => void regenerateAnchors()}>
             <RefreshCw className="size-4" /> Regenerate anchors
@@ -139,7 +139,6 @@ function SettingsForm({ initial }: { initial: FormState }) {
 
 export function SettingsPanel() {
   const settings = useAppStore((s) => s.settings);
-  // Derive initial form from settings; key prop resets local state when settings change
   const initial: FormState = settings
     ? {
         wakeTime: settings.wakeTime,

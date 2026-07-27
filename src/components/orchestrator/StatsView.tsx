@@ -47,50 +47,50 @@ export function StatsView() {
   const maxCatMin = Math.max(1, ...catEntries.map(([, v]) => v.minutes));
 
   return (
-    <div className="space-y-3">
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+    <div className="space-y-2 sm:space-y-3">
+      {/* Stat cards — responsive grid */}
+      <div className="grid grid-cols-2 xs:grid-cols-4 gap-2">
         {[
           { icon: Trophy, color: 'text-amber-500', value: String(todayScore), label: 'Score' },
           { icon: Target, color: 'text-purple-500', value: `${realismPct}%`, label: 'Realism' },
           { icon: TrendingUp, color: 'text-emerald-500', value: String(completed.length), label: 'Completed' },
           { icon: Flame, color: 'text-orange-500', value: formatDuration(totalFocusMin), label: 'Focus' },
         ].map(({ icon: Icon, color, value, label }) => (
-          <Card key={label} className="p-2.5 flex items-center gap-2">
+          <Card key={label} className="p-2 sm:p-2.5 flex items-center gap-2">
             <Icon className={cn('size-4 shrink-0', color)} />
             <div className="min-w-0">
-              <div className="text-lg font-bold tabular-nums leading-none">{value}</div>
-              <div className="text-[9px] text-muted-foreground mt-0.5">{label}</div>
+              <div className="text-base sm:text-lg font-bold tabular-nums leading-none">{value}</div>
+              <div className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5">{label}</div>
             </div>
           </Card>
         ))}
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid gap-2 sm:gap-3 md:grid-cols-2">
         {/* 7-day bar chart */}
-        <Card className="p-2.5">
-          <h3 className="text-[11px] font-semibold mb-2 flex items-center gap-1.5">
+        <Card className="p-2 sm:p-2.5">
+          <h3 className="text-[11px] sm:text-xs font-semibold mb-2 flex items-center gap-1.5">
             <Calendar className="size-3" /> Last 7 days
           </h3>
-          <div className="flex items-end justify-between gap-1.5 h-28">
+          <div className="flex items-end justify-between gap-1 sm:gap-1.5 h-24 sm:h-28">
             {completedByDay.map((d, i) => (
               <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
                 <span className="text-[9px] font-medium tabular-nums">{d.count}</span>
-                <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                <div className="w-full flex items-end justify-center" style={{ height: '72px' }}>
                   <div
                     className="w-full max-w-[1.25rem] rounded-t bg-primary/70"
                     style={{ height: `${(d.count / maxCompleted) * 100}%`, minHeight: d.count > 0 ? '4px' : '1px' }}
                   />
                 </div>
-                <span className="text-[8px] text-muted-foreground">{d.date.toLocaleDateString('en', { weekday: 'short' })}</span>
+                <span className="text-[8px] sm:text-[9px] text-muted-foreground">{d.date.toLocaleDateString('en', { weekday: 'short' })}</span>
               </div>
             ))}
           </div>
         </Card>
 
         {/* Category breakdown */}
-        <Card className="p-2.5">
-          <h3 className="text-[11px] font-semibold mb-2 flex items-center gap-1.5">
+        <Card className="p-2 sm:p-2.5">
+          <h3 className="text-[11px] sm:text-xs font-semibold mb-2 flex items-center gap-1.5">
             <Anchor className="size-3" /> Focus by category
           </h3>
           {catEntries.length === 0 ? (
@@ -98,12 +98,12 @@ export function StatsView() {
           ) : (
             <div className="space-y-1.5">
               {catEntries.map(([cat, v]) => (
-                <div key={cat} className="flex items-center gap-2 text-[10px]">
-                  <span className="w-14 truncate font-medium">{cat}</span>
+                <div key={cat} className="flex items-center gap-2 text-[10px] sm:text-xs">
+                  <span className="w-12 sm:w-14 truncate font-medium">{cat}</span>
                   <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                     <div className="h-full rounded-full bg-primary/60" style={{ width: `${(v.minutes / maxCatMin) * 100}%` }} />
                   </div>
-                  <span className="tabular-nums text-muted-foreground w-16 text-right">{v.count} · {formatDuration(v.minutes)}</span>
+                  <span className="tabular-nums text-muted-foreground w-14 sm:w-16 text-right text-[9px] sm:text-[10px]">{v.count} · {formatDuration(v.minutes)}</span>
                 </div>
               ))}
             </div>
@@ -113,31 +113,33 @@ export function StatsView() {
 
       {/* Scoring events table */}
       {gamification.length > 0 && (
-        <Card className="p-2.5">
-          <h3 className="text-[11px] font-semibold mb-2 flex items-center gap-1.5">
+        <Card className="p-2 sm:p-2.5">
+          <h3 className="text-[11px] sm:text-xs font-semibold mb-2 flex items-center gap-1.5">
             <Trophy className="size-3 text-amber-500" /> Scoring events
           </h3>
           <div className="max-h-40 overflow-y-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-border text-[9px] text-muted-foreground uppercase tracking-wide">
-                  <th className="px-1.5 py-0.5">Type</th>
-                  <th className="px-1.5 py-0.5">Note</th>
-                  <th className="px-1.5 py-0.5 text-right">Pts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gamification.map((g) => (
-                  <tr key={g.id} className="border-b border-border/30 last:border-0">
-                    <td className="px-1.5 py-1 text-[10px] capitalize text-muted-foreground">{g.type.replace('_', ' ')}</td>
-                    <td className="px-1.5 py-1 text-[10px] truncate max-w-[200px] text-muted-foreground">{g.note ?? '—'}</td>
-                    <td className={cn('px-1.5 py-1 text-[10px] font-semibold tabular-nums text-right', g.points > 0 ? 'text-emerald-600' : 'text-rose-600')}>
-                      {g.points > 0 ? '+' : ''}{g.points}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left min-w-[280px]">
+                <thead>
+                  <tr className="border-b border-border text-[9px] text-muted-foreground uppercase tracking-wide">
+                    <th className="px-1.5 py-0.5">Type</th>
+                    <th className="px-1.5 py-0.5">Note</th>
+                    <th className="px-1.5 py-0.5 text-right">Pts</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {gamification.map((g) => (
+                    <tr key={g.id} className="border-b border-border/30 last:border-0">
+                      <td className="px-1.5 py-1 text-[10px] capitalize text-muted-foreground">{g.type.replace('_', ' ')}</td>
+                      <td className="px-1.5 py-1 text-[10px] truncate max-w-[200px] text-muted-foreground">{g.note ?? '—'}</td>
+                      <td className={cn('px-1.5 py-1 text-[10px] font-semibold tabular-nums text-right', g.points > 0 ? 'text-emerald-600' : 'text-rose-600')}>
+                        {g.points > 0 ? '+' : ''}{g.points}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </Card>
       )}
