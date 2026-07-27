@@ -89,7 +89,7 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
       </div>
 
       {showActions && (
-        <div className="mt-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="mt-2 flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
           {task.status !== 'completed' && (
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={handleStartTimer}>
               <Play className="size-3" /> Start

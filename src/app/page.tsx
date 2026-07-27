@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   LayoutDashboard, Calendar, Inbox, AlertTriangle, BarChart3, Settings as SettingsIcon,
   Moon, Sun, Sparkles, Mic,
@@ -92,22 +92,22 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Quick Capture Sheet */}
-      <Sheet open={captureOpen} onOpenChange={setCaptureOpen}>
-        <SheetContent side="bottom" className="max-h-[40vh]">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
+      {/* Quick Capture Dialog */}
+      <Dialog open={captureOpen} onOpenChange={setCaptureOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
               <Mic className="size-4" /> Quick Capture
-            </SheetTitle>
-            <SheetDescription>
+            </DialogTitle>
+            <DialogDescription>
               Speak or type a task — e.g. &ldquo;Add design new poster to Incubator list&rdquo;
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-4">
-            <VoiceInput />
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-2">
+            <VoiceInput autoStart={captureOpen} />
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Main */}
       <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-4">

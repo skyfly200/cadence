@@ -27,7 +27,7 @@ function DraggableTaskCard({ task, onEdit }: { task: Task; onEdit: (t: Task) => 
       {...attributes}
       {...listeners}
     >
-      <TaskCard task={task} onEdit={onEdit} draggable showActions={false} />
+      <TaskCard task={task} onEdit={onEdit} draggable showActions />
     </div>
   );
 }

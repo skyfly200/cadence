@@ -92,3 +92,49 @@ Work Log:
 
 Stage Summary:
 - Quick Capture shrink was already implemented. Verified working correctly.
+
+---
+Task ID: 1
+Agent: Main
+Task: Fix red line (current-time indicator) not updating
+
+Work Log:
+- Root cause: `nowRow`/`nowTopPx` were calculated once at render with `const nowRow = timeToGridRow(new Date())` — no re-render mechanism
+- Added `const [now, setNow] = useState(() => new Date())` with `setInterval(() => setNow(new Date()), 30_000)` 
+- Replaced all `new Date()` references in the indicator calculation with the `now` state variable
+
+Stage Summary:
+- Red line now auto-updates every 30 seconds, keeping the time label and position current
+- Verified: line shows "9:01 PM" at correct position (1024px in visible grid)
+
+---
+Task ID: 2
+Agent: Main
+Task: Add ability to delete task entries from all views
+
+Work Log:
+- BacklogIncubator's `DraggableTaskCard` had `showActions={false}`, hiding all action buttons including delete
+- Changed to `showActions` (true) in BacklogIncubator.tsx
+- TaskCard already had `md:opacity-0 md:group-hover:opacity-100` for responsive action visibility (always shown on mobile, hover-reveal on desktop)
+
+Stage Summary:
+- Delete buttons now visible on backlog/incubator tasks (both matrix and list views)
+- Verified: deleted "Create a Sumsoma alternative" task, count went from 3→2, persisted through reload
+
+---
+Task ID: 3
+Agent: Main
+Task: Make quick capture modal centered + auto-start listening
+
+Work Log:
+- Changed from Sheet (side="bottom") to Dialog (centered) in page.tsx
+- Added `autoStart` prop and `VoiceInputHandle` interface to VoiceInput
+- Converted VoiceInput from function to `forwardRef` component
+- Added auto-start logic: `useRef(false)` guard + `setTimeout(300ms)` to start MediaRecorder after dialog animation
+- Fixed ReferenceError: moved auto-start `useEffect` after `startMediaRecording` definition (TDZ issue)
+- Removed unused `useImperativeHandle` after simplifying
+
+Stage Summary:
+- Quick Capture now opens as centered Dialog instead of bottom Sheet
+- Auto-starts recording 300ms after dialog opens (shows mic permission error in headless browser, which is expected)
+- VoiceInput exposes `VoiceInputHandle` for future imperative control

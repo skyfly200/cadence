@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, forwardRef } from 'react';
 import { Mic, Square, Loader2, AlertCircle, Keyboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
@@ -38,7 +38,15 @@ function getSpeechRecognition(): (new () => SpeechRecognitionLike) | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-export function VoiceInput() {
+interface VoiceInputProps {
+  autoStart?: boolean;
+}
+
+export interface VoiceInputHandle {
+  startRecording: () => void;
+}
+
+export const VoiceInput = forwardRef<VoiceInputHandle, VoiceInputProps>(function VoiceInput({ autoStart = false }, _ref) {
   const [state, setState] = useState<VoiceState>('idle');
   const [transcript, setTranscript] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -230,6 +238,16 @@ export function VoiceInput() {
     };
   }, [stopStream]);
 
+  // Auto-start when dialog opens (fires once)
+  const autoStartFired = useRef(false);
+  useEffect(() => {
+    if (autoStart && !autoStartFired.current) {
+      autoStartFired.current = true;
+      const timer = setTimeout(() => void startMediaRecording(), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [autoStart, startMediaRecording]);
+
   const commit = useCallback(async () => {
     const text = transcript.trim();
     if (!text) return;
@@ -341,4 +359,4 @@ export function VoiceInput() {
       )}
     </div>
   );
-}
+});

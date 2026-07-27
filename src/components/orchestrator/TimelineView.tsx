@@ -126,6 +126,13 @@ export function TimelineView() {
   const [activeDrag, setActiveDrag] = useState<{ id: string; type: 'block' | 'task'; data?: Task | TimeBlock } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Live clock for current-time indicator — updates every 30s
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
@@ -230,7 +237,7 @@ export function TimelineView() {
     return () => clearTimeout(timer);
   }, []);
 
-  const nowRow = timeToGridRow(new Date());
+  const nowRow = timeToGridRow(now);
   const nowVisibleRow = toVisibleRow(nowRow);
   const nowTopPx = (nowVisibleRow - 1) * ROW_HEIGHT;
   const visibleStartPx = 0;
@@ -306,7 +313,7 @@ export function TimelineView() {
                 >
                   <span className="absolute -left-1 -top-1.5 size-2.5 rounded-full bg-rose-500 shadow" />
                   <span className="absolute right-1 -top-3 text-[9px] font-semibold text-rose-600 bg-background px-1 rounded shadow-sm">
-                    {formatTime(new Date())}
+                    {formatTime(now)}
                   </span>
                 </div>
               )}
