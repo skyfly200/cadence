@@ -138,3 +138,25 @@ Stage Summary:
 - Quick Capture now opens as centered Dialog instead of bottom Sheet
 - Auto-starts recording 300ms after dialog opens (shows mic permission error in headless browser, which is expected)
 - VoiceInput exposes `VoiceInputHandle` for future imperative control
+
+---
+Task ID: session-3
+Agent: Main
+Task: Fix red timeline indicator, condense UI on larger screens, add Import from Notes feature
+
+Work Log:
+- Fixed red timeline indicator: Added `syncedRef` + `requestAnimationFrame` guard to sync `now` state to client time after hydration (SSR may use server time). Reduced update interval from 30s to 15s. Reduced ROW_HEIGHT from 32px to 28px for compact display.
+- Condensed timeline: ROW_HEIGHT 32→28px, show every 2nd hour label on large screens, maxHeight uses `calc(100vh - 180px)` for better viewport usage.
+- Condensed Dashboard: Task rows use `py-0.5 lg:py-1` instead of `py-1.5`, increased max-height to `lg:max-h-[50vh]`, reduced padding on cards `p-2 lg:p-3`.
+- Condensed sidebar panels (CapacityPanel, GamificationPanel): Added responsive padding `p-2 lg:p-2.5`, reduced internal spacing with `space-y-1.5 lg:space-y-2`, compact stat boxes `py-1 lg:py-1.5`, reduced gamification event max-height.
+- Condensed BacklogIncubator: Table rows use `py-0.5 lg:py-1` with `px-1 lg:px-1.5`, quadrant cards `p-1.5 lg:p-2`, matrix grid gap `gap-1 lg:gap-1.5`, wider truncation on lg `lg:max-w-[480px]`.
+- Built `/api/ai/parse-todos/route.ts`: LLM-powered parsing of unstructured text into tasks. Handles bullets, numbers, checkboxes, strikethrough, nested items. Includes robust regex-based fallback parser. Validates/sanitizes all fields.
+- Built `NotesImporter.tsx`: 2-step dialog — paste text → AI parses → review/edit/select → bulk import. Each parsed task shows editable title, category dropdown, Eisenhower dropdown, estimate input, remove button. Select all/deselect all. Shows total time estimate.
+- Added "Import" button to BacklogIncubator toolbar alongside "Add".
+- Verified: AI parsed 5 sample tasks correctly (Buy groceries→Maintenance/45m, Call dentist→Health/15m, Review PRs→Admin/30m, Design landing page→Creative/120m, Meditate→Health/15m). Bulk import created all 5 tasks (backlog count 3→8). All API calls 200, no console errors, lint clean.
+
+Stage Summary:
+- Red line now syncs to client time immediately, updates every 15s, uses compact 28px row height
+- All panels and rows use responsive padding that tightens on lg+ screens, showing significantly more content
+- Notes Import feature fully functional: paste → AI parse → review → import, with editable fields and bulk creation
+- Lint clean, no console errors, all API routes 200

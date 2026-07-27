@@ -28,8 +28,8 @@ export function GamificationPanel() {
   );
 
   return (
-    <Card className="p-2.5">
-      <div className="flex items-center justify-between mb-2">
+    <Card className="p-2 lg:p-2.5">
+      <div className="flex items-center justify-between mb-1.5 lg:mb-2">
         <div className="flex items-center gap-1.5">
           <Trophy className="size-3.5 text-amber-500" />
           <span className="text-[11px] font-semibold">Score</span>
@@ -37,7 +37,7 @@ export function GamificationPanel() {
         <span className="text-xs font-bold tabular-nums">{todayScore}</span>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5 lg:space-y-2">
         <div>
           <div className="flex items-center justify-between text-[10px] mb-0.5">
             <span className="text-muted-foreground">Tier</span>
@@ -47,18 +47,18 @@ export function GamificationPanel() {
         </div>
 
         <div className="grid grid-cols-2 gap-1.5">
-          <div className="rounded bg-muted/40 px-2 py-1.5 text-center">
+          <div className="rounded bg-muted/40 px-2 py-1 lg:py-1.5 text-center">
             <div className="text-base font-bold tabular-nums">{completedToday.length}</div>
             <div className="text-[9px] text-muted-foreground">done today</div>
           </div>
-          <div className="rounded bg-muted/40 px-2 py-1.5 text-center">
+          <div className="rounded bg-muted/40 px-2 py-1 lg:py-1.5 text-center">
             <div className="text-base font-bold tabular-nums">{gamification.length}</div>
             <div className="text-[9px] text-muted-foreground">events</div>
           </div>
         </div>
 
         {gamification.length > 0 && (
-          <div className="max-h-28 overflow-y-auto space-y-0 -mr-1 pr-1">
+          <div className="max-h-24 lg:max-h-28 overflow-y-auto space-y-0 -mr-1 pr-1">
             {gamification.slice(0, 6).map((g) => {
               const meta = TYPE_META[g.type] ?? TYPE_META.completion;
               const Icon = meta.icon;

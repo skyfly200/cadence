@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const TIMELINE_START_HOUR = 5; // show 5am onwards
 const VISIBLE_HOURS = 19; // through midnight
-const ROW_HEIGHT = 32; // px
+const ROW_HEIGHT = 28; // px — compact
 const VISIBLE_ROW_OFFSET = TIMELINE_START_HOUR * 2; // 10 slots before visible range
 const VISIBLE_SLOTS = VISIBLE_HOURS * 2; // 38 visible 30-min slots
 
@@ -125,10 +125,16 @@ export function TimelineView() {
   const [activeDrag, setActiveDrag] = useState<{ id: string; type: 'block' | 'task'; data?: Task | TimeBlock } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Live clock for current-time indicator — updates every 30s
+  // Live clock for current-time indicator — updates every 15s
   const [now, setNow] = useState(() => new Date());
+  const syncedRef = useRef(false);
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 30_000);
+    if (!syncedRef.current) {
+      syncedRef.current = true;
+      // Sync to client time after hydration (SSR may use server time)
+      requestAnimationFrame(() => setNow(new Date()));
+    }
+    const id = setInterval(() => setNow(new Date()), 15_000);
     return () => clearInterval(id);
   }, []);
 
@@ -147,7 +153,10 @@ export function TimelineView() {
 
   const hourLabels = useMemo(() => {
     const labels: { visibleRow: number; label: string }[] = [];
+    // Show every hour on small screens, every 2 hours on large screens
+    const step = typeof window !== 'undefined' && window.innerWidth >= 1024 ? 2 : 1;
     for (let h = TIMELINE_START_HOUR; h < TIMELINE_START_HOUR + VISIBLE_HOURS; h++) {
+      if (step === 2 && h % 2 !== 0) continue;
       const hour = h % 24;
       const ampm = hour < 12 ? 'AM' : 'PM';
       const display = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
@@ -256,7 +265,7 @@ export function TimelineView() {
         </span>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ maxHeight: '70vh' }}>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div className="grid" style={{
             gridTemplateColumns: '3.5rem 1fr',

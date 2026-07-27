@@ -11,10 +11,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Inbox, Lightbulb, Plus, Search, Grid2x2, List as ListIcon,
-  Pencil, Trash2, Play, GripVertical,
+  Pencil, Trash2, Play, GripVertical, FileText,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { TaskFormDialog } from './TaskFormDialog';
+import { NotesImporter } from './NotesImporter';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -53,7 +54,7 @@ function TaskRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
 
   return (
     <tr className="group border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-      <td className="px-1.5 py-1.5 w-6">
+      <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 w-6">
         <Checkbox
           checked={task.status === 'completed'}
           onCheckedChange={(v) => v ? void completeTask(task.id) : void uncompleteTask(task.id)}
@@ -61,21 +62,21 @@ function TaskRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
           aria-label={`Complete ${task.title}`}
         />
       </td>
-      <td className="px-1.5 py-1.5 min-w-0">
+      <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 min-w-0">
         <span className={cn(
-          'block text-xs font-medium truncate max-w-[200px] sm:max-w-[320px]',
+          'block text-xs font-medium truncate max-w-[200px] sm:max-w-[320px] lg:max-w-[480px]',
           task.status === 'completed' && 'line-through text-muted-foreground',
         )}>
           {task.title}
         </span>
       </td>
-      <td className="px-1.5 py-1.5 text-[10px] whitespace-nowrap">
+      <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 text-[10px] whitespace-nowrap">
         <span className={cn('inline-block rounded px-1 py-px font-medium', catColor)}>{task.category}</span>
       </td>
-      <td className="px-1.5 py-1.5 text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+      <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
         {formatDuration(task.estimatedMinutes)}
       </td>
-      <td className="px-1.5 py-1.5">
+      <td className="px-1 lg:px-1.5 py-0.5 lg:py-1">
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           {task.status !== 'completed' && (
             <Button size="icon" variant="ghost" className="size-5" onClick={() => void startTimer(task.id, 'pomodoro')} aria-label="Start timer">
@@ -112,11 +113,11 @@ function DraggableListRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => v
 const TABLE_HEAD = (
   <thead>
     <tr className="border-b border-border text-[10px] text-muted-foreground uppercase tracking-wide">
-      <th className="px-1.5 py-1 text-left w-6"></th>
-      <th className="px-1.5 py-1 text-left">Task</th>
-      <th className="px-1.5 py-1 text-left">Cat</th>
-      <th className="px-1.5 py-1 text-left">Est</th>
-      <th className="px-1.5 py-1 text-right w-24"></th>
+      <th className="px-1 lg:px-1.5 py-0.5 text-left w-6"></th>
+      <th className="px-1 lg:px-1.5 py-0.5 text-left">Task</th>
+      <th className="px-1 lg:px-1.5 py-0.5 text-left">Cat</th>
+      <th className="px-1 lg:px-1.5 py-0.5 text-left">Est</th>
+      <th className="px-1 lg:px-1.5 py-0.5 text-right w-24"></th>
     </tr>
   </thead>
 );
@@ -144,7 +145,6 @@ function MatrixRow({
 
   return (
     <>
-      {/* Insertion line above this row */}
       {showInsertBefore && (
         <tr>
           <td colSpan={6} className="px-0 py-0">
@@ -161,10 +161,10 @@ function MatrixRow({
         {...attributes}
         {...listeners}
       >
-        <td className="px-1 py-1.5 w-4">
+        <td className="px-0.5 lg:px-1 py-0.5 lg:py-1 w-4">
           <GripVertical className="size-3 text-muted-foreground/60 mx-auto" />
         </td>
-        <td className="px-1 py-1.5 w-5">
+        <td className="px-0.5 lg:px-1 py-0.5 lg:py-1 w-5">
           <Checkbox
             checked={task.status === 'completed'}
             onCheckedChange={(v) => { if (v) completeTask(task.id); else uncompleteTask(task.id); }}
@@ -173,19 +173,19 @@ function MatrixRow({
             aria-label={`Complete ${task.title}`}
           />
         </td>
-        <td className="px-1.5 py-1.5 min-w-0">
+        <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 min-w-0">
           <span className={cn(
-            'block text-xs font-medium truncate max-w-[200px] sm:max-w-[320px]',
+            'block text-xs font-medium truncate max-w-[200px] sm:max-w-[320px] lg:max-w-[400px]',
             task.status === 'completed' && 'line-through text-muted-foreground',
           )}>{task.title}</span>
         </td>
-        <td className="px-1.5 py-1.5 text-[10px] whitespace-nowrap">
+        <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 text-[10px] whitespace-nowrap">
           <span className={cn('inline-block rounded px-1 py-px font-medium', catColor)}>{task.category}</span>
         </td>
-        <td className="px-1.5 py-1.5 text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+        <td className="px-1 lg:px-1.5 py-0.5 lg:py-1 text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
           {formatDuration(task.estimatedMinutes)}
         </td>
-        <td className="px-1.5 py-1.5">
+        <td className="px-1 lg:px-1.5 py-0.5 lg:py-1">
           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button size="icon" variant="ghost" className="size-5" onClick={(e) => { e.stopPropagation(); void useAppStore.getState().startTimer(task.id, 'pomodoro'); }} aria-label="Start timer">
               <Play className="size-2.5" />
@@ -199,7 +199,6 @@ function MatrixRow({
           </div>
         </td>
       </tr>
-      {/* Insertion line below last row (no more rows) */}
       {showInsertAfter && (
         <tr>
           <td colSpan={6} className="px-0 py-0">
@@ -233,18 +232,18 @@ function QuadrantTable({
     <Card
       ref={setNodeRef}
       className={cn(
-        'p-2 transition-all duration-200',
+        'p-1.5 lg:p-2 transition-all duration-200',
         isHovered && 'ring-2 ring-primary/40 bg-primary/[0.03] shadow-sm',
         isOver && !isHovered && 'ring-2 ring-primary/30 bg-primary/[0.02]',
       )}
     >
-      <div className="flex items-center justify-between mb-1 px-1">
+      <div className="flex items-center justify-between mb-0.5 lg:mb-1 px-0.5 lg:px-1">
         <span className="text-[11px] font-semibold">{meta.label}</span>
         <span className="text-[9px] text-muted-foreground tabular-nums">{tasks.length}</span>
       </div>
       {tasks.length === 0 ? (
         <div className={cn(
-          'py-3 text-center transition-colors duration-200',
+          'py-2 lg:py-3 text-center transition-colors duration-200',
           isHovered && 'bg-primary/10 rounded-md',
         )}>
           <p className={cn('text-[10px] italic', isHovered ? 'text-primary' : 'text-muted-foreground')}>
@@ -282,26 +281,21 @@ function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) 
   const updateTask = useAppStore((s) => s.updateTask);
   const { toast } = useToast();
 
-  // Build grouped lookup
   const grouped = useMemo(() => {
     const map: Record<EisenhowerCategory, Task[]> = { do_first: [], schedule: [], delegate: [], eliminate: [] };
     for (const t of tasks) map[t.eisenhowerCategory].push(t);
     return map;
   }, [tasks]);
 
-  // Track drag state
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [hoveredCategory, setHoveredCategory] = useState<EisenhowerCategory | null>(null);
   const [insertIndex, setInsertIndex] = useState<number | null>(null);
-
-  // Temporarily reordered state during drag — synced back after drop
   const [liveTasks, setLiveTasks] = useState<Task[]>(tasks);
 
   useEffect(() => {
     setLiveTasks(tasks);
   }, [tasks]);
 
-  // Compute live grouped from liveTasks
   const liveGrouped = useMemo(() => {
     const map: Record<EisenhowerCategory, Task[]> = { do_first: [], schedule: [], delegate: [], eliminate: [] };
     for (const t of liveTasks) map[t.eisenhowerCategory].push(t);
@@ -326,13 +320,12 @@ function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) 
       return;
     }
 
-    // Determine which quadrant we're over
     let targetCategory: EisenhowerCategory | null = null;
     let targetIndex: number | null = null;
 
     if (overId.startsWith('quadrant:')) {
       targetCategory = overId.slice(9) as EisenhowerCategory;
-      targetIndex = liveGrouped[targetCategory].length; // append at end
+      targetIndex = liveGrouped[targetCategory].length;
     } else if (overId.startsWith('task:')) {
       const overTaskId = overId.slice(5);
       for (const cat of CATEGORIES) {
@@ -356,12 +349,9 @@ function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) 
     setHoveredCategory(targetCategory);
     setInsertIndex(targetIndex);
 
-    // Live reorder preview — move the dragged task in liveTasks
     if (targetCategory && targetIndex !== null && activeTask) {
       setLiveTasks((prev) => {
-        // Remove from current position
         const filtered = prev.filter((t) => t.id !== activeTask.id);
-        // Insert at target position
         const newCatList = filtered.filter((t) => t.eisenhowerCategory === targetCategory);
         const otherTasks = filtered.filter((t) => t.eisenhowerCategory !== targetCategory);
         const clampedIdx = Math.min(targetIndex, newCatList.length);
@@ -378,7 +368,7 @@ function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) 
     setInsertIndex(null);
 
     if (!over || !activeTask) {
-      setLiveTasks(tasks); // reset
+      setLiveTasks(tasks);
       return;
     }
 
@@ -403,7 +393,7 @@ function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) 
     }
 
     if (activeTask.eisenhowerCategory === newCategory) {
-      setLiveTasks(tasks); // same quadrant, no change needed
+      setLiveTasks(tasks);
       return;
     }
 
@@ -419,7 +409,7 @@ function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) 
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-[auto_1fr_1fr] grid-rows-[auto_1fr_1fr] gap-1.5 items-start">
+      <div className="grid grid-cols-[auto_1fr_1fr] grid-rows-[auto_1fr_1fr] gap-1 lg:gap-1.5 items-start">
         {/* Column headers */}
         <div />
         <div className="text-[10px] font-semibold text-muted-foreground text-center pb-0.5">⚡ Urgent</div>
@@ -452,7 +442,6 @@ function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) 
         />
       </div>
 
-      {/* Floating overlay */}
       <DragOverlay dropAnimation={{ duration: 200 }}>
         {activeTask ? <DragOverlayCard task={activeTask} /> : null}
       </DragOverlay>
@@ -473,6 +462,7 @@ export function BacklogIncubator({ variant }: Props) {
   const [query, setQuery] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const tasks = useMemo(() => allTasks.filter((t) => t.status === variant), [allTasks, variant]);
   const filtered = useMemo(() => tasks.filter((t) =>
@@ -487,13 +477,13 @@ export function BacklogIncubator({ variant }: Props) {
   return (
     <div className="space-y-2">
       {/* Toolbar */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 lg:gap-2">
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <Icon className="size-3.5" />
           <span className="text-xs font-semibold text-foreground">{title}</span>
           <span className="text-[10px] tabular-nums">({filtered.length})</span>
         </div>
-        <div className="relative flex-1 max-w-xs">
+        <div className="relative flex-1 min-w-[120px] max-w-xs">
           <Search className="absolute left-1.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
           <Input
             value={query}
@@ -508,7 +498,10 @@ export function BacklogIncubator({ variant }: Props) {
             <ToggleGroupItem value="list" aria-label="List view" className="size-6"><ListIcon className="size-3" /></ToggleGroupItem>
           </ToggleGroup>
         )}
-        <Button size="sm" variant="outline" className="h-6 text-[11px] px-2" onClick={() => { setEditTask(null); setCreateOpen(true); }}>
+        <Button size="sm" variant="outline" className="h-6 text-[11px] px-2 gap-1" onClick={() => setImportOpen(true)}>
+          <FileText className="size-3" /> Import
+        </Button>
+        <Button size="sm" variant="outline" className="h-6 text-[11px] px-2 gap-1" onClick={() => { setEditTask(null); setCreateOpen(true); }}>
           <Plus className="size-3" /> Add
         </Button>
       </div>
@@ -539,6 +532,12 @@ export function BacklogIncubator({ variant }: Props) {
         open={createOpen}
         onOpenChange={setCreateOpen}
         editTask={editTask}
+        defaultStatus={variant}
+      />
+
+      <NotesImporter
+        open={importOpen}
+        onOpenChange={setImportOpen}
         defaultStatus={variant}
       />
     </div>

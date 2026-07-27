@@ -20,7 +20,7 @@ import { formatDuration } from '@/lib/time-utils';
 function CompletedRow({ task }: { task: Task }) {
   const uncompleteTask = useAppStore((s) => s.uncompleteTask);
   return (
-    <div className="group flex items-center justify-between text-[11px] py-1 border-b border-border/40 last:border-0">
+    <div className="group flex items-center justify-between text-[11px] py-0.5 lg:py-px border-b border-border/40 last:border-0">
       <div className="flex items-center gap-1.5 min-w-0">
         <Checkbox
           checked
@@ -47,7 +47,7 @@ function DraggableTodayTask({ task, onEdit }: { task: Task; onEdit: (t: Task) =>
   const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
 
   return (
-    <div ref={setNodeRef} className={cn(isDragging && 'opacity-30', 'flex items-center gap-2 px-2 py-1.5 rounded-md border border-border/50 bg-background hover:bg-muted/30 transition-colors group')} {...attributes} {...listeners}>
+    <div ref={setNodeRef} className={cn(isDragging && 'opacity-30', 'flex items-center gap-2 px-2 py-1 lg:py-0.5 rounded-md border border-border/50 bg-background hover:bg-muted/30 transition-colors group')} {...attributes} {...listeners}>
       <Checkbox
         checked={task.status === 'completed'}
         onCheckedChange={(v) => v ? void completeTask(task.id) : void uncompleteTask(task.id)}
@@ -89,10 +89,10 @@ export function Dashboard() {
   const overBudget = totalEstimated > maxFocus;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 lg:space-y-3">
       {/* Triage alert — compact banner */}
       {triageTasks.length > 0 && (
-        <div className="flex items-center justify-between gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+        <div className="flex items-center justify-between gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-1.5 lg:py-2">
           <div className="flex items-center gap-1.5">
             <AlertCircle className="size-3.5 text-amber-600 shrink-0" />
             <span className="text-xs font-medium">{triageTasks.length} task{triageTasks.length !== 1 ? 's' : ''} need triage</span>
@@ -101,11 +101,11 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid gap-2 lg:gap-3 lg:grid-cols-3">
         {/* Today list */}
         <div className="lg:col-span-2">
-          <Card className="p-3">
-            <div className="flex items-center justify-between mb-2">
+          <Card className="p-2 lg:p-3">
+            <div className="flex items-center justify-between mb-1.5 lg:mb-2">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs font-semibold">Today&apos;s Plan</h3>
                 <span className="text-[10px] text-muted-foreground">{todayTasks.length} scheduled · {completedToday.length} done</span>
@@ -115,7 +115,7 @@ export function Dashboard() {
               </Button>
             </div>
 
-            <div className="mb-2">
+            <div className="mb-1.5 lg:mb-2">
               <div className="flex items-center justify-between text-[10px] mb-0.5">
                 <span className="text-muted-foreground">Focus budget</span>
                 <span className={cn('font-medium tabular-nums', overBudget && 'text-rose-600')}>
@@ -126,12 +126,12 @@ export function Dashboard() {
             </div>
 
             {todayTasks.length === 0 ? (
-              <div className="py-6 text-center">
+              <div className="py-4 lg:py-6 text-center">
                 <Clock className="size-5 mx-auto text-muted-foreground/40 mb-1" />
                 <p className="text-[11px] text-muted-foreground">Nothing scheduled. Drag from backlog or add above.</p>
               </div>
             ) : (
-              <div className="space-y-0.5 max-h-[360px] overflow-y-auto">
+              <div className="space-y-0.5 max-h-[280px] lg:max-h-[50vh] overflow-y-auto">
                 {todayTasks.map((t) => (
                   <DraggableTodayTask key={t.id} task={t} onEdit={(t) => { setEditTask(t); setCreateOpen(true); }} />
                 ))}
@@ -141,8 +141,8 @@ export function Dashboard() {
 
           {/* Completed — single-line rows with undo */}
           {completedToday.length > 0 && (
-            <Card className="p-3 mt-2">
-              <div className="flex items-center gap-1.5 mb-1.5">
+            <Card className="p-2 lg:p-3 mt-2">
+              <div className="flex items-center gap-1.5 mb-1 lg:mb-1.5">
                 <CheckCircle2 className="size-3 text-emerald-600" />
                 <h3 className="text-xs font-semibold">Completed</h3>
                 <Badge variant="outline" className="text-[9px] px-1">{completedToday.length}</Badge>
@@ -156,7 +156,7 @@ export function Dashboard() {
           )}
         </div>
 
-        {/* Sidebar */}
+        {/* Sidebar — compact on large screens */}
         <div className="space-y-2">
           <CapacityPanel />
           <TimerPanel />

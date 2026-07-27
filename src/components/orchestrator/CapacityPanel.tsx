@@ -30,8 +30,8 @@ export function CapacityPanel() {
   const over = (capacity?.scheduledFocusMinutes ?? 0) > (capacity?.maxAllowedFocusMinutes ?? 0);
 
   return (
-    <Card className={cn('p-2.5 ring-1', style.ring, style.bg)}>
-      <div className="flex items-center justify-between mb-2">
+    <Card className={cn('p-2 lg:p-2.5 ring-1', style.ring, style.bg)}>
+      <div className="flex items-center justify-between mb-1.5 lg:mb-2">
         <div className="flex items-center gap-1.5">
           <Battery className={cn('size-3.5', style.text)} />
           <span className="text-[11px] font-semibold">Capacity</span>
@@ -39,7 +39,7 @@ export function CapacityPanel() {
         <span className={cn('text-[10px] font-medium', style.text)}>{style.label}</span>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5 lg:space-y-2">
         <div>
           <div className="flex items-center justify-between text-[10px] mb-0.5">
             <span className="flex items-center gap-0.5 text-muted-foreground"><Zap className="size-2.5" /> Readiness</span>
@@ -59,7 +59,7 @@ export function CapacityPanel() {
           </div>
         </div>
 
-        <div className="rounded bg-background/60 px-2 py-1.5 border">
+        <div className="rounded bg-background/60 px-2 py-1 lg:py-1.5 border">
           <div className="flex items-center justify-between text-[10px] mb-0.5">
             <span className="text-muted-foreground">Budget</span>
             <span className={cn('font-medium tabular-nums', over ? 'text-rose-600' : '')}>
