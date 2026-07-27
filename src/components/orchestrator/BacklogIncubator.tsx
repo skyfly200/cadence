@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Inbox, Lightbulb, Plus, Search, Grid2x2, List as ListIcon,
-  Pencil, Trash2, Play, GripVertical, FileText,
+  Pencil, Trash2, CalendarClock, GripVertical, FileText,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { TaskFormDialog } from './TaskFormDialog';
@@ -49,7 +49,7 @@ function TaskRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
   const completeTask = useAppStore((s) => s.completeTask);
   const uncompleteTask = useAppStore((s) => s.uncompleteTask);
   const deleteTask = useAppStore((s) => s.deleteTask);
-  const startTimer = useAppStore((s) => s.startTimer);
+  const updateTask = useAppStore((s) => s.updateTask);
   const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
 
   return (
@@ -79,8 +79,8 @@ function TaskRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
       <td className="px-1 md:px-1.5 py-1 md:py-1.5">
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           {task.status !== 'completed' && (
-            <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={() => void startTimer(task.id, 'pomodoro')} aria-label="Start timer">
-              <Play className="size-3" />
+            <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={() => void updateTask(task.id, { status: 'today' })} aria-label="Do today" title="Do today">
+              <CalendarClock className="size-3" />
             </Button>
           )}
           <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={() => onEdit(task)} aria-label="Edit">
@@ -187,8 +187,8 @@ function MatrixRow({
         </td>
         <td className="px-1 md:px-1.5 py-1 md:py-1.5">
           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={(e) => { e.stopPropagation(); void useAppStore.getState().startTimer(task.id, 'pomodoro'); }} aria-label="Start timer">
-              <Play className="size-3" />
+            <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={(e) => { e.stopPropagation(); void useAppStore.getState().updateTask(task.id, { status: 'today' }); }} aria-label="Do today" title="Do today">
+              <CalendarClock className="size-3" />
             </Button>
             <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={(e) => { e.stopPropagation(); onEdit(task); }} aria-label="Edit">
               <Pencil className="size-3" />

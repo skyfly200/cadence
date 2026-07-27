@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Clock, Play, CheckCircle2, AlertCircle, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Clock, Play, CalendarClock, CheckCircle2, AlertCircle, Pencil, Trash2 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { TaskFormDialog } from './TaskFormDialog';
 import { TimerPanel } from './TimerPanel';
@@ -44,6 +44,7 @@ function DraggableTodayTask({ task, onEdit }: { task: Task; onEdit: (t: Task) =>
   const uncompleteTask = useAppStore((s) => s.uncompleteTask);
   const deleteTask = useAppStore((s) => s.deleteTask);
   const startTimer = useAppStore((s) => s.startTimer);
+  const setActiveTab = useAppStore((s) => s.setActiveTab);
   const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
 
   return (
@@ -61,8 +62,9 @@ function DraggableTodayTask({ task, onEdit }: { task: Task; onEdit: (t: Task) =>
       <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 hidden xs:inline">{formatDuration(task.estimatedMinutes)}</span>
       <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
         {task.status !== 'completed' && (
-          <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={() => void startTimer(task.id, 'pomodoro')} aria-label="Start"><Play className="size-3" /></Button>
+          <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={() => void startTimer(task.id, 'pomodoro')} aria-label="Start timer" title="Start timer"><Play className="size-3" /></Button>
         )}
+        <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={() => setActiveTab('timeline')} aria-label="Schedule on timeline" title="Schedule on timeline"><CalendarClock className="size-3" /></Button>
         <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={() => onEdit(task)} aria-label="Edit"><Pencil className="size-3" /></Button>
         <Button size="icon" variant="ghost" className="size-6 sm:size-6 text-destructive hover:text-destructive" onClick={() => void deleteTask(task.id)} aria-label="Delete"><Trash2 className="size-3" /></Button>
       </div>
