@@ -27,7 +27,7 @@ function DraggableTaskCard({ task, onEdit }: { task: Task; onEdit: (t: Task) => 
       {...attributes}
       {...listeners}
     >
-      <TaskCard task={task} onEdit={onEdit} draggable showActions />
+      <TaskCard task={task} onEdit={onEdit} draggable compact showActions />
     </div>
   );
 }
@@ -35,25 +35,22 @@ function DraggableTaskCard({ task, onEdit }: { task: Task; onEdit: (t: Task) => 
 function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) => void }) {
   const quadrants: EisenhowerCategory[] = ['do_first', 'schedule', 'delegate', 'eliminate'];
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       {quadrants.map((q) => {
         const items = tasks.filter((t) => t.eisenhowerCategory === q);
         const meta = EISENHOWER_LABELS[q];
         return (
-          <Card key={q} className="p-3 min-h-[160px]">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-semibold">{meta.label}</h4>
-              <Badge variant="outline" className="text-[10px]">{items.length}</Badge>
+          <Card key={q} className="p-2.5">
+            <div className="flex items-center justify-between mb-1.5">
+              <h4 className="text-[11px] font-semibold">{meta.label}</h4>
+              <Badge variant="outline" className="text-[9px] px-1.5">{items.length}</Badge>
             </div>
-            <p className="text-[10px] text-muted-foreground mb-2">
-              {meta.urgent ? 'Urgent' : 'Not urgent'} · {meta.important ? 'Important' : 'Not important'}
-            </p>
-            <div className="space-y-2">
+            <div className="space-y-1">
               {items.map((t) => (
                 <DraggableTaskCard key={t.id} task={t} onEdit={onEdit} />
               ))}
               {items.length === 0 && (
-                <p className="text-[11px] text-muted-foreground italic py-4 text-center">No tasks here</p>
+                <p className="text-[10px] text-muted-foreground italic py-3 text-center">No tasks</p>
               )}
             </div>
           </Card>
@@ -137,7 +134,7 @@ export function BacklogIncubator({ variant }: Props) {
       ) : isBacklog && view === 'matrix' ? (
         <EisenhowerMatrix tasks={filtered} onEdit={(t) => { setEditTask(t); setCreateOpen(true); }} />
       ) : (
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-1">
           {filtered.map((t) => (
             <DraggableTaskCard key={t.id} task={t} onEdit={(t) => { setEditTask(t); setCreateOpen(true); }} />
           ))}

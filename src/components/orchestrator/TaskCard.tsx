@@ -35,6 +35,67 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
   const handleDelete = () => void deleteTask(task.id);
   const handleStartTimer = () => void startTimer(task.id, 'pomodoro');
 
+  // Compact single-line card for backlog/incubator views
+  if (compact) {
+    return (
+      <Card
+        className={cn(
+          'group flex items-center gap-2 px-2.5 py-1.5 transition-all hover:shadow-md',
+          draggable && 'cursor-grab active:cursor-grabbing',
+          task.status === 'completed' && 'opacity-60',
+        )}
+      >
+        <Checkbox
+          checked={task.status === 'completed'}
+          onCheckedChange={(v) => v && handleComplete()}
+          className="shrink-0"
+          aria-label={`Complete ${task.title}`}
+        />
+        <span className={cn(
+          'min-w-0 flex-1 text-xs font-medium truncate',
+          task.status === 'completed' && 'line-through',
+        )}>
+          {task.title}
+        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          <Badge variant="outline" className={cn('text-[9px] px-1.5 py-0', catColor)}>
+            {task.category}
+          </Badge>
+          <Badge variant="outline" className="text-[9px] px-1.5 py-0 gap-0.5">
+            <Clock className="size-2" /> {formatDuration(task.estimatedMinutes)}
+          </Badge>
+          {task.rolledOverCount > 0 && (
+            <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-amber-700 border-amber-500/40 bg-amber-500/10">
+              ×{task.rolledOverCount}
+            </Badge>
+          )}
+        </div>
+        {showActions && (
+          <div className="flex items-center gap-0.5 shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+            {task.status !== 'completed' && (
+              <Button size="icon" variant="ghost" className="size-6" onClick={handleStartTimer} aria-label="Start timer">
+                <Play className="size-2.5" />
+              </Button>
+            )}
+            {onEdit && (
+              <Button size="icon" variant="ghost" className="size-6" onClick={() => onEdit(task)} aria-label="Edit">
+                <Pencil className="size-2.5" />
+              </Button>
+            )}
+            {task.status !== 'today' && task.status !== 'completed' && (
+              <Button size="icon" variant="ghost" className="size-6" onClick={() => void updateTask(task.id, { status: 'today' })} title="Move to today" aria-label="Move to today">
+                <ArrowUpRight className="size-2.5" />
+              </Button>
+            )}
+            <Button size="icon" variant="ghost" className="size-6 text-destructive hover:text-destructive" onClick={handleDelete} aria-label="Delete">
+              <Trash2 className="size-2.5" />
+            </Button>
+          </div>
+        )}
+      </Card>
+    );
+  }
+
   return (
     <Card
       className={cn(
@@ -66,7 +127,7 @@ export function TaskCard({ task, compact = false, draggable = false, showActions
               </span>
             )}
           </div>
-          {!compact && task.notes && (
+          {task.notes && (
             <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{task.notes}</p>
           )}
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
