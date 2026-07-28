@@ -1,12 +1,8 @@
-[build]
-  command = "bun run build"
-  publish = ".next"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-# Google Calendar OAuth environment variables (set in Netlify UI)
-# GOOGLE_CLIENT_ID=your-client-id
-# GOOGLE_CLIENT_SECRET=your-secret
-
-# AI SDK (already configured via z-ai-web-dev-sdk)
+# Netlify auto-detects Nuxt and applies the Nitro `netlify` preset,
+# building server routes into Netlify Functions. No publish/command
+# overrides are needed — setting them wrong breaks the deploy.
+#
+# Set these in the Netlify UI to enable Google Calendar sync:
+#   GOOGLE_CLIENT_ID
+#   GOOGLE_CLIENT_SECRET
+#   NUXT_PUBLIC_GOOGLE_CLIENT_ID
