@@ -41,7 +41,7 @@ export function TimerPanel() {
 
   const task = activeTimer ? tasks.find((t) => t.id === activeTimer.taskId) : null;
   const elapsed = activeTimer
-    ? activeTimer.elapsedBeforeStart + Math.floor((now - activeTimer.startedAt) / 1000)
+    ? Math.max(0, activeTimer.elapsedBeforeStart + Math.floor((now - activeTimer.startedAt) / 1000))
     : 0;
   const remaining = activeTimer?.type === 'pomodoro' && activeTimer.targetSeconds > 0
     ? Math.max(0, activeTimer.targetSeconds - elapsed)
