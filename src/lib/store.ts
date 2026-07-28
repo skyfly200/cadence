@@ -74,6 +74,9 @@ interface AppState {
   moveTaskToTimeline: (taskId: string, startISO: string, endISO: string) => Promise<void>;
   recalcScheduledFocus: () => Promise<void>;
 
+  // Settings
+  saveSettings: (input: Partial<Settings>) => Promise<void>;
+
   // Capacity
   setCapacity: (input: Partial<DailyCapacity>) => Promise<void>;
   generateAnchors: () => Promise<void>;
@@ -309,6 +312,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ capacity: updated });
       setCapacityRow(date, { scheduledFocusMinutes: scheduled });
     }
+  },
+
+  // ── Settings ────────────────────────────────────────────
+  saveSettings: async (input) => {
+    const current = getSettingsRow();
+    const updated: SettingsRow = { ...current, ...input } as SettingsRow;
+    saveSettings(updated);
+    set({ settings: updated as unknown as Settings });
   },
 
   // ── Capacity ────────────────────────────────────────────

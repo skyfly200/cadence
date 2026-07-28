@@ -26,19 +26,14 @@ const DEFAULTS = {
 type FormState = typeof DEFAULTS;
 
 function SettingsForm({ initial }: { initial: FormState }) {
-  const loadSettings = useAppStore((s) => s.loadSettings);
+  const saveSettings = useAppStore((s) => s.saveSettings);
   const generateAnchors = useAppStore((s) => s.generateAnchors);
   const { toast } = useToast();
   const [form, setForm] = useState<FormState>(initial);
 
   const save = async () => {
     try {
-      await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      await loadSettings();
+      await saveSettings(form);
       toast({ title: 'Settings saved' });
     } catch {
       toast({ title: 'Save failed', variant: 'destructive' });

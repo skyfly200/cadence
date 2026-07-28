@@ -390,3 +390,24 @@ Stage Summary:
 - Event sync is client-side (Google Calendar API supports CORS with Bearer tokens)
 - Ready for Netlify deployment via `netlify.toml`
 - Lint clean, TS clean, page verified 200
+
+---
+Task ID: 15
+Agent: main
+Task: Post-migration cleanup — fix settings save bug, remove dead Prisma artifacts
+
+Work Log:
+- Discovered the Prisma→localStorage migration was already 99% complete from previous session
+- **Fixed settings save bug**: `SettingsPanel.tsx` was POSTing to non-existent `/api/settings` → wired to new `saveSettings()` store action that writes directly to localStorage
+- Added `saveSettings(input: Partial<Settings>)` action to Zustand store (merges with current settings and persists)
+- **Deleted dead files**: `src/lib/db.ts`, `prisma/` directory
+- **Removed 6 unused packages**: `@prisma/client`, `prisma`, `next-auth`, `@tanstack/react-query`, `@tanstack/react-table`, `next-intl`
+- Cleaned up `db:*` scripts in package.json (replaced with echo placeholders)
+- Verified: zero references to removed packages in source code, lint clean, page compiles 200
+- Serverless API routes preserved: Google Calendar callback/refresh (OAuth needs client_secret), AI estimate/parse-todos, voice transcribe
+
+Stage Summary:
+- App is now 100% localStorage with zero database dependency
+- Settings save/restore works correctly via Zustand → localStorage
+- All dead Prisma/DB artifacts removed — clean dependency tree
+- Ready for Netlify deployment as Next.js serverless functions + client-side localStorage
