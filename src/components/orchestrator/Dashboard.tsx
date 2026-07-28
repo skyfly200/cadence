@@ -280,8 +280,8 @@ export function Dashboard() {
       )}
 
       <div className="grid gap-2 sm:gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {/* Today list */}
-        <div className="md:col-span-2 lg:col-span-2 min-w-0">
+        {/* Today list — 1 col at md, 2 cols at lg */}
+        <div className="md:col-span-1 lg:col-span-2 min-w-0">
           <Card className="p-2 sm:p-2.5 md:p-3 overflow-hidden">
             <div className="flex items-center justify-between mb-1.5 sm:mb-2">
               <div className="flex items-center gap-2">

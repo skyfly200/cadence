@@ -275,3 +275,21 @@ Stage Summary:
 - Pomodoro and Open Flow timers can be started independently of any task
 - Import from Notes automatically filters out tasks that already exist (case-insensitive)
 - Lint clean, all API routes return 200
+
+---
+Task ID: session-7-grid-fix
+Agent: Main
+Task: Fix dashboard cards not wrapping side by side
+
+Work Log:
+- Root cause: At `md` breakpoint (768px), the grid was `md:grid-cols-2` (2 columns) but the Today's Plan card had `md:col-span-2` which consumed BOTH columns, leaving zero room for the sidebar. The sidebar wrapped to a new row, making it appear below instead of beside the today list.
+- The fix: Changed Today's Plan grid child from `md:col-span-2 lg:col-span-2` to `md:col-span-1 lg:col-span-2`. Now at md both panels take 1 column each (side by side, equal width), and at lg the today list expands to 2 columns while sidebar stays at 1.
+- Verified via agent-browser + VLM at three viewports:
+  * 375px (mobile): cards stacked vertically (correct, single column)
+  * 768px (md): cards side by side (FIXED - was previously broken)
+  * default (lg): cards side by side (still working)
+
+Stage Summary:
+- Dashboard now correctly shows Today's Plan and sidebar panels (Capacity, Timer, Score) side by side starting at the md breakpoint (768px+)
+- Mobile (<768px) retains the stacked vertical layout
+- Lint clean, no runtime errors
