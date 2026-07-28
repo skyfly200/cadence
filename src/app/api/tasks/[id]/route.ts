@@ -9,7 +9,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const allowed = [
     'title', 'notes', 'status', 'eisenhowerCategory',
     'estimatedMinutes', 'actualMinutes', 'category',
-    'rolledOverCount', 'priority', 'completedAt',
+    'rolledOverCount', 'priority', 'completedAt', 'sortOrder',
   ];
   const data: Record<string, unknown> = {};
   for (const k of allowed) {

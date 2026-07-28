@@ -41,6 +41,7 @@ interface AppState {
   deleteTask: (id: string) => Promise<void>;
   completeTask: (id: string, actualMinutes?: number) => Promise<void>;
   uncompleteTask: (id: string) => Promise<void>;
+  reorderTasks: (orderedIds: string[]) => Promise<void>;
 
   // Time blocks
   createTimeBlock: (input: Partial<TimeBlock>) => Promise<TimeBlock | null>;
@@ -204,6 +205,22 @@ export const useAppStore = create<AppState>((set, get) => ({
       await get().computeDailyScore();
     } catch (e) {
       console.error('uncompleteTask failed', e);
+    }
+  },
+
+  reorderTasks: async (orderedIds) => {
+    try {
+      await api.post('/api/tasks/reorder', { orderedIds });
+      // Update local state to reflect new sort orders
+      const idOrderMap = new Map(orderedIds.map((id, idx) => [id, idx]));
+      set({
+        tasks: get().tasks.map((t) => ({
+          ...t,
+          sortOrder: idOrderMap.has(t.id) ? idOrderMap.get(t.id)! : t.sortOrder,
+        })),
+      });
+    } catch (e) {
+      console.error('reorderTasks failed', e);
     }
   },
 

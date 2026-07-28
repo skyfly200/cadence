@@ -1,22 +1,29 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useDraggable } from '@dnd-kit/core';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import {
+  DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
+  useDraggable, useDroppable,
+  type DragStartEvent, type DragOverEvent, type DragEndEvent,
+} from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Clock, Play, CalendarClock, CheckCircle2, AlertCircle, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Clock, Play, CalendarClock, CheckCircle2, AlertCircle, Pencil, Trash2, GripVertical } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { TaskFormDialog } from './TaskFormDialog';
 import { TimerPanel } from './TimerPanel';
 import { CapacityPanel } from './CapacityPanel';
 import { GamificationPanel } from './GamificationPanel';
 import { cn } from '@/lib/utils';
-import { CATEGORY_COLORS, EISENHOWER_LABELS, type Task } from '@/lib/types';
+import { CATEGORY_COLORS, type Task } from '@/lib/types';
 import { formatDuration } from '@/lib/time-utils';
 
+/* ═══════════════════════════════════════════════════════════════
+   Completed row with undo
+   ═══════════════════════════════════════════════════════════════ */
 function CompletedRow({ task }: { task: Task }) {
   const uncompleteTask = useAppStore((s) => s.uncompleteTask);
   return (
@@ -38,40 +45,209 @@ function CompletedRow({ task }: { task: Task }) {
   );
 }
 
-function DraggableTodayTask({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
+/* ═══════════════════════════════════════════════════════════════
+   Drag overlay card — shows what you're dragging
+   ═══════════════════════════════════════════════════════════════ */
+function DragOverlayCard({ task }: { task: Task }) {
+  const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
+  return (
+    <div className="flex items-center gap-2 rounded-md border bg-background shadow-lg px-2.5 py-2 max-w-[300px] opacity-90 rotate-1 scale-105">
+      <GripVertical className="size-3 text-muted-foreground shrink-0" />
+      <span className="text-xs font-medium truncate">{task.title}</span>
+      <span className={cn('inline-block rounded px-1 py-px font-medium shrink-0 text-[10px]', catColor)}>{task.category}</span>
+      <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{formatDuration(task.estimatedMinutes)}</span>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Droppable list wrapper
+   ═══════════════════════════════════════════════════════════════ */
+function DroppableTodayList({ id, children }: { id: string; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef} className={cn(isOver && 'ring-2 ring-primary/30 rounded-md')}>
+      {children}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Draggable today task row
+   ═══════════════════════════════════════════════════════════════ */
+function DraggableTodayTask({
+  task, onEdit, isDraggingItem, showInsertBefore, showInsertAfter,
+}: {
+  task: Task;
+  onEdit: (t: Task) => void;
+  isDraggingItem: boolean;
+  showInsertBefore: boolean;
+  showInsertAfter: boolean;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `task:${task.id}` });
   const completeTask = useAppStore((s) => s.completeTask);
-  const uncompleteTask = useAppStore((s) => s.uncompleteTask);
   const deleteTask = useAppStore((s) => s.deleteTask);
   const startTimer = useAppStore((s) => s.startTimer);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
   const catColor = CATEGORY_COLORS[task.category] ?? CATEGORY_COLORS.Admin;
 
   return (
-    <div ref={setNodeRef} className={cn(isDragging && 'opacity-30', 'flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-1.5 md:py-1 rounded-md border border-border/50 bg-background hover:bg-muted/30 transition-colors group')} {...attributes} {...listeners}>
-      <Checkbox
-        checked={task.status === 'completed'}
-        onCheckedChange={(v) => v ? void completeTask(task.id) : void uncompleteTask(task.id)}
-        className="size-3.5 sm:size-4 shrink-0"
-        aria-label={`Complete ${task.title}`}
-      />
-      <span className={cn('flex-1 min-w-0 text-xs font-medium truncate', task.status === 'completed' && 'line-through text-muted-foreground')}>
-        {task.title}
-      </span>
-      <span className={cn('text-[9px] rounded px-1 py-px font-medium shrink-0 hidden sm:inline-block', catColor)}>{task.category}</span>
-      <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 hidden xs:inline">{formatDuration(task.estimatedMinutes)}</span>
-      <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-        {task.status !== 'completed' && (
-          <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={() => void startTimer(task.id, 'pomodoro')} aria-label="Start timer" title="Start timer"><Play className="size-3" /></Button>
+    <>
+      {showInsertBefore && <div className="h-0.5 bg-primary rounded-full mx-1 my-0.5" />}
+      <div
+        ref={setNodeRef}
+        className={cn(
+          isDragging && 'opacity-30',
+          isDraggingItem && !isDragging && 'opacity-30 scale-[0.97] -translate-y-0.5',
+          'flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-1.5 md:py-1 rounded-md border border-border/50 bg-background hover:bg-muted/30 transition-all duration-200 group cursor-grab active:cursor-grabbing',
         )}
-        <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={() => setActiveTab('timeline')} aria-label="Schedule on timeline" title="Schedule on timeline"><CalendarClock className="size-3" /></Button>
-        <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={() => onEdit(task)} aria-label="Edit"><Pencil className="size-3" /></Button>
-        <Button size="icon" variant="ghost" className="size-6 sm:size-6 text-destructive hover:text-destructive" onClick={() => void deleteTask(task.id)} aria-label="Delete"><Trash2 className="size-3" /></Button>
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-3 text-muted-foreground/50 shrink-0" />
+        <Checkbox
+          checked={task.status === 'completed'}
+          onCheckedChange={(v) => { if (v) void completeTask(task.id); }}
+          className="size-3.5 sm:size-4 shrink-0"
+          aria-label={`Complete ${task.title}`}
+        />
+        <span className={cn('flex-1 min-w-0 text-xs font-medium truncate', task.status === 'completed' && 'line-through text-muted-foreground')}>
+          {task.title}
+        </span>
+        <span className={cn('text-[9px] rounded px-1 py-px font-medium shrink-0 hidden sm:inline-block', catColor)}>{task.category}</span>
+        <span className="text-[10px] text-muted-foreground tabular-nums shrink-0 hidden xs:inline">{formatDuration(task.estimatedMinutes)}</span>
+        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          {task.status !== 'completed' && (
+            <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={(e) => { e.stopPropagation(); void startTimer(task.id, 'pomodoro'); }} aria-label="Start timer" title="Start timer"><Play className="size-3" /></Button>
+          )}
+          <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={(e) => { e.stopPropagation(); setActiveTab('timeline'); }} aria-label="Schedule on timeline" title="Schedule on timeline"><CalendarClock className="size-3" /></Button>
+          <Button size="icon" variant="ghost" className="size-6 sm:size-6" onClick={(e) => { e.stopPropagation(); onEdit(task); }} aria-label="Edit"><Pencil className="size-3" /></Button>
+          <Button size="icon" variant="ghost" className="size-6 sm:size-6 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); void deleteTask(task.id); }} aria-label="Delete"><Trash2 className="size-3" /></Button>
+        </div>
       </div>
-    </div>
+      {showInsertAfter && <div className="h-0.5 bg-primary rounded-full mx-1 my-0.5" />}
+    </>
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   Today's task list with DnD reordering
+   ═══════════════════════════════════════════════════════════════ */
+function TodayTaskList({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) => void }) {
+  const reorderTasks = useAppStore((s) => s.reorderTasks);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [insertIndex, setInsertIndex] = useState<number | null>(null);
+  const [liveTasks, setLiveTasks] = useState<Task[]>(tasks);
+
+  useEffect(() => { setLiveTasks(tasks); }, [tasks]);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragStart = useCallback((e: DragStartEvent) => {
+    const id = String(e.active.id);
+    if (id.startsWith('task:')) {
+      const t = tasks.find((x) => x.id === id.slice(5));
+      setActiveTask(t ?? null);
+    }
+  }, [tasks]);
+
+  const handleDragOver = useCallback((e: DragOverEvent) => {
+    const overId = e.over ? String(e.over.id) : null;
+    const activeId = e.active ? String(e.active.id) : null;
+
+    if (!overId || !activeId || !activeTask) {
+      setInsertIndex(null);
+      return;
+    }
+
+    // Calculate insertion index from midpoint comparison
+    let targetIndex: number | null = null;
+    if (overId === 'today-list') {
+      targetIndex = liveTasks.length;
+    } else if (overId.startsWith('task:')) {
+      const overTaskId = overId.slice(5);
+      const idx = liveTasks.findIndex((t) => t.id === overTaskId);
+      if (idx !== -1) {
+        const overRect = e.over?.rect;
+        const activeRect = e.active?.rect?.current.translated;
+        if (overRect && activeRect) {
+          const activeCenterY = activeRect.top + activeRect.height / 2;
+          const overCenterY = overRect.top + overRect.height / 2;
+          targetIndex = activeCenterY < overCenterY ? idx : idx + 1;
+        } else {
+          targetIndex = idx + 1;
+        }
+      }
+    }
+
+    setInsertIndex(targetIndex);
+
+    // Live preview: reorder local array
+    if (targetIndex !== null && activeTask) {
+      setLiveTasks((prev) => {
+        const filtered = prev.filter((t) => t.id !== activeTask.id);
+        const clampedIdx = Math.min(targetIndex, filtered.length);
+        filtered.splice(clampedIdx, 0, activeTask);
+        return [...filtered];
+      });
+    }
+  }, [activeTask, liveTasks]);
+
+  const handleDragEnd = useCallback(async (e: DragEndEvent) => {
+    const { over } = e;
+    const activeId = activeTask?.id;
+    setActiveTask(null);
+    setInsertIndex(null);
+
+    if (!over || !activeId) {
+      setLiveTasks(tasks);
+      return;
+    }
+
+    // Persist reorder
+    const orderedIds = liveTasks.map((t) => t.id);
+    await reorderTasks(orderedIds);
+  }, [activeTask, liveTasks, tasks, reorderTasks]);
+
+  return (
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <DroppableTodayList id="today-list">
+        {liveTasks.length === 0 ? (
+          <div className="py-6 sm:py-8 text-center">
+            <Clock className="size-5 mx-auto text-muted-foreground/40 mb-1" />
+            <p className="text-[11px] text-muted-foreground">Nothing scheduled. Drag from backlog or add above.</p>
+          </div>
+        ) : (
+          <div className="space-y-0.5 max-h-[240px] xs:max-h-[280px] sm:max-h-[300px] md:max-h-[40vh] lg:max-h-[50vh] overflow-y-auto">
+            {liveTasks.map((t, idx) => (
+              <DraggableTodayTask
+                key={t.id}
+                task={t}
+                onEdit={onEdit}
+                isDraggingItem={activeTask ? activeTask.id === t.id : false}
+                showInsertBefore={insertIndex === idx}
+                showInsertAfter={insertIndex === liveTasks.length && idx === liveTasks.length - 1}
+              />
+            ))}
+          </div>
+        )}
+      </DroppableTodayList>
+
+      <DragOverlay dropAnimation={{ duration: 200 }}>
+        {activeTask ? <DragOverlayCard task={activeTask} /> : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Main Dashboard component
+   ═══════════════════════════════════════════════════════════════ */
 export function Dashboard() {
   const tasks = useAppStore((s) => s.tasks);
   const capacity = useAppStore((s) => s.capacity);
@@ -92,7 +268,7 @@ export function Dashboard() {
 
   return (
     <div className="space-y-2 sm:space-y-3">
-      {/* Triage alert — compact banner */}
+      {/* Triage alert */}
       {triageTasks.length > 0 && (
         <div className="flex items-center justify-between gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-1.5 sm:py-2">
           <div className="flex items-center gap-1.5">
@@ -127,21 +303,10 @@ export function Dashboard() {
               <Progress value={budgetPct} className={cn('h-1.5', overBudget && '[&>div]:bg-rose-500')} />
             </div>
 
-            {todayTasks.length === 0 ? (
-              <div className="py-6 sm:py-8 text-center">
-                <Clock className="size-5 mx-auto text-muted-foreground/40 mb-1" />
-                <p className="text-[11px] text-muted-foreground">Nothing scheduled. Drag from backlog or add above.</p>
-              </div>
-            ) : (
-              <div className="space-y-0.5 max-h-[240px] xs:max-h-[280px] sm:max-h-[300px] md:max-h-[40vh] lg:max-h-[50vh] overflow-y-auto">
-                {todayTasks.map((t) => (
-                  <DraggableTodayTask key={t.id} task={t} onEdit={(t) => { setEditTask(t); setCreateOpen(true); }} />
-                ))}
-              </div>
-            )}
+            <TodayTaskList tasks={todayTasks} onEdit={(t) => { setEditTask(t); setCreateOpen(true); }} />
           </Card>
 
-          {/* Completed — single-line rows with undo */}
+          {/* Completed */}
           {completedToday.length > 0 && (
             <Card className="p-2 sm:p-2.5 md:p-3 mt-2">
               <div className="flex items-center gap-1.5 mb-1 sm:mb-1.5">

@@ -17,6 +17,7 @@ export interface Task {
   category: string;
   rolledOverCount: number;
   priority: number;
+  sortOrder: number;
   createdAt: string;
   updatedAt: string;
   completedAt?: string | null;

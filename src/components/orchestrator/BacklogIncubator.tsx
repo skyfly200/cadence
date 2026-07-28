@@ -96,31 +96,44 @@ function TaskRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Draggable wrapper for list view (timeline drops)
+   Draggable list row with insertion indicators
    ═══════════════════════════════════════════════════════════════ */
-function DraggableListRow({ task, onEdit }: { task: Task; onEdit: (t: Task) => void }) {
+function DraggableListRow({
+  task, onEdit, isDraggingItem, showInsertBefore, showInsertAfter,
+}: {
+  task: Task; onEdit: (t: Task) => void;
+  isDraggingItem: boolean;
+  showInsertBefore: boolean;
+  showInsertAfter: boolean;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `task:${task.id}` });
   return (
-    <div ref={setNodeRef} className={cn(isDragging && 'opacity-30')} {...attributes} {...listeners}>
-      <table className="w-full"><tbody><TaskRow task={task} onEdit={onEdit} /></tbody></table>
-    </div>
+    <>
+      {showInsertBefore && <div className="h-0.5 bg-primary rounded-full mx-1 my-0.5" />}
+      <div ref={setNodeRef} className={cn(isDragging && 'opacity-30', isDraggingItem && !isDragging && 'opacity-30 scale-[0.97]', 'transition-all duration-200')} {...attributes} {...listeners}>
+        <table className="w-full"><tbody><TaskRow task={task} onEdit={onEdit} /></tbody></table>
+      </div>
+      {showInsertAfter && <div className="h-0.5 bg-primary rounded-full mx-1 my-0.5" />}
+    </>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════════
    Table header for list view
    ═══════════════════════════════════════════════════════════════ */
-const TABLE_HEAD = (
-  <thead>
-    <tr className="border-b border-border text-[10px] text-muted-foreground uppercase tracking-wide">
-      <th className="px-1 md:px-1.5 py-0.5 text-left w-6 sm:w-7"></th>
-      <th className="px-1 md:px-1.5 py-0.5 text-left">Task</th>
-      <th className="px-1 md:px-1.5 py-0.5 text-left hidden xs:table-cell">Cat</th>
-      <th className="px-1 md:px-1.5 py-0.5 text-left hidden sm:table-cell">Est</th>
-      <th className="px-1 md:px-1.5 py-0.5 text-right w-20 sm:w-24"></th>
-    </tr>
-  </thead>
-);
+function TableHead() {
+  return (
+    <thead>
+      <tr className="border-b border-border text-[10px] text-muted-foreground uppercase tracking-wide">
+        <th className="px-1 md:px-1.5 py-0.5 text-left w-6 sm:w-7"></th>
+        <th className="px-1 md:px-1.5 py-0.5 text-left">Task</th>
+        <th className="px-1 md:px-1.5 py-0.5 text-left hidden xs:table-cell">Cat</th>
+        <th className="px-1 md:px-1.5 py-0.5 text-left hidden sm:table-cell">Est</th>
+        <th className="px-1 md:px-1.5 py-0.5 text-right w-20 sm:w-24"></th>
+      </tr>
+    </thead>
+  );
+}
 
 /* ═══════════════════════════════════════════════════════════════
    Matrix quadrant row — draggable item + insertion droppable
@@ -462,6 +475,108 @@ function EisenhowerMatrix({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) 
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   Reorderable list view with DndContext
+   ═══════════════════════════════════════════════════════════════ */
+function ReorderableList({ tasks, onEdit }: { tasks: Task[]; onEdit: (t: Task) => void }) {
+  const reorderTasks = useAppStore((s) => s.reorderTasks);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [insertIndex, setInsertIndex] = useState<number | null>(null);
+  const [liveTasks, setLiveTasks] = useState<Task[]>(tasks);
+
+  useEffect(() => { setLiveTasks(tasks); }, [tasks]);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragStart = useCallback((e: DragStartEvent) => {
+    const id = String(e.active.id);
+    if (id.startsWith('task:')) {
+      const t = tasks.find((x) => x.id === id.slice(5));
+      setActiveTask(t ?? null);
+    }
+  }, [tasks]);
+
+  const handleDragOver = useCallback((e: DragOverEvent) => {
+    const overId = e.over ? String(e.over.id) : null;
+    if (!overId || !activeTask) {
+      setInsertIndex(null);
+      return;
+    }
+
+    let targetIndex: number | null = null;
+    if (overId === 'reorder-list') {
+      targetIndex = liveTasks.length;
+    } else if (overId.startsWith('task:')) {
+      const overTaskId = overId.slice(5);
+      const idx = liveTasks.findIndex((t) => t.id === overTaskId);
+      if (idx !== -1) {
+        const overRect = e.over?.rect;
+        const activeRect = e.active?.rect?.current.translated;
+        if (overRect && activeRect) {
+          const activeCenterY = activeRect.top + activeRect.height / 2;
+          const overCenterY = overRect.top + overRect.height / 2;
+          targetIndex = activeCenterY < overCenterY ? idx : idx + 1;
+        } else {
+          targetIndex = idx + 1;
+        }
+      }
+    }
+
+    setInsertIndex(targetIndex);
+
+    if (targetIndex !== null && activeTask) {
+      setLiveTasks((prev) => {
+        const filtered = prev.filter((t) => t.id !== activeTask.id);
+        const clampedIdx = Math.min(targetIndex, filtered.length);
+        filtered.splice(clampedIdx, 0, activeTask);
+        return [...filtered];
+      });
+    }
+  }, [activeTask, liveTasks]);
+
+  const handleDragEnd = useCallback(async () => {
+    setActiveTask(null);
+    setInsertIndex(null);
+    const orderedIds = liveTasks.map((t) => t.id);
+    await reorderTasks(orderedIds);
+  }, [liveTasks, reorderTasks]);
+
+  const { setNodeRef } = useDroppable({ id: 'reorder-list' });
+
+  return (
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <Card className="overflow-hidden" ref={setNodeRef}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <TableHead />
+            <tbody>
+              {liveTasks.map((t, idx) => (
+                <DraggableListRow
+                  key={t.id}
+                  task={t}
+                  onEdit={onEdit}
+                  isDraggingItem={activeTask ? activeTask.id === t.id : false}
+                  showInsertBefore={insertIndex === idx}
+                  showInsertAfter={insertIndex === liveTasks.length && idx === liveTasks.length - 1}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <DragOverlay dropAnimation={{ duration: 200 }}>
+        {activeTask ? <DragOverlayCard task={activeTask} /> : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
    Main component
    ═══════════════════════════════════════════════════════════════ */
 interface Props {
@@ -526,18 +641,10 @@ export function BacklogIncubator({ variant }: Props) {
       ) : isBacklog && view === 'matrix' ? (
         <EisenhowerMatrix tasks={filtered} onEdit={(t) => { setEditTask(t); setCreateOpen(true); }} />
       ) : (
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              {TABLE_HEAD}
-              <tbody>
-                {filtered.map((t) => (
-                  <TaskRow key={t.id} task={t} onEdit={(t) => { setEditTask(t); setCreateOpen(true); }} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        <ReorderableList
+          tasks={filtered}
+          onEdit={(t) => { setEditTask(t); setCreateOpen(true); }}
+        />
       )}
 
       <TaskFormDialog

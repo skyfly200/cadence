@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const tasks = await db.task.findMany({ orderBy: { createdAt: 'desc' } });
+  const tasks = await db.task.findMany({ orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }] });
   return NextResponse.json(tasks);
 }
 
@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
       category,
       rolledOverCount: Number(rolledOverCount) || 0,
       priority: Number(priority) || 2,
+      sortOrder: Number(body.sortOrder) || 0,
     },
   });
   return NextResponse.json(task);

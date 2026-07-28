@@ -220,3 +220,31 @@ Stage Summary:
 - dvh used throughout to fix mobile browser chrome issues
 - 4-tier breakpoint system: base → xs (480px) → sm (640px) → md (768px) → lg (1024px) → xl (1280px)
 - Lint clean, no runtime errors, browser-verified on mobile (375px), tablet (768px), desktop (1440px)
+
+---
+Task ID: session-5-actions
+Agent: Main
+Task: Replace Play button with Schedule + Do Today, shrink TaskFormDialog, add task reordering
+
+Work Log:
+- Replaced ▶ Play buttons with 📅 Schedule (CalendarClock icon) in Dashboard today task rows, BacklogIncubator MatrixRow and TaskRow
+- Added "Do Today" buttons (CalendarClock icon calling updateTask(id, {status: 'today'})) for backlog/incubator tasks
+- Shrank TaskFormDialog: reduced from sm:max-w-lg/p-6 to sm:max-w-md/p-4, Eisenhower 2×2 toggle → 4 compact color-coded buttons, duration → single inline row with preset chips, collapsible notes section, ⌘↵ keyboard shortcut on Create button
+- Added task reordering:
+  * Added `sortOrder Int @default(0)` to Prisma Task model
+  * Updated GET /api/tasks to order by `sortOrder asc, createdAt desc`
+  * Added `sortOrder` to PATCH allowed fields and POST task creation
+  * Created POST /api/tasks/reorder endpoint (accepts orderedIds array, assigns 0,1,2,...)
+  * Added `reorderTasks(orderedIds)` action to Zustand store with optimistic local update
+  * Wrapped Dashboard today's list in DndContext with live reorder preview, insertion indicators (blue lines), DragOverlay
+  * Wrapped BacklogIncubator list view in DndContext with same reorder mechanism
+  * Each DraggableTodayTask/MatrixRow has GripVertical handle, cursor-grab, live opacity/scale transitions
+  * Midpoint comparison algorithm for insertion index detection
+- Updated Task type in types.ts with sortOrder field
+
+Stage Summary:
+- Play button replaced with Schedule/Do Today actions across all views
+- TaskFormDialog is 40% more compact with collapsible notes and inline controls
+- Full drag-and-drop reordering for Today's Plan (Dashboard) and backlog/incubator list views
+- Reorder persists via sortOrder field and /api/tasks/reorder endpoint
+- Lint clean, API verified (reorder returns ok:true, sortOrder values correct)
