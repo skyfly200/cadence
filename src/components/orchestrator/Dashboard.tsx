@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Clock, Play, CalendarClock, CheckCircle2, AlertCircle, Pencil, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Clock, Play, CalendarClock, CheckCircle2, AlertCircle, Pencil, Trash2, GripVertical, RefreshCw } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { TaskFormDialog } from './TaskFormDialog';
 import { TimerPanel } from './TimerPanel';
@@ -252,8 +252,22 @@ export function Dashboard() {
   const tasks = useAppStore((s) => s.tasks);
   const capacity = useAppStore((s) => s.capacity);
   const setActiveTab = useAppStore((s) => s.setActiveTab);
+  const googleCalendar = useAppStore((s) => s.googleCalendar);
+  const loadGoogleCalendarStatus = useAppStore((s) => s.loadGoogleCalendarStatus);
+  const syncGoogleCalendar = useAppStore((s) => s.syncGoogleCalendar);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    void loadGoogleCalendarStatus();
+  }, [loadGoogleCalendarStatus]);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    await syncGoogleCalendar();
+    setSyncing(false);
+  };
 
   const todayTasks = useMemo(() => tasks.filter((t) => t.status === 'today'), [tasks]);
   const completedToday = useMemo(() => tasks.filter(
@@ -276,6 +290,31 @@ export function Dashboard() {
             <span className="text-xs font-medium">{triageTasks.length} task{triageTasks.length !== 1 ? 's' : ''} need triage</span>
           </div>
           <Button size="sm" variant="outline" className="h-7 sm:h-6 text-[10px] sm:text-[10px] px-2 sm:px-2" onClick={() => setActiveTab('triage')}>Review</Button>
+        </div>
+      )}
+
+      {/* Google Calendar sync bar */}
+      {googleCalendar.connected && (
+        <div className="flex items-center justify-between gap-2 rounded-md border border-sky-500/30 bg-sky-500/5 px-3 py-1.5">
+          <div className="flex items-center gap-1.5">
+            <CalendarClock className="size-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
+            <span className="text-[11px] font-medium">
+              Google Calendar
+              {googleCalendar.lastSyncAt && (
+                <span className="text-muted-foreground ml-1">· synced {new Date(googleCalendar.lastSyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              )}
+            </span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 text-[10px] px-2 border-sky-500/30"
+            onClick={() => void handleSync()}
+            disabled={syncing}
+          >
+            <RefreshCw className={cn('size-3', syncing && 'animate-spin')} />
+            Sync
+          </Button>
         </div>
       )}
 

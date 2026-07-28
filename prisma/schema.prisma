@@ -99,3 +99,17 @@ model Settings {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
+
+model GoogleCalendarToken {
+  id                    String   @id @default("singleton")
+  clientId              String
+  clientSecret          String
+  accessToken           String?
+  refreshToken          String?
+  tokenExpiresAt        DateTime?
+  calendarEmail         String?
+  connected             Boolean  @default(false)
+  lastSyncAt            DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}

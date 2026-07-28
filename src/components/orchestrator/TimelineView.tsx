@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Trash2, Lock, Calendar, Plus } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import {
-  ANCHOR_COLORS, CATEGORY_COLORS, type TimeBlock, type Task,
+  ANCHOR_COLORS, CATEGORY_COLORS, EXTERNAL_EVENT_COLORS, type TimeBlock, type Task,
 } from '@/lib/types';
 import {
   SLOT_MINUTES, SLOTS_PER_DAY, timeToGridRow, durationToRows,
@@ -46,6 +46,9 @@ function toVisibleRow(absoluteRow: number): number {
 }
 
 function BlockColor(block: TimeBlock): string {
+  if (block.isExternalEvent) {
+    return EXTERNAL_EVENT_COLORS[block.colorTag ?? 'external'] ?? EXTERNAL_EVENT_COLORS.external;
+  }
   if (block.isAnchor && block.anchorType) {
     return ANCHOR_COLORS[block.anchorType] ?? 'bg-muted border-border text-foreground';
   }
@@ -62,7 +65,7 @@ function DraggableBlock({ block, rowHeight }: DraggableBlockProps) {
     attributes, listeners, setNodeRef, isDragging,
   } = useDraggable({
     id: `block:${block.id}`,
-    disabled: block.isAnchor,
+    disabled: block.isAnchor || block.isExternalEvent,
   });
   const deleteTimeBlock = useAppStore((s) => s.deleteTimeBlock);
 
@@ -81,7 +84,7 @@ function DraggableBlock({ block, rowHeight }: DraggableBlockProps) {
         'group relative m-0.5 rounded-md border p-1 sm:p-1.5 text-[10px] sm:text-[11px] shadow-sm transition-opacity overflow-hidden',
         colorClass,
         isDragging && 'opacity-30',
-        block.isAnchor ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing hover:shadow-md',
+        block.isAnchor || block.isExternalEvent ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing hover:shadow-md',
       )}
       style={{
         gridRow: `${visibleStartRow} / span ${rowSpan}`,
@@ -92,14 +95,14 @@ function DraggableBlock({ block, rowHeight }: DraggableBlockProps) {
       <div className="flex items-start justify-between gap-1 h-full">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1">
-            {block.isAnchor && <Lock className="size-2 sm:size-2.5 shrink-0" />}
+            {(block.isAnchor || block.isExternalEvent) && <Lock className="size-2 sm:size-2.5 shrink-0" />}
             <span className="font-medium truncate text-[10px] sm:text-[11px]">{block.title}</span>
           </div>
           <div className="text-[9px] sm:text-[10px] opacity-80">
             {formatRange(start, end)}
           </div>
         </div>
-        {!block.isAnchor && (
+        {!block.isAnchor && !block.isExternalEvent && (
           <button
             type="button"
             onPointerDown={(e) => e.stopPropagation()}

@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import type {
   Task, TimeBlock, TimeLogSession, DailyCapacity, Settings, GamificationLog,
-  TaskStatus, EisenhowerCategory,
+  TaskStatus, EisenhowerCategory, GoogleCalendarStatus,
 } from '@/lib/types';
 import { getMaxFocusForScore, getCapacityTier } from '@/lib/types';
 import { todayKey } from '@/lib/time-utils';
@@ -66,6 +66,14 @@ interface AppState {
   // Gamification
   awardPoints: (type: GamificationLog['type'], points: number, note?: string) => Promise<void>;
   computeDailyScore: () => Promise<void>;
+
+  // Google Calendar
+  googleCalendar: GoogleCalendarStatus;
+  loadGoogleCalendarStatus: () => Promise<void>;
+  saveGoogleCredentials: (clientId: string, clientSecret: string) => Promise<void>;
+  connectGoogleCalendar: () => Promise<void>;
+  disconnectGoogleCalendar: () => Promise<void>;
+  syncGoogleCalendar: (date?: string) => Promise<{ synced: Array<{ id: string; title: string; start: string; end: string }>; total: number; filtered: number } | undefined>;
 }
 
 const api = {
@@ -114,6 +122,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   loading: false,
   activeTab: 'dashboard',
   activeTimer: null,
+  googleCalendar: { connected: false, calendarEmail: null, hasCredentials: false, lastSyncAt: null },
 
   setActiveTab: (t) => set({ activeTab: t }),
 
@@ -447,6 +456,61 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { gamification } = get();
     const score = gamification.reduce((sum, g) => sum + g.points, 0);
     set({ todayScore: score });
+  },
+
+  // ── Google Calendar ──────────────────────────────────────
+  loadGoogleCalendarStatus: async () => {
+    try {
+      const status = await api.get<GoogleCalendarStatus>('/api/google-calendar');
+      set({ googleCalendar: status });
+    } catch {
+      // ignore — not configured yet
+    }
+  },
+
+  saveGoogleCredentials: async (clientId, clientSecret) => {
+    try {
+      await api.post('/api/google-calendar', { clientId, clientSecret });
+      await get().loadGoogleCalendarStatus();
+    } catch (e) {
+      console.error('saveGoogleCredentials failed', e);
+    }
+  },
+
+  connectGoogleCalendar: async () => {
+    try {
+      const { url } = await api.get<{ url: string }>('/api/google-calendar?mode=auth-url');
+      // Redirect to Google OAuth
+      window.location.href = url;
+    } catch (e) {
+      console.error('connectGoogleCalendar failed', e);
+    }
+  },
+
+  disconnectGoogleCalendar: async () => {
+    try {
+      await api.del('/api/google-calendar');
+      await get().loadGoogleCalendarStatus();
+    } catch (e) {
+      console.error('disconnectGoogleCalendar failed', e);
+    }
+  },
+
+  syncGoogleCalendar: async (date) => {
+    try {
+      const dateParam = date ?? todayKey();
+      const result = await api.post<{ synced: Array<{ id: string; title: string; start: string; end: string }>; total: number; filtered: number }>(
+        `/api/google-calendar/sync?date=${dateParam}`,
+        {},
+      );
+      // Reload time blocks to pick up synced events
+      const blocks = await api.get<TimeBlock[]>(`/api/time-blocks?date=${dateParam}`);
+      set({ timeBlocks: blocks });
+      await get().loadGoogleCalendarStatus();
+      return result;
+    } catch (e) {
+      console.error('syncGoogleCalendar failed', e);
+    }
   },
 }));
 

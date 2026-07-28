@@ -10,6 +10,7 @@ import { Settings as SettingsIcon, Save, RefreshCw } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/hooks/use-toast';
 import { formatDuration } from '@/lib/time-utils';
+import { GoogleCalendarSettings } from './GoogleCalendarSettings';
 
 const DEFAULTS = {
   wakeTime: '07:00',
@@ -152,5 +153,10 @@ export function SettingsPanel() {
       }
     : DEFAULTS;
 
-  return <SettingsForm key={JSON.stringify(initial)} initial={initial} />;
+  return (
+    <div className="space-y-3">
+      <SettingsForm key={JSON.stringify(initial)} initial={initial} />
+      <GoogleCalendarSettings />
+    </div>
+  );
 }

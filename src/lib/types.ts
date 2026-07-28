@@ -124,3 +124,26 @@ export const EISENHOWER_LABELS: Record<EisenhowerCategory, { label: string; shor
 export const TASK_CATEGORIES: TaskCategory[] = ['Creative', 'Admin', 'Maintenance', 'Health', 'Learning', 'Social'];
 
 export const PRESET_DURATIONS = [15, 30, 60, 90, 120, 180];
+
+// Google Calendar external event colors
+export const EXTERNAL_EVENT_COLORS: Record<string, string> = {
+  external: 'bg-sky-500/15 border-sky-500/40 text-sky-800 dark:text-sky-200',
+  lavender: 'bg-purple-500/15 border-purple-500/40 text-purple-800 dark:text-purple-200',
+  slate: 'bg-slate-500/15 border-slate-500/40 text-slate-800 dark:text-slate-200',
+  grape: 'bg-violet-500/15 border-violet-500/40 text-violet-800 dark:text-violet-200',
+  flamingo: 'bg-pink-500/15 border-pink-500/40 text-pink-800 dark:text-pink-200',
+  banana: 'bg-amber-500/15 border-amber-500/40 text-amber-800 dark:text-amber-200',
+  tangerine: 'bg-orange-500/15 border-orange-500/40 text-orange-800 dark:text-orange-200',
+  peacock: 'bg-teal-500/15 border-teal-500/40 text-teal-800 dark:text-teal-200',
+  graphite: 'bg-zinc-500/15 border-zinc-500/40 text-zinc-800 dark:text-zinc-200',
+  blueberry: 'bg-purple-500/15 border-purple-500/40 text-purple-800 dark:text-purple-200',
+  basil: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-800 dark:text-emerald-200',
+  tomato: 'bg-rose-500/15 border-rose-500/40 text-rose-800 dark:text-rose-200',
+};
+
+export interface GoogleCalendarStatus {
+  connected: boolean;
+  calendarEmail: string | null;
+  hasCredentials: boolean;
+  lastSyncAt: string | null;
+}
