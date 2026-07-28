@@ -1,0 +1,12 @@
+[build]
+  command = "bun run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Google Calendar OAuth environment variables (set in Netlify UI)
+# GOOGLE_CLIENT_ID=your-client-id
+# GOOGLE_CLIENT_SECRET=your-secret
+
+# AI SDK (already configured via z-ai-web-dev-sdk)
