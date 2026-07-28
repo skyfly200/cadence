@@ -7,6 +7,30 @@ import type {
 } from '@/lib/types';
 import { getMaxFocusForScore, getCapacityTier } from '@/lib/types';
 import { todayKey } from '@/lib/time-utils';
+import {
+  loadAll, saveTasks, saveTimeBlocks, saveCapacityMap, saveSettings,
+  saveGamificationMap, saveTimerSessions, saveGoogleCalendar as persistGoogleCalendar,
+  addTask, updateTask as updateTaskRow, deleteTask as deleteTaskRow,
+  reorderTaskIds,
+  addTimeBlock, updateTimeBlock as updateTimeBlockRow, deleteTimeBlock as deleteTimeBlockRow,
+  deleteExternalEventsForDate,
+  getCapacity as getCapacityRow, setCapacity as setCapacityRow,
+  getSettings as getSettingsRow,
+  getGamificationForDate, addGamificationEntry,
+  addTimerSession, updateTimerSession,
+  getGoogleCalendar as getGoogleCalendarRow, disconnectGoogleCalendar as clearGoogleCalendar,
+  uid, nowISO,
+  type TaskRow, type TimeBlockRow, type CapacityRow, type GamificationRow,
+  type TimerSessionRow, type GoogleCalendarRow,
+} from '@/lib/local-storage';
+
+// ── Minimal fetch helper (only for serverless endpoints) ──────
+
+async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
+  const r = await fetch(url, init);
+  if (!r.ok) throw new Error(`${url}: ${r.status}`);
+  return r.json();
+}
 
 interface AppState {
   // Data
@@ -24,16 +48,16 @@ interface AppState {
   activeTimer: {
     taskId: string | null;
     type: 'pomodoro' | 'open_flow';
-    startedAt: number; // epoch ms
-    elapsedBeforeStart: number; // seconds already accumulated
-    targetSeconds: number; // for pomodoro
+    startedAt: number;
+    elapsedBeforeStart: number;
+    targetSeconds: number;
     running: boolean;
   } | null;
 
   // Actions
   setActiveTab: (t: string) => void;
-  loadData: () => Promise<void>;
-  loadSettings: () => Promise<void>;
+  loadData: () => void;
+  loadSettings: () => void;
 
   // Tasks
   createTask: (input: Partial<Task>) => Promise<Task | null>;
@@ -69,47 +93,11 @@ interface AppState {
 
   // Google Calendar
   googleCalendar: GoogleCalendarStatus;
-  loadGoogleCalendarStatus: () => Promise<void>;
-  saveGoogleCredentials: (clientId: string, clientSecret: string) => Promise<void>;
-  connectGoogleCalendar: () => Promise<void>;
-  disconnectGoogleCalendar: () => Promise<void>;
-  syncGoogleCalendar: (date?: string) => Promise<{ synced: Array<{ id: string; title: string; start: string; end: string }>; total: number; filtered: number } | undefined>;
+  loadGoogleCalendarStatus: () => void;
+  connectGoogleCalendar: () => void;
+  disconnectGoogleCalendar: () => void;
+  syncGoogleCalendar: (date?: string) => Promise<{ synced: number; total: number; filtered: number } | undefined>;
 }
-
-const api = {
-  async get<T>(url: string): Promise<T> {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(`${url}: ${r.status}`);
-    return r.json();
-  },
-  async post<T>(url: string, body: unknown): Promise<T> {
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!r.ok) throw new Error(`${url}: ${r.status}`);
-    return r.json();
-  },
-  async patch<T>(url: string, body: unknown): Promise<T> {
-    const r = await fetch(url, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!r.ok) throw new Error(`${url}: ${r.status}`);
-    return r.json();
-  },
-  async del(url: string): Promise<void> {
-    const r = await fetch(url, { method: 'DELETE' });
-    if (!r.ok) throw new Error(`${url}: ${r.status}`);
-  },
-  async delete_<T>(url: string): Promise<T> {
-    const r = await fetch(url, { method: 'DELETE' });
-    if (!r.ok) throw new Error(`${url}: ${r.status}`);
-    return r.json();
-  },
-};
 
 export const useAppStore = create<AppState>((set, get) => ({
   tasks: [],
@@ -126,46 +114,51 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setActiveTab: (t) => set({ activeTab: t }),
 
-  loadData: async () => {
+  // ── Load data from localStorage (synchronous) ──────────────
+  loadData: () => {
     set({ loading: true });
     try {
+      const data = loadAll();
       const date = todayKey();
-      const [tasks, blocks, capacity, gamification] = await Promise.all([
-        api.get<Task[]>('/api/tasks'),
-        api.get<TimeBlock[]>(`/api/time-blocks?date=${date}`),
-        api.get<DailyCapacity>(`/api/capacity?date=${date}`).catch(() => null),
-        api.get<GamificationLog[]>(`/api/gamification?date=${date}`).catch(() => []),
-      ]);
       set({
-        tasks,
-        timeBlocks: blocks,
-        capacity,
-        gamification,
+        tasks: data.tasks as Task[],
+        timeBlocks: data.timeBlocks as TimeBlock[],
+        timerSessions: data.timerSessions as TimeLogSession[],
+        capacity: data.capacityMap[date] as DailyCapacity | null,
+        settings: data.settings as Settings,
+        gamification: data.gamificationMap[date] as GamificationLog[] ?? [],
         loading: false,
       });
-      await get().computeDailyScore();
+      get().computeDailyScore();
     } catch (e) {
       console.error('loadData failed', e);
       set({ loading: false });
     }
   },
 
-  loadSettings: async () => {
-    try {
-      const s = await api.get<Settings>('/api/settings');
-      set({ settings: s });
-    } catch {
-      // create default settings
-      const s = await api.post<Settings>('/api/settings', {});
-      set({ settings: s });
-    }
+  loadSettings: () => {
+    const s = getSettingsRow();
+    set({ settings: s as Settings });
   },
 
+  // ── Tasks ────────────────────────────────────────────────
   createTask: async (input) => {
     try {
-      const t = await api.post<Task>('/api/tasks', input);
-      set({ tasks: [...get().tasks, t] });
-      return t;
+      const row = addTask({
+        title: input.title ?? '',
+        notes: input.notes ?? null,
+        status: input.status ?? 'backlog',
+        eisenhowerCategory: input.eisenhowerCategory ?? 'schedule',
+        estimatedMinutes: input.estimatedMinutes ?? 30,
+        actualMinutes: input.actualMinutes ?? 0,
+        category: input.category ?? 'Admin',
+        rolledOverCount: input.rolledOverCount ?? 0,
+        priority: input.priority ?? 2,
+        sortOrder: input.sortOrder ?? 0,
+        completedAt: input.completedAt ?? null,
+      });
+      set({ tasks: [...get().tasks, row as Task] });
+      return row as Task;
     } catch (e) {
       console.error('createTask failed', e);
       return null;
@@ -174,8 +167,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   updateTask: async (id, patch) => {
     try {
-      const t = await api.patch<Task>(`/api/tasks/${id}`, patch);
-      set({ tasks: get().tasks.map((x) => (x.id === id ? t : x)) });
+      const row = updateTaskRow(id, patch);
+      if (row) {
+        set({ tasks: get().tasks.map((x) => (x.id === id ? (row as Task) : x)) });
+      }
     } catch (e) {
       console.error('updateTask failed', e);
     }
@@ -183,7 +178,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   deleteTask: async (id) => {
     try {
-      await api.del(`/api/tasks/${id}`);
+      deleteTaskRow(id);
       set({
         tasks: get().tasks.filter((x) => x.id !== id),
         timeBlocks: get().timeBlocks.filter((b) => b.taskId !== id),
@@ -195,12 +190,16 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   completeTask: async (id, actualMinutes) => {
     try {
-      const t = await api.post<Task>(`/api/tasks/${id}/complete`, { actualMinutes });
-      set({ tasks: get().tasks.map((x) => (x.id === id ? t : x)) });
-      // award completion points
-      await get().awardPoints('completion', 10, `Completed: ${t.title}`);
-      await get().recalcScheduledFocus();
-      await get().computeDailyScore();
+      const row = updateTaskRow(id, {
+        status: 'completed',
+        completedAt: nowISO(),
+        actualMinutes: actualMinutes ?? get().tasks.find((t) => t.id === id)?.actualMinutes ?? 0,
+      });
+      if (row) {
+        set({ tasks: get().tasks.map((x) => (x.id === id ? (row as Task) : x)) });
+        await get().awardPoints('completion', 10, `Completed: ${row.title}`);
+        await get().recalcScheduledFocus();
+      }
     } catch (e) {
       console.error('completeTask failed', e);
     }
@@ -208,10 +207,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   uncompleteTask: async (id) => {
     try {
-      const t = await api.delete_<Task>(`/api/tasks/${id}/complete`);
-      set({ tasks: get().tasks.map((x) => (x.id === id ? t : x)) });
-      await get().recalcScheduledFocus();
-      await get().computeDailyScore();
+      const row = updateTaskRow(id, { status: 'today', completedAt: null });
+      if (row) {
+        set({ tasks: get().tasks.map((x) => (x.id === id ? (row as Task) : x)) });
+        await get().recalcScheduledFocus();
+      }
     } catch (e) {
       console.error('uncompleteTask failed', e);
     }
@@ -219,8 +219,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   reorderTasks: async (orderedIds) => {
     try {
-      await api.post('/api/tasks/reorder', { orderedIds });
-      // Update local state to reflect new sort orders
+      reorderTaskIds(orderedIds);
       const idOrderMap = new Map(orderedIds.map((id, idx) => [id, idx]));
       set({
         tasks: get().tasks.map((t) => ({
@@ -233,12 +232,22 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  // ── Time Blocks ──────────────────────────────────────────
   createTimeBlock: async (input) => {
     try {
-      const b = await api.post<TimeBlock>('/api/time-blocks', input);
-      set({ timeBlocks: [...get().timeBlocks, b] });
+      const row = addTimeBlock({
+        taskId: input.taskId ?? null,
+        title: input.title ?? '',
+        startTime: input.startTime ?? nowISO(),
+        endTime: input.endTime ?? nowISO(),
+        isAnchor: input.isAnchor ?? false,
+        isExternalEvent: input.isExternalEvent ?? false,
+        anchorType: input.anchorType ?? null,
+        colorTag: input.colorTag ?? null,
+      });
+      set({ timeBlocks: [...get().timeBlocks, row as TimeBlock] });
       await get().recalcScheduledFocus();
-      return b;
+      return row as TimeBlock;
     } catch (e) {
       console.error('createTimeBlock failed', e);
       return null;
@@ -247,9 +256,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   updateTimeBlock: async (id, patch) => {
     try {
-      const b = await api.patch<TimeBlock>(`/api/time-blocks/${id}`, patch);
-      set({ timeBlocks: get().timeBlocks.map((x) => (x.id === id ? b : x)) });
-      await get().recalcScheduledFocus();
+      const row = updateTimeBlockRow(id, patch);
+      if (row) {
+        set({ timeBlocks: get().timeBlocks.map((x) => (x.id === id ? (row as TimeBlock) : x)) });
+        await get().recalcScheduledFocus();
+      }
     } catch (e) {
       console.error('updateTimeBlock failed', e);
     }
@@ -257,7 +268,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   deleteTimeBlock: async (id) => {
     try {
-      await api.del(`/api/time-blocks/${id}`);
+      deleteTimeBlockRow(id);
       set({ timeBlocks: get().timeBlocks.filter((x) => x.id !== id) });
       await get().recalcScheduledFocus();
     } catch (e) {
@@ -268,24 +279,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   moveTaskToTimeline: async (taskId, startISO, endISO) => {
     const task = get().tasks.find((t) => t.id === taskId);
     if (!task) return;
-    // remove existing non-anchor block for this task today
     const existing = get().timeBlocks.find((b) => b.taskId === taskId);
     if (existing) {
-      await get().updateTimeBlock(existing.id, {
-        startTime: startISO, endTime: endISO,
-      });
+      await get().updateTimeBlock(existing.id, { startTime: startISO, endTime: endISO });
     } else {
       await get().createTimeBlock({
-        taskId,
-        title: task.title,
-        startTime: startISO,
-        endTime: endISO,
-        isAnchor: false,
-        isExternalEvent: false,
-        colorTag: task.category,
+        taskId, title: task.title, startTime: startISO, endTime: endISO,
+        isAnchor: false, isExternalEvent: false, colorTag: task.category,
       });
     }
-    // mark task as 'today'
     if (task.status !== 'today') {
       await get().updateTask(taskId, { status: 'today' as TaskStatus });
     }
@@ -305,28 +307,28 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (capacity) {
       const updated = { ...capacity, scheduledFocusMinutes: scheduled };
       set({ capacity: updated });
-      try {
-        await api.patch<DailyCapacity>(`/api/capacity?date=${date}`, { scheduledFocusMinutes: scheduled });
-      } catch (e) {
-        console.error('recalcScheduledFocus persist failed', e);
-      }
+      setCapacityRow(date, { scheduledFocusMinutes: scheduled });
     }
   },
 
+  // ── Capacity ────────────────────────────────────────────
   setCapacity: async (input) => {
     const date = todayKey();
-    try {
-      const c = await api.patch<DailyCapacity>(`/api/capacity?date=${date}`, input);
-      set({ capacity: c });
-    } catch (e) {
-      console.error('setCapacity failed', e);
-    }
+    const row = setCapacityRow(date, {
+      readinessScore: input.readinessScore ?? undefined,
+      sleepHours: input.sleepHours ?? undefined,
+      manualEnergyRating: input.manualEnergyRating ?? undefined,
+      maxAllowedFocusMinutes: input.maxAllowedFocusMinutes ?? undefined,
+      scheduledFocusMinutes: input.scheduledFocusMinutes ?? undefined,
+      triageCompleted: input.triageCompleted ?? undefined,
+      triageStreak: input.triageStreak ?? undefined,
+    } as Partial<CapacityRow>);
+    set({ capacity: row as unknown as DailyCapacity });
   },
 
   generateAnchors: async () => {
     const { settings, timeBlocks } = get();
     if (!settings) return;
-    // Check if anchors already exist for today
     const todayAnchors = timeBlocks.filter((b) => b.isAnchor);
     if (todayAnchors.length > 0) return;
 
@@ -345,7 +347,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     await make(settings.breakfastTime, 'Breakfast', 'breakfast', 30);
     await make(settings.lunchTime, 'Lunch', 'lunch', 45);
     await make(settings.dinnerTime, 'Dinner', 'dinner', 45);
-    // Hydration breaks every interval
     const startMins = 9 * 60;
     const endMins = 21 * 60;
     for (let m = startMins; m <= endMins; m += settings.hydrationInterval) {
@@ -362,6 +363,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  // ── Timer ───────────────────────────────────────────────
   startTimer: async (taskId, type, targetSeconds) => {
     const t = get().activeTimer;
     if (t) await get().stopTimer(false);
@@ -373,13 +375,15 @@ export const useAppStore = create<AppState>((set, get) => ({
         targetSeconds: target, running: true,
       },
     });
-    // persist session start (only for task-linked timers)
     if (taskId) {
       try {
-        const session = await api.post<TimeLogSession>('/api/timer/start', { taskId, type });
-        set({ timerSessions: [...get().timerSessions, session] });
+        const session = addTimerSession({
+          taskId, type, startTime: nowISO(), endTime: null,
+          elapsedSeconds: 0, interrupted: false,
+        });
+        set({ timerSessions: [...get().timerSessions, session as TimeLogSession] });
       } catch (e) {
-        console.error('startTimer failed', e);
+        console.error('startTimer session failed', e);
       }
     }
   },
@@ -391,13 +395,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ activeTimer: null });
     try {
       if (t.taskId) {
-        await api.post('/api/timer/stop', {
-          taskId: t.taskId, elapsedSeconds: elapsed, interrupted,
-        });
+        updateTimerSession(
+          get().timerSessions.find((s) => s.taskId === t.taskId && !s.endTime)?.id ?? '',
+          { endTime: nowISO(), elapsedSeconds: elapsed, interrupted },
+        );
         const task = get().tasks.find((x) => x.id === t.taskId);
         if (task) {
-          const addedMinutes = Math.round(elapsed / 60);
-          await get().updateTask(task.id, { actualMinutes: task.actualMinutes + addedMinutes });
+          await get().updateTask(task.id, { actualMinutes: task.actualMinutes + Math.round(elapsed / 60) });
         }
       }
       await get().awardPoints('focus_session', Math.max(1, Math.round(elapsed / 300)), `${elapsed}s focus`);
@@ -409,7 +413,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   tickTimer: () => {
     const t = get().activeTimer;
     if (!t || !t.running) return;
-    // For pomodoro, check completion
     if (t.type === 'pomodoro' && t.targetSeconds > 0) {
       const total = t.elapsedBeforeStart + Math.floor((Date.now() - t.startedAt) / 1000);
       if (total >= t.targetSeconds) {
@@ -418,8 +421,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  // ── Triage ──────────────────────────────────────────────
   runMidnightRollover: async () => {
-    // Move all 'today' tasks that are not completed into triage_review
     const { tasks } = get();
     const todayTasks = tasks.filter((t) => t.status === 'today');
     for (const t of todayTasks) {
@@ -442,14 +445,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  // ── Gamification ────────────────────────────────────────
   awardPoints: async (type, points, note) => {
     const date = todayKey();
-    try {
-      const g = await api.post<GamificationLog>('/api/gamification', { date, type, points, note });
-      set({ gamification: [...get().gamification, g] });
-    } catch (e) {
-      console.error('awardPoints failed', e);
-    }
+    const entry = addGamificationEntry({ date, type, points, note });
+    set({ gamification: [...get().gamification, entry as GamificationLog] });
   },
 
   computeDailyScore: async () => {
@@ -458,58 +458,124 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ todayScore: score });
   },
 
-  // ── Google Calendar ──────────────────────────────────────
-  loadGoogleCalendarStatus: async () => {
-    try {
-      const status = await api.get<GoogleCalendarStatus>('/api/google-calendar');
-      set({ googleCalendar: status });
-    } catch {
-      // ignore — not configured yet
-    }
+  // ── Google Calendar (client-side with serverless helpers) ──
+  loadGoogleCalendarStatus: () => {
+    const gc = getGoogleCalendarRow();
+    set({
+      googleCalendar: {
+        connected: gc.connected,
+        calendarEmail: gc.calendarEmail ?? null,
+        hasCredentials: typeof window !== 'undefined' && !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+        lastSyncAt: gc.lastSyncAt ?? null,
+      },
+    });
   },
 
-  saveGoogleCredentials: async (clientId, clientSecret) => {
-    try {
-      await api.post('/api/google-calendar', { clientId, clientSecret });
-      await get().loadGoogleCalendarStatus();
-    } catch (e) {
-      console.error('saveGoogleCredentials failed', e);
+  connectGoogleCalendar: () => {
+    const clientId = (typeof window !== 'undefined' && (window as unknown as Record<string, string>).NEXT_PUBLIC_GOOGLE_CLIENT_ID)
+      ?? process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      console.error('Google Client ID not configured');
+      return;
     }
+    const redirectUri = `${window.location.origin}/api/google-calendar/callback`;
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.email',
+      access_type: 'offline',
+      prompt: 'consent',
+    });
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   },
 
-  connectGoogleCalendar: async () => {
-    try {
-      const { url } = await api.get<{ url: string }>('/api/google-calendar?mode=auth-url');
-      // Redirect to Google OAuth
-      window.location.href = url;
-    } catch (e) {
-      console.error('connectGoogleCalendar failed', e);
-    }
-  },
-
-  disconnectGoogleCalendar: async () => {
-    try {
-      await api.del('/api/google-calendar');
-      await get().loadGoogleCalendarStatus();
-    } catch (e) {
-      console.error('disconnectGoogleCalendar failed', e);
-    }
+  disconnectGoogleCalendar: () => {
+    clearGoogleCalendar();
+    get().loadGoogleCalendarStatus();
   },
 
   syncGoogleCalendar: async (date) => {
+    const gc = getGoogleCalendarRow();
+    if (!gc.accessToken) return undefined;
+
+    // Check if token needs refresh
+    let accessToken = gc.accessToken;
+    if (gc.tokenExpiresAt && gc.refreshToken) {
+      const expiresAt = new Date(gc.tokenExpiresAt).getTime();
+      if (Date.now() > expiresAt - 60_000) {
+        try {
+          const refreshed = await fetchJSON<{ access_token: string; expires_in: number }>(
+            '/api/google-calendar/refresh',
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: gc.refreshToken }) },
+          );
+          accessToken = refreshed.access_token;
+          const newGc: GoogleCalendarRow = {
+            ...gc,
+            accessToken: refreshed.access_token,
+            tokenExpiresAt: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
+          };
+          persistGoogleCalendar(newGc);
+        } catch (e) {
+          console.error('Token refresh failed', e);
+          return undefined;
+        }
+      }
+    }
+
+    // Fetch events client-side (Google Calendar API supports CORS)
+    const dateParam = date ?? todayKey();
+    const startOfDay = new Date(`${dateParam}T00:00:00`);
+    const endOfDay = new Date(`${dateParam}T23:59:59`);
     try {
-      const dateParam = date ?? todayKey();
-      const result = await api.post<{ synced: Array<{ id: string; title: string; start: string; end: string }>; total: number; filtered: number }>(
-        `/api/google-calendar/sync?date=${dateParam}`,
-        {},
-      );
-      // Reload time blocks to pick up synced events
-      const blocks = await api.get<TimeBlock[]>(`/api/time-blocks?date=${dateParam}`);
-      set({ timeBlocks: blocks });
-      await get().loadGoogleCalendarStatus();
-      return result;
+      const params = new URLSearchParams({
+        timeMin: startOfDay.toISOString(),
+        timeMax: endOfDay.toISOString(),
+        singleEvents: 'true',
+        orderBy: 'startTime',
+        maxResults: '50',
+      });
+      const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!r.ok) throw new Error(`Calendar API: ${r.status}`);
+      const data = await r.json();
+      const events = data.items ?? [];
+
+      // Delete previous external blocks for this date
+      deleteExternalEventsForDate(dateParam);
+
+      // Create new external blocks
+      let synced = 0;
+      for (const event of events) {
+        if (!event.start?.dateTime || !event.end?.dateTime) continue;
+        const startTime = new Date(event.start.dateTime);
+        const endTime = new Date(event.end.dateTime);
+        if (startTime < startOfDay || endTime > endOfDay) continue;
+
+        addTimeBlock({
+          title: event.summary || '(No title)',
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          isExternalEvent: true,
+          isAnchor: false,
+          colorTag: event.colorId ?? 'external',
+        });
+        synced++;
+      }
+
+      // Update lastSyncAt
+      persistGoogleCalendar({ ...getGoogleCalendarRow(), lastSyncAt: nowISO() });
+
+      // Reload time blocks in store
+      const updatedBlocks = loadAll().timeBlocks as TimeBlock[];
+      set({ timeBlocks: updatedBlocks });
+      get().loadGoogleCalendarStatus();
+
+      return { synced, total: events.length, filtered: events.length - synced };
     } catch (e) {
       console.error('syncGoogleCalendar failed', e);
+      return undefined;
     }
   },
 }));

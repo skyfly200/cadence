@@ -344,3 +344,49 @@ Stage Summary:
 - Settings UI with step-by-step setup guide and credential management
 - Sync bar on Dashboard for quick one-click sync
 - Cannot browser-verify due to sandbox memory constraints (Turbopack OOM on full page compile), but API routes verified working
+
+---
+Task ID: session-9-localstorage-netlify
+Agent: Main
+Task: Refactor to localStorage (no DB) + Netlify deployment
+
+Work Log:
+- Created `src/lib/local-storage.ts` — complete typed localStorage persistence layer:
+  * TaskRow, TimeBlockRow, CapacityRow, GamificationRow, TimerSessionRow, GoogleCalendarRow, SettingsRow
+  * CRUD operations for each entity with safe JSON parse/stringify
+  * Bulk loadAll() for initial hydration
+  * uid() and nowISO() helpers replacing Prisma's cuid() and now()
+- Rewrote `src/lib/store.ts` — removed ALL API calls (api.get/post/patch/del), replaced with localStorage:
+  * loadData/loadSettings now synchronous (no async needed for localStorage)
+  * createTask → addTask(), updateTask → updateTaskRow(), etc.
+  * recalcScheduledFocus saves directly to localStorage
+  * startTimer/stopTimer use localStorage for timer sessions
+  * Google Calendar: tokens stored in localStorage, event sync done client-side (Google Calendar API supports CORS)
+  * Token refresh via serverless function /api/google-calendar/refresh
+  * Auth URL built client-side using NEXT_PUBLIC_GOOGLE_CLIENT_ID env var
+- Rewrote Google Calendar serverless routes:
+  * `/api/google-calendar/callback` — uses env vars (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET) instead of Prisma, redirects tokens in URL fragment (#gcal_tokens=base64)
+  * `/api/google-calendar/refresh` — new endpoint, uses env vars, takes refresh_token from request body
+- Updated `GoogleCalendarSettings.tsx`:
+  * Parses OAuth tokens from URL fragment on mount, stores in localStorage
+  * Detects whether env vars are configured (shows Connect button vs setup instructions)
+  * No more client ID / secret input fields — uses env vars exclusively
+- Updated `page.tsx` — loadData/loadSettings calls no longer use void (synchronous now)
+- Deleted 12 data API routes (tasks, time-blocks, capacity, timer, gamification, settings, google-calendar route, google-calendar sync)
+- Deleted `src/lib/google-calendar.ts` (old Prisma-based helper)
+- Only 4 API routes remain (all serverless-only):
+  * `/api/google-calendar/callback` — OAuth code exchange
+  * `/api/google-calendar/refresh` — Token refresh
+  * `/api/ai/estimate` — AI time estimation
+  * `/api/ai/parse-todos` — AI todo parsing
+  * `/api/voice/transcribe` — Voice transcription
+- Added `netlify.toml` with @netlify/plugin-nextjs and env var documentation
+- Verified: lint clean, TypeScript clean (only pre-existing NotesImporter error), page compiles and returns 200
+
+Stage Summary:
+- App is now fully client-renderable with localStorage persistence — zero database dependency
+- Only 4 serverless functions needed (OAuth callback, token refresh, AI features, voice)
+- Google Calendar OAuth uses env vars (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+- Event sync is client-side (Google Calendar API supports CORS with Bearer tokens)
+- Ready for Netlify deployment via `netlify.toml`
+- Lint clean, TS clean, page verified 200

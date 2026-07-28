@@ -260,7 +260,7 @@ export function Dashboard() {
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    void loadGoogleCalendarStatus();
+    loadGoogleCalendarStatus();
   }, [loadGoogleCalendarStatus]);
 
   const handleSync = async () => {

@@ -45,8 +45,8 @@ export default function Home() {
   const incubatorCount = useMemo(() => tasks.filter((t) => t.status === 'incubator').length, [tasks]);
 
   useEffect(() => {
-    void loadData();
-    void loadSettings();
+    loadData();
+    loadSettings();
   }, [loadData, loadSettings]);
 
   return (
