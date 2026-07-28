@@ -248,3 +248,30 @@ Stage Summary:
 - Full drag-and-drop reordering for Today's Plan (Dashboard) and backlog/incubator list views
 - Reorder persists via sortOrder field and /api/tasks/reorder endpoint
 - Lint clean, API verified (reorder returns ok:true, sortOrder values correct)
+
+---
+Task ID: session-6-fixes
+Agent: Main
+Task: Fix 3 issues — dashboard grid wrapping, free pomodoro, duplicate import filtering
+
+Work Log:
+- Fixed Dashboard grid layout: Added `min-w-0` to both grid children (today list + sidebar) and `overflow-hidden` to the Card containing the DnD list. This prevents grid children from overflowing their allocated column space.
+- Allowed starting pomodoro without a preset task:
+  * Changed `activeTimer.taskId` type from `string` to `string | null` in store
+  * Changed `startTimer` param to accept `string | null` taskId
+  * Wrapped API calls in `startTimer`/`stopTimer` with `if (taskId)` guards — free timers only update UI state and award gamification points, no DB session persistence
+  * TimerPanel: Changed running condition from `activeTimer && task` to just `activeTimer`, showing "Free Pomodoro"/"Free Flow" label when no task linked
+  * TimerPanel: Changed idle buttons to always work — uses first today task if available, falls back to `null` (free timer) if no today tasks exist
+- Added duplicate filtering to NotesImporter:
+  * Added `isDuplicate?: boolean` field to ParsedTaskItem interface
+  * Added `allTasks` selector from store
+  * After AI parsing, builds a Set of lowercase+trimmed existing task titles and marks matching items as duplicates (deselected)
+  * Shows amber "Duplicate" badge next to duplicate items in the review list
+  * Shows "X duplicates filtered" count badge in the review header
+- Lint clean, API verified (200 on all routes)
+
+Stage Summary:
+- Dashboard now properly shows Today list and Sidebar side-by-side on md+ screens
+- Pomodoro and Open Flow timers can be started independently of any task
+- Import from Notes automatically filters out tasks that already exist (case-insensitive)
+- Lint clean, all API routes return 200

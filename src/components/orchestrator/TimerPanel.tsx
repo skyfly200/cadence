@@ -62,10 +62,10 @@ export function TimerPanel() {
         {activeTimer && <span className="text-[9px] text-muted-foreground capitalize">{activeTimer.type.replace('_', ' ')}</span>}
       </div>
 
-      {activeTimer && task ? (
+      {activeTimer ? (
         <div className="space-y-1.5 sm:space-y-2">
           <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
-            {task.title}
+            {task ? task.title : (activeTimer.type === 'pomodoro' ? 'Free Pomodoro' : 'Free Flow')}
           </p>
           <div className="text-center">
             <div className="font-mono text-xl sm:text-2xl font-bold tabular-nums leading-none">{formatSeconds(elapsed)}</div>
@@ -90,15 +90,13 @@ export function TimerPanel() {
           <div className="flex flex-col gap-1">
             <Button size="sm" variant="outline" className="h-7 sm:h-6 text-[10px] px-2 sm:px-2" onClick={() => {
               const t = tasks.find((x) => x.status === 'today');
-              if (!t) { toast({ title: 'No today tasks', variant: 'destructive' }); return; }
-              void startTimer(t.id, 'pomodoro');
+              void startTimer(t?.id ?? null, 'pomodoro');
             }}>
               <TimerIcon className="size-2.5" /> Start Pomodoro
             </Button>
             <Button size="sm" variant="ghost" className="h-7 sm:h-6 text-[10px] px-2 sm:px-2" onClick={() => {
               const t = tasks.find((x) => x.status === 'today');
-              if (!t) return;
-              void startTimer(t.id, 'open_flow');
+              void startTimer(t?.id ?? null, 'open_flow');
             }}>
               <Brain className="size-2.5" /> Open Flow
             </Button>

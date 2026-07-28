@@ -22,7 +22,7 @@ interface AppState {
   loading: boolean;
   activeTab: string;
   activeTimer: {
-    taskId: string;
+    taskId: string | null;
     type: 'pomodoro' | 'open_flow';
     startedAt: number; // epoch ms
     elapsedBeforeStart: number; // seconds already accumulated
@@ -55,7 +55,7 @@ interface AppState {
   generateAnchors: () => Promise<void>;
 
   // Timer
-  startTimer: (taskId: string, type: 'pomodoro' | 'open_flow', targetSeconds?: number) => Promise<void>;
+  startTimer: (taskId: string | null, type: 'pomodoro' | 'open_flow', targetSeconds?: number) => Promise<void>;
   stopTimer: (interrupted?: boolean) => Promise<void>;
   tickTimer: () => void;
 
@@ -364,12 +364,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         targetSeconds: target, running: true,
       },
     });
-    // persist session start
-    try {
-      const session = await api.post<TimeLogSession>('/api/timer/start', { taskId, type });
-      set({ timerSessions: [...get().timerSessions, session] });
-    } catch (e) {
-      console.error('startTimer failed', e);
+    // persist session start (only for task-linked timers)
+    if (taskId) {
+      try {
+        const session = await api.post<TimeLogSession>('/api/timer/start', { taskId, type });
+        set({ timerSessions: [...get().timerSessions, session] });
+      } catch (e) {
+        console.error('startTimer failed', e);
+      }
     }
   },
 
@@ -379,14 +381,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     const elapsed = t.elapsedBeforeStart + Math.floor((Date.now() - t.startedAt) / 1000);
     set({ activeTimer: null });
     try {
-      await api.post('/api/timer/stop', {
-        taskId: t.taskId, elapsedSeconds: elapsed, interrupted,
-      });
-      // update task actualMinutes
-      const task = get().tasks.find((x) => x.id === t.taskId);
-      if (task) {
-        const addedMinutes = Math.round(elapsed / 60);
-        await get().updateTask(task.id, { actualMinutes: task.actualMinutes + addedMinutes });
+      if (t.taskId) {
+        await api.post('/api/timer/stop', {
+          taskId: t.taskId, elapsedSeconds: elapsed, interrupted,
+        });
+        const task = get().tasks.find((x) => x.id === t.taskId);
+        if (task) {
+          const addedMinutes = Math.round(elapsed / 60);
+          await get().updateTask(task.id, { actualMinutes: task.actualMinutes + addedMinutes });
+        }
       }
       await get().awardPoints('focus_session', Math.max(1, Math.round(elapsed / 300)), `${elapsed}s focus`);
     } catch (e) {

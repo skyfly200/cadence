@@ -24,6 +24,7 @@ interface ParsedTaskItem {
   eisenhowerCategory: EisenhowerCategory;
   priority: number;
   selected: boolean;
+  isDuplicate?: boolean;
 }
 
 const CATEGORIES: TaskCategory[] = ['Creative', 'Admin', 'Maintenance', 'Health', 'Learning', 'Social'];
@@ -40,6 +41,7 @@ export function NotesImporter({ open, onOpenChange, defaultStatus = 'backlog' }:
   const [parsed, setParsed] = useState<ParsedTaskItem[]>([]);
   const [status, setStatus] = useState<'idle' | 'parsing' | 'importing' | 'done'>('idle');
   const createTask = useAppStore((s) => s.createTask);
+  const allTasks = useAppStore((s) => s.tasks);
   const { toast } = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -64,6 +66,16 @@ export function NotesImporter({ open, onOpenChange, defaultStatus = 'backlog' }:
         priority: Math.max(1, Math.min(5, Math.round(Number(t.priority) || 3))),
         selected: true,
       }));
+      // Filter duplicates against existing tasks
+      const existingTitles = new Set(
+        allTasks.map((t) => t.title.toLowerCase().trim())
+      );
+      for (const item of items) {
+        if (existingTitles.has(item.title.toLowerCase().trim())) {
+          item.isDuplicate = true;
+          item.selected = false;
+        }
+      }
       setParsed(items);
       setStatus('idle');
     } catch (err) {
@@ -71,7 +83,7 @@ export function NotesImporter({ open, onOpenChange, defaultStatus = 'backlog' }:
       setStatus('idle');
       toast({ title: 'Parse failed', description: 'Could not parse the text. Check the format and try again.', variant: 'destructive' });
     }
-  }, [rawText, defaultStatus, toast]);
+  }, [rawText, defaultStatus, toast, allTasks]);
 
   const toggleItem = useCallback((idx: number) => {
     setParsed((prev) => prev.map((t, i) => i === idx ? { ...t, selected: !t.selected } : t));
@@ -137,6 +149,7 @@ export function NotesImporter({ open, onOpenChange, defaultStatus = 'backlog' }:
   }, [status, onOpenChange]);
 
   const selectedCount = parsed.filter((t) => t.selected).length;
+  const duplicateCount = parsed.filter((t) => t.isDuplicate).length;
   const totalMinutes = parsed.filter((t) => t.selected).reduce((s, t) => s + t.estimatedMinutes, 0);
 
   return (
@@ -207,6 +220,11 @@ export function NotesImporter({ open, onOpenChange, defaultStatus = 'backlog' }:
                   <Badge variant="outline" className="text-[9px]">
                     {formatDuration(totalMinutes)} total
                   </Badge>
+                  {duplicateCount > 0 && (
+                    <Badge variant="outline" className="text-[8px] px-1 py-0 border-amber-500/40 text-amber-600">
+                      {duplicateCount} duplicate{duplicateCount !== 1 ? 's' : ''} filtered
+                    </Badge>
+                  )}
                   <Button
                     size="sm"
                     variant="ghost"
@@ -233,6 +251,11 @@ export function NotesImporter({ open, onOpenChange, defaultStatus = 'backlog' }:
                         onCheckedChange={() => toggleItem(idx)}
                         className="size-3.5 mt-0.5 shrink-0"
                       />
+                      {item.isDuplicate && (
+                        <Badge variant="outline" className="text-[8px] px-1 py-0 border-amber-500/40 text-amber-600 mt-0.5 shrink-0">
+                          Duplicate
+                        </Badge>
+                      )}
                       <div className="flex-1 min-w-0 space-y-0.5">
                         <Input
                           value={item.title}
