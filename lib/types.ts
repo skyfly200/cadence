@@ -60,9 +60,15 @@ export interface DailyCapacity {
 export interface GamificationLog {
   id: string;
   date: string;
-  type: 'realism' | 'anchor_discipline' | 'triage_streak' | 'completion' | 'focus_session';
+  type: 'realism' | 'anchor_discipline' | 'triage_streak' | 'completion' | 'focus_session' | 'planning_streak';
   points: number;
   note?: string | null;
+}
+
+export interface PlanningStreak {
+  current: number;        // consecutive days planned, up to and including lastPlannedDate
+  longest: number;        // best run ever
+  lastPlannedDate: string | null; // YYYY-MM-DD of the most recent planned day
 }
 
 export interface Settings {

@@ -19,8 +19,9 @@ npm run preview  # preview the build
 
 ## Modules
 
-- **Capacity Engine** — a daily readiness score maps to a focus-time budget.
-- **Visual Timeline** — drag task blocks across a day; meal/hydration anchors are locked.
+- **Capacity Engine** — a daily readiness score maps to a focus-time budget. Google Calendar events count as committed time, so the budget shows how much focus you actually have left after meetings.
+- **Visual Timeline** — drag task blocks across a day; meal/hydration anchors and synced calendar events are locked.
 - **Idea Incubator + Triage** — Eisenhower matrix; unfinished tasks roll into triage at the day boundary (no silent rollover).
 - **Resilient Timers** — pomodoro / open-flow sessions computed from wall-clock time; restored across reloads.
-- **Gamification** — points for completion, focus, realism, anchor discipline, and triage streaks.
+- **Google Calendar** — connect once; events auto-sync onto the timeline and into your focus budget.
+- **Gamification** — points for completion, focus, realism, anchor discipline, triage, and a **planning streak** that grows each day you plan (schedule a task, set your readiness, or finish triage) and resets if you skip a day.

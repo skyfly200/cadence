@@ -8,6 +8,12 @@ export function dateKey(d: Date): string {
   return format(d, 'yyyy-MM-dd');
 }
 
+export function yesterdayKey(d: Date = new Date()): string {
+  const y = new Date(d);
+  y.setDate(y.getDate() - 1);
+  return format(y, 'yyyy-MM-dd');
+}
+
 export function parseTimeOnDate(date: Date, timeStr: string): Date {
   // timeStr = "HH:mm"
   const [h, m] = timeStr.split(':').map(Number);

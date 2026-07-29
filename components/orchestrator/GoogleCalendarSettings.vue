@@ -97,8 +97,10 @@ onMounted(() => {
         lastSyncAt: null,
       });
       store.loadGoogleCalendarStatus();
-      toast({ title: 'Google Calendar connected!', description: 'Your calendar is now linked.' });
+      toast({ title: 'Google Calendar connected!', description: 'Syncing today’s events…' });
       window.history.replaceState({}, '', '/');
+      // Pull events immediately so connecting actually surfaces value.
+      void store.syncGoogleCalendar();
     } catch (e) {
       console.error('Failed to parse OAuth tokens:', e);
       toast({ title: 'Connection failed', variant: 'destructive' });

@@ -16,6 +16,12 @@
             </div>
           </div>
           <div class="flex items-center gap-1.5 sm:gap-2">
+            <div v-if="streak > 0"
+              class="flex items-center gap-1 rounded-full border border-orange-500/30 bg-orange-500/10 px-2 sm:px-2.5 py-1"
+              :title="`${streak}-day planning streak${plannedToday ? '' : ' — plan today to keep it'}`">
+              <Flame :class="['size-3.5', plannedToday ? 'text-orange-500' : 'text-orange-400/70']" />
+              <span class="text-xs sm:text-sm font-bold tabular-nums">{{ streak }}</span>
+            </div>
             <div class="hidden xs:flex items-center gap-1.5 rounded-full border bg-muted/50 px-2.5 sm:px-3 py-1">
               <span class="text-[9px] sm:text-[10px] font-medium text-muted-foreground">SCORE</span>
               <span class="text-xs sm:text-sm font-bold tabular-nums">{{ todayScore }}</span>
@@ -111,7 +117,7 @@
 import { ref, computed, onMounted } from 'vue';
 import {
   LayoutDashboard, Calendar, Inbox, AlertTriangle, BarChart3, Settings as SettingsIcon,
-  Moon, Sun, Sparkles, Mic,
+  Moon, Sun, Sparkles, Mic, Flame,
 } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { cn } from '~/lib/utils';
@@ -123,6 +129,8 @@ const captureOpen = ref(false);
 const activeTab = computed(() => store.activeTab);
 const todayScore = computed(() => store.todayScore);
 const loading = computed(() => store.loading);
+const streak = computed(() => store.planningStreakDisplay);
+const plannedToday = computed(() => store.plannedToday);
 
 const triageCount = computed(() => store.triageTasks.length);
 const backlogCount = computed(() => store.backlogTasks.length);

@@ -9,6 +9,19 @@
     </div>
 
     <div class="space-y-1.5 sm:space-y-2">
+      <!-- Planning streak -->
+      <div class="flex items-center justify-between rounded-md bg-orange-500/10 border border-orange-500/20 px-2 py-1">
+        <span class="flex items-center gap-1 text-[10px] font-medium text-orange-700 dark:text-orange-300">
+          <Flame :class="cn('size-3', streak > 0 ? 'text-orange-500' : 'text-muted-foreground')" />
+          Planning streak
+        </span>
+        <div class="flex items-center gap-1.5">
+          <span v-if="streak > 0 && !plannedToday" class="text-[8px] text-muted-foreground">plan today to keep it</span>
+          <span v-else-if="longest > 0" class="text-[8px] text-muted-foreground">best {{ longest }}</span>
+          <span class="text-xs font-bold tabular-nums">{{ streak }}<span class="text-[10px]"> day{{ streak !== 1 ? 's' : '' }}</span></span>
+        </div>
+      </div>
+
       <div>
         <div class="flex items-center justify-between text-[10px] mb-0.5">
           <span class="text-muted-foreground">Tier</span>
@@ -50,6 +63,9 @@ const store = useAppStore();
 const todayScore = computed(() => store.todayScore);
 const gamification = computed(() => store.gamification);
 const completedToday = computed(() => store.completedToday);
+const streak = computed(() => store.planningStreakDisplay);
+const longest = computed(() => store.planningStreak.longest);
+const plannedToday = computed(() => store.plannedToday);
 
 const nextTier = computed(() => Math.ceil((todayScore.value + 1) / 50) * 50);
 const tierPct = computed(() => ((todayScore.value % 50) / 50) * 100);
@@ -60,6 +76,7 @@ const TYPE_META: Record<string, { icon: any; color: string; label: string }> = {
   triage_streak: { icon: Flame, color: 'text-orange-600 dark:text-orange-400', label: 'Triage' },
   completion: { icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', label: 'Done' },
   focus_session: { icon: Clock, color: 'text-teal-600 dark:text-teal-400', label: 'Focus' },
+  planning_streak: { icon: Flame, color: 'text-orange-600 dark:text-orange-400', label: 'Streak' },
 };
 const meta = (type: string) => TYPE_META[type] ?? TYPE_META.completion;
 </script>

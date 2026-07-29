@@ -4,8 +4,9 @@ import type {
   Task, TimeBlock, TimeLogSession, DailyCapacity, Settings, GamificationLog,
   TaskStatus, GoogleCalendarStatus,
 } from '~/lib/types';
+import type { PlanningStreak } from '~/lib/types';
 import { getMaxFocusForScore } from '~/lib/types';
-import { todayKey, isSameDay } from '~/lib/time-utils';
+import { todayKey, yesterdayKey, isSameDay, blockDurationMinutes } from '~/lib/time-utils';
 import {
   loadAll, saveSettings as persistSettings,
   getTasks as getTasksRaw,
@@ -21,6 +22,7 @@ import {
   saveGoogleCalendar as persistGoogleCalendar,
   getActiveTimer, saveActiveTimer,
   getLastActiveDate, setLastActiveDate,
+  getPlanningStreak, savePlanningStreak,
   nowISO,
   type SettingsRow, type CapacityRow, type GoogleCalendarRow, type ActiveTimerRow,
 } from '~/lib/local-storage';
@@ -55,6 +57,7 @@ export const useAppStore = defineStore('app', () => {
   const googleCalendar = ref<GoogleCalendarStatus>({
     connected: false, calendarEmail: null, hasCredentials: false, lastSyncAt: null,
   });
+  const planningStreak = ref<PlanningStreak>({ current: 0, longest: 0, lastPlannedDate: null });
 
   function persistTimer(t: ActiveTimer | null) {
     activeTimer.value = t;
@@ -74,6 +77,32 @@ export const useAppStore = defineStore('app', () => {
   const todayBlocks = computed(() =>
     timeBlocks.value.filter((b) => isSameDay(new Date(b.startTime), new Date())),
   );
+
+  /** Calendar commitments today (external Google events), in minutes. */
+  const committedMinutes = computed(() =>
+    Math.round(todayBlocks.value
+      .filter((b) => b.isExternalEvent)
+      .reduce((sum, b) => sum + blockDurationMinutes(b.startTime, b.endTime), 0)),
+  );
+  /** Focus you've planned onto the timeline today (your own task blocks). */
+  const scheduledFocusMinutes = computed(() =>
+    Math.round(todayBlocks.value
+      .filter((b) => !b.isAnchor && !b.isExternalEvent)
+      .reduce((sum, b) => sum + blockDurationMinutes(b.startTime, b.endTime), 0)),
+  );
+  /** Focus capacity left after calendar commitments and already-scheduled focus. */
+  const availableFocusMinutes = computed(() => {
+    const max = capacity.value?.maxAllowedFocusMinutes ?? 270;
+    return Math.max(0, max - committedMinutes.value - scheduledFocusMinutes.value);
+  });
+
+  /** Streak counts only while it's still "alive" (planned today or yesterday). */
+  const planningStreakDisplay = computed(() => {
+    const s = planningStreak.value;
+    if (s.lastPlannedDate === todayKey() || s.lastPlannedDate === yesterdayKey()) return s.current;
+    return 0;
+  });
+  const plannedToday = computed(() => planningStreak.value.lastPlannedDate === todayKey());
 
   const setActiveTab = (t: string) => { activeTab.value = t; };
 
@@ -104,7 +133,13 @@ export const useAppStore = defineStore('app', () => {
       const persisted = getActiveTimer();
       if (persisted) activeTimer.value = persisted as ActiveTimer;
 
+      planningStreak.value = getPlanningStreak();
+
       computeDailyScore();
+
+      // Auto-refresh calendar so connecting actually surfaces events without
+      // a manual Sync click.
+      if (getGoogleCalendarRow().accessToken) void syncGoogleCalendar();
     } catch (e) {
       console.error('loadData failed', e);
     } finally {
@@ -133,6 +168,7 @@ export const useAppStore = defineStore('app', () => {
         completedAt: input.completedAt ?? null,
       });
       tasks.value = [...tasks.value, row as Task];
+      if (row.status === 'today') recordPlanningActivity();
       return row as Task;
     } catch (e) {
       console.error('createTask failed', e);
@@ -143,7 +179,11 @@ export const useAppStore = defineStore('app', () => {
   async function updateTask(id: string, patch: Partial<Task>) {
     try {
       const row = updateTaskRow(id, patch);
-      if (row) tasks.value = tasks.value.map((x) => (x.id === id ? (row as Task) : x));
+      if (row) {
+        tasks.value = tasks.value.map((x) => (x.id === id ? (row as Task) : x));
+        // Scheduling a task into "today" is a planning action.
+        if (patch.status === 'today') recordPlanningActivity();
+      }
     } catch (e) {
       console.error('updateTask failed', e);
     }
@@ -260,13 +300,14 @@ export const useAppStore = defineStore('app', () => {
     if (task.status !== 'today') {
       await updateTask(taskId, { status: 'today' as TaskStatus });
     }
+    recordPlanningActivity();
   }
 
   async function recalcScheduledFocus() {
     const date = todayKey();
     let scheduled = 0;
     for (const b of timeBlocks.value) {
-      if (b.isAnchor) continue;
+      if (b.isAnchor || b.isExternalEvent) continue; // external = committed, tracked separately
       if (!isSameDay(new Date(b.startTime), new Date())) continue;
       const s = new Date(b.startTime);
       const e = new Date(b.endTime);
@@ -308,6 +349,8 @@ export const useAppStore = defineStore('app', () => {
     } else {
       capacity.value = row as unknown as DailyCapacity;
     }
+    // Setting your readiness or finishing triage both count as planning your day.
+    if (input.readinessScore != null || input.triageCompleted === true) recordPlanningActivity();
   }
 
   async function generateAnchors() {
@@ -439,6 +482,32 @@ export const useAppStore = defineStore('app', () => {
     computeDailyScore();
   }
 
+  /**
+   * Record that the user planned their day. Idempotent per day: the first
+   * planning action each day advances (or resets) the streak; later ones are
+   * no-ops. A gap of a day or more breaks the streak back to 1.
+   */
+  function recordPlanningActivity() {
+    const today = todayKey();
+    const s = getPlanningStreak();
+    if (s.lastPlannedDate === today) {
+      planningStreak.value = s; // already counted today
+      return;
+    }
+    const continued = s.lastPlannedDate === yesterdayKey();
+    const current = continued ? s.current + 1 : 1;
+    const next = { current, longest: Math.max(s.longest, current), lastPlannedDate: today };
+    savePlanningStreak(next);
+    planningStreak.value = next;
+
+    const milestone = [3, 7, 14, 30, 60, 100].includes(current);
+    const points = milestone ? 5 + current : 5;
+    const note = milestone
+      ? `🔥 ${current}-day planning streak!`
+      : `Planned your day · ${current}-day streak`;
+    void awardPoints('planning_streak', points, note);
+  }
+
   function computeDailyScore() {
     todayScore.value = gamification.value.reduce((sum, g) => sum + g.points, 0);
   }
@@ -556,9 +625,11 @@ export const useAppStore = defineStore('app', () => {
   return {
     // state
     tasks, timeBlocks, timerSessions, capacity, settings, gamification,
-    todayScore, loading, activeTab, activeTimer, googleCalendar,
+    todayScore, loading, activeTab, activeTimer, googleCalendar, planningStreak,
     // selectors
     todayTasks, backlogTasks, incubatorTasks, triageTasks, completedToday, todayBlocks,
+    committedMinutes, scheduledFocusMinutes, availableFocusMinutes,
+    planningStreakDisplay, plannedToday,
     // actions
     setActiveTab, loadData, loadSettings,
     createTask, updateTask, deleteTask, completeTask, uncompleteTask, reorderTasks,
@@ -566,7 +637,7 @@ export const useAppStore = defineStore('app', () => {
     saveSettings, setCapacity, generateAnchors,
     startTimer, stopTimer, tickTimer,
     runMidnightRollover, resolveTriageItem,
-    awardPoints, computeDailyScore,
+    awardPoints, computeDailyScore, recordPlanningActivity,
     loadGoogleCalendarStatus, connectGoogleCalendar, disconnectGoogleCalendar, syncGoogleCalendar,
   };
 });

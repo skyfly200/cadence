@@ -17,7 +17,8 @@
         <CalendarClock class="size-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
         <span class="text-[11px] font-medium">
           Google Calendar
-          <span v-if="gcal.lastSyncAt" class="text-muted-foreground ml-1">· synced {{ syncTime }}</span>
+          <span v-if="calEventCount > 0" class="text-muted-foreground ml-1">· {{ calEventCount }} event{{ calEventCount !== 1 ? 's' : '' }} · {{ formatDuration(committed) }} committed</span>
+          <span v-else-if="gcal.lastSyncAt" class="text-muted-foreground ml-1">· synced {{ syncTime }} · no events today</span>
         </span>
       </div>
       <Button size="sm" variant="outline" class="h-6 text-[10px] px-2 border-sky-500/30" :disabled="syncing" @click="handleSync">
@@ -40,9 +41,12 @@
 
           <div class="mb-1.5 sm:mb-2">
             <div class="flex items-center justify-between text-[10px] mb-0.5">
-              <span class="text-muted-foreground">Focus budget</span>
+              <span class="text-muted-foreground">
+                Focus budget
+                <span v-if="committed > 0" class="text-sky-600 dark:text-sky-400">· {{ formatDuration(committed) }} in meetings</span>
+              </span>
               <span :class="cn('font-medium tabular-nums', overBudget && 'text-rose-600')">
-                {{ formatDuration(totalEstimated) }} / {{ formatDuration(maxFocus) }}
+                {{ formatDuration(used) }} / {{ formatDuration(maxFocus) }}
               </span>
             </div>
             <Progress :value="budgetPct" :bar-class="overBudget ? 'bg-rose-500' : undefined" class="h-1.5" />
@@ -135,9 +139,12 @@ const capacity = computed(() => store.capacity);
 const catColor = (c: string) => CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Admin;
 
 const totalEstimated = computed(() => todayTasks.value.reduce((s, t) => s + t.estimatedMinutes, 0));
+const committed = computed(() => store.committedMinutes);
+const calEventCount = computed(() => store.todayBlocks.filter((b) => b.isExternalEvent).length);
+const used = computed(() => totalEstimated.value + committed.value);
 const maxFocus = computed(() => capacity.value?.maxAllowedFocusMinutes ?? 270);
-const budgetPct = computed(() => Math.min(100, Math.round((totalEstimated.value / maxFocus.value) * 100)));
-const overBudget = computed(() => totalEstimated.value > maxFocus.value);
+const budgetPct = computed(() => Math.min(100, Math.round((used.value / maxFocus.value) * 100)));
+const overBudget = computed(() => used.value > maxFocus.value);
 const syncTime = computed(() => gcal.value.lastSyncAt
   ? new Date(gcal.value.lastSyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
 

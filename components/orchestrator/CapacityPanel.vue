@@ -34,12 +34,21 @@
 
       <div class="rounded bg-background/60 px-2 py-1 sm:py-1.5 border">
         <div class="flex items-center justify-between text-[10px] mb-0.5">
-          <span class="text-muted-foreground">Budget</span>
+          <span class="text-muted-foreground">Focus budget</span>
           <span :class="cn('font-medium tabular-nums', over ? 'text-rose-600' : '')">
-            {{ formatDuration(capacity?.scheduledFocusMinutes ?? 0) }}/{{ formatDuration(capacity?.maxAllowedFocusMinutes ?? 0) }}
+            {{ formatDuration(used) }}/{{ formatDuration(maxFocus) }}
           </span>
         </div>
-        <Progress :value="pct" :bar-class="over ? 'bg-rose-500' : undefined" class="h-1.5" />
+        <Progress :value="pct" :bar-class="over ? 'bg-rose-500' : committed > 0 ? 'bg-sky-500' : undefined" class="h-1.5" />
+        <div class="flex items-center justify-between text-[9px] mt-1 text-muted-foreground">
+          <span v-if="committed > 0" class="flex items-center gap-0.5">
+            <CalendarClock class="size-2.5 text-sky-500" /> {{ formatDuration(committed) }} committed
+          </span>
+          <span v-else>{{ formatDuration(scheduled) }} scheduled</span>
+          <span :class="cn('tabular-nums font-medium', over ? 'text-rose-600' : 'text-emerald-600')">
+            {{ over ? 'over budget' : `${formatDuration(available)} free` }}
+          </span>
+        </div>
       </div>
     </div>
   </Card>
@@ -47,7 +56,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Battery, Heart, Moon, Zap } from 'lucide-vue-next';
+import { Battery, Heart, Moon, Zap, CalendarClock } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { getCapacityTier } from '~/lib/types';
 import { cn } from '~/lib/utils';
@@ -57,6 +66,12 @@ const store = useAppStore();
 const capacity = computed(() => store.capacity);
 const score = computed(() => capacity.value?.readinessScore ?? null);
 
+const committed = computed(() => store.committedMinutes);
+const scheduled = computed(() => store.scheduledFocusMinutes);
+const available = computed(() => store.availableFocusMinutes);
+const maxFocus = computed(() => capacity.value?.maxAllowedFocusMinutes ?? 270);
+const used = computed(() => committed.value + scheduled.value);
+
 const TIER_STYLES: Record<string, { ring: string; text: string; bg: string; label: string }> = {
   emerald: { ring: 'ring-emerald-500/40', text: 'text-emerald-700 dark:text-emerald-300', bg: 'bg-emerald-500/10', label: 'Peak' },
   amber: { ring: 'ring-amber-500/40', text: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-500/10', label: 'Steady' },
@@ -64,10 +79,8 @@ const TIER_STYLES: Record<string, { ring: string; text: string; bg: string; labe
 };
 const style = computed(() => TIER_STYLES[getCapacityTier(score.value).color]);
 
-const pct = computed(() => capacity.value && capacity.value.maxAllowedFocusMinutes > 0
-  ? Math.min(100, Math.round((capacity.value.scheduledFocusMinutes / capacity.value.maxAllowedFocusMinutes) * 100))
-  : 0);
-const over = computed(() => (capacity.value?.scheduledFocusMinutes ?? 0) > (capacity.value?.maxAllowedFocusMinutes ?? 0));
+const pct = computed(() => maxFocus.value > 0 ? Math.min(100, Math.round((used.value / maxFocus.value) * 100)) : 0);
+const over = computed(() => used.value > maxFocus.value);
 
 function onReadiness(v: number) {
   store.setCapacity({ readinessScore: v });

@@ -105,6 +105,12 @@ export interface ActiveTimerRow {
   running: boolean;
 }
 
+export interface PlanningStreakRow {
+  current: number;
+  longest: number;
+  lastPlannedDate: string | null;
+}
+
 // ── Storage keys ──────────────────────────────────────────
 
 const STORAGE_PREFIX = 'cadence:';
@@ -119,6 +125,7 @@ const KEYS = {
   googleCalendar: `${STORAGE_PREFIX}googleCalendar`,
   activeTimer: `${STORAGE_PREFIX}activeTimer`,
   lastActiveDate: `${STORAGE_PREFIX}lastActiveDate`,
+  planningStreak: `${STORAGE_PREFIX}planningStreak`,
 } as const;
 
 // ── Safe JSON parse/stringify ───────────────────────────────
@@ -395,6 +402,18 @@ export function getLastActiveDate(): string | null {
 
 export function setLastActiveDate(date: string): void {
   save(KEYS.lastActiveDate, date);
+}
+
+// ── Planning streak ────────────────────────────────────────
+
+const DEFAULT_STREAK: PlanningStreakRow = { current: 0, longest: 0, lastPlannedDate: null };
+
+export function getPlanningStreak(): PlanningStreakRow {
+  return load<PlanningStreakRow>(KEYS.planningStreak, { ...DEFAULT_STREAK });
+}
+
+export function savePlanningStreak(streak: PlanningStreakRow): void {
+  save(KEYS.planningStreak, streak);
 }
 
 // ── Google Calendar operations ───────────────────────────────
