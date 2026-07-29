@@ -1,12 +1,21 @@
 [build]
-  command = "bun run build"
-  publish = ".next"
+  command = "npm run build"
+  # Nuxt's Nitro `netlify` preset emits static assets to `dist/` and the
+  # server to `.netlify/functions-internal/` (auto-detected).
+  publish = "dist"
 
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+[build.environment]
+  # This repo used to be a Next.js app; the Netlify site still has the
+  # @netlify/plugin-nextjs plugin enabled in the UI. Skip it — there is no
+  # `.next` build anymore. (Remove the plugin in the Netlify UI to drop this.)
+  NETLIFY_NEXT_PLUGIN_SKIP = "true"
 
-# Google Calendar OAuth environment variables (set in Netlify UI)
-# GOOGLE_CLIENT_ID=your-client-id
-# GOOGLE_CLIENT_SECRET=your-secret
-
-# AI SDK (already configured via z-ai-web-dev-sdk)
+# Set these in the Netlify UI to enable Google Calendar sync:
+#   GOOGLE_CLIENT_ID
+#   GOOGLE_CLIENT_SECRET
+#   NUXT_PUBLIC_GOOGLE_CLIENT_ID
+#
+# AI features (task estimate, notes parsing, voice transcription) use
+# z-ai-web-dev-sdk, which needs credentials via a `.z-ai-config` file or its
+# supported env vars. Without them, estimate/parse degrade to offline
+# heuristics and voice transcription is disabled with a clear message.
