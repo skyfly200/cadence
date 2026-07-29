@@ -4,6 +4,7 @@ import type {
   Task, TimeBlock, TimeLogSession, DailyCapacity, Settings, GamificationLog,
   TaskStatus, GoogleCalendarStatus,
 } from '~/lib/types';
+import { getMaxFocusForScore } from '~/lib/types';
 import { todayKey, isSameDay } from '~/lib/time-utils';
 import {
   loadAll, saveSettings as persistSettings,
@@ -301,7 +302,6 @@ export const useAppStore = defineStore('app', () => {
     } as Partial<CapacityRow>);
     // Keep the focus budget in step with the readiness score.
     if (input.readinessScore != null) {
-      const { getMaxFocusForScore } = await import('~/lib/types');
       const maxFocus = getMaxFocusForScore(input.readinessScore);
       const row2 = setCapacityRow(date, { maxAllowedFocusMinutes: maxFocus });
       capacity.value = row2 as unknown as DailyCapacity;

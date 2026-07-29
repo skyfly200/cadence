@@ -29,6 +29,14 @@ export default defineEventHandler(async (event) => {
   } catch (e) {
     console.error('voice/transcribe failed', e);
     const msg = e instanceof Error ? e.message : 'transcription failed';
+    // z-ai-web-dev-sdk throws this when its credentials file is missing.
+    if (/\.z-ai-config|Configuration file not found/i.test(msg)) {
+      setResponseStatus(event, 503);
+      return {
+        error: 'Voice transcription isn’t configured on the server. Type your task in the box instead.',
+        text: '',
+      };
+    }
     setResponseStatus(event, 500);
     return { error: msg, text: '' };
   }
