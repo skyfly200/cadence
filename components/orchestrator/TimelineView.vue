@@ -4,11 +4,32 @@
       <div class="flex items-center gap-1.5">
         <Calendar class="size-3.5" />
         <h3 class="text-[11px] sm:text-xs font-semibold">Timeline</h3>
-        <span class="text-[9px] text-muted-foreground hidden sm:inline">drag blocks · anchors locked</span>
+        <span class="text-[9px] text-muted-foreground hidden sm:inline">drag tasks onto a slot · anchors locked</span>
       </div>
       <span class="text-[9px] text-muted-foreground tabular-nums">
         {{ scheduledCount }} scheduled · {{ anchorCount }} anchors
       </span>
+    </div>
+
+    <!-- Schedule tray: drag an unscheduled Today task onto a time slot -->
+    <div v-if="unscheduledTasks.length > 0" class="border-b bg-muted/20 px-2 py-1.5 shrink-0">
+      <div class="flex items-center gap-1 mb-1">
+        <GripVertical class="size-3 text-muted-foreground" />
+        <span class="text-[9px] text-muted-foreground">Drag a task onto a time slot to schedule it</span>
+      </div>
+      <div class="flex gap-1.5 overflow-x-auto pb-0.5">
+        <div v-for="t in unscheduledTasks" :key="t.id" draggable="true"
+          :class="cn(
+            'shrink-0 flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] bg-background cursor-grab active:cursor-grabbing hover:shadow-sm transition-all',
+            draggingTaskId === t.id && 'opacity-40',
+          )"
+          @dragstart="onTaskDragStart(t.id)"
+          @dragend="draggingTaskId = null">
+          <GripVertical class="size-2.5 text-muted-foreground/50 shrink-0" />
+          <span class="font-medium truncate max-w-[100px] sm:max-w-[140px]">{{ t.title }}</span>
+          <span :class="cn('rounded px-1 py-px shrink-0', catColor(t.category))">{{ formatDuration(t.estimatedMinutes) }}</span>
+        </div>
+      </div>
     </div>
 
     <div ref="scrollRef" class="flex-1 overflow-y-auto" style="max-height: calc(100dvh - 160px)">
@@ -79,10 +100,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { Trash2, Lock, Calendar } from 'lucide-vue-next';
+import { Trash2, Lock, Calendar, GripVertical } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
-import { ANCHOR_COLORS, CATEGORY_COLORS, EXTERNAL_EVENT_COLORS, type TimeBlock } from '~/lib/types';
-import { SLOT_MINUTES, timeToGridRow, durationToRows, formatTime, formatRange, blockDurationMinutes } from '~/lib/time-utils';
+import { ANCHOR_COLORS, CATEGORY_COLORS, EXTERNAL_EVENT_COLORS, type TimeBlock, type Task } from '~/lib/types';
+import { SLOT_MINUTES, timeToGridRow, durationToRows, formatTime, formatRange, formatDuration, blockDurationMinutes } from '~/lib/time-utils';
 import { cn } from '~/lib/utils';
 import { useToast } from '~/composables/useToast';
 
@@ -97,7 +118,16 @@ const scrollRef = ref<HTMLElement | null>(null);
 const rowHeight = ref(28);
 const now = ref(new Date());
 const overSlot = ref<number | null>(null);
-const draggingId = ref<string | null>(null);
+const draggingId = ref<string | null>(null);      // a timeline block being moved
+const draggingTaskId = ref<string | null>(null);  // a task chip being scheduled
+
+const catColor = (c: string) => CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Admin;
+
+// Today's tasks that don't yet have a block on the timeline — the schedule tray.
+const scheduledTaskIds = computed(() =>
+  new Set(store.todayBlocks.filter((b) => b.taskId).map((b) => b.taskId)));
+const unscheduledTasks = computed(() =>
+  store.todayTasks.filter((t) => !scheduledTaskIds.value.has(t.id)));
 
 let clockInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -171,27 +201,56 @@ const labelColWidth = computed(() => (typeof window !== 'undefined' && window.in
 
 function onDragStart(b: TimeBlock) {
   if (b.isAnchor || b.isExternalEvent) return;
+  draggingTaskId.value = null;
   draggingId.value = b.id;
+}
+
+function onTaskDragStart(taskId: string) {
+  draggingId.value = null;
+  draggingTaskId.value = taskId;
+}
+
+function anchorCollision(start: Date, end: Date, exceptBlockId: string | null): boolean {
+  return store.timeBlocks.some((b) =>
+    b.isAnchor && b.id !== exceptBlockId && start < new Date(b.endTime) && new Date(b.startTime) < end);
 }
 
 async function onDrop(slotIndex: number) {
   overSlot.value = null;
-  const id = draggingId.value;
+  const taskId = draggingTaskId.value;
+  const blockId = draggingId.value;
+  draggingTaskId.value = null;
   draggingId.value = null;
-  if (!id) return;
-  const block = store.timeBlocks.find((b) => b.id === id);
-  if (!block || block.isAnchor) return;
+
   const startMinutes = slotIndex * SLOT_MINUTES;
   const startDate = new Date();
   startDate.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
-  const dur = blockDurationMinutes(block.startTime, block.endTime);
-  const endDate = new Date(startDate.getTime() + dur * 60000);
-  const collides = store.timeBlocks.some((b) =>
-    b.id !== id && b.isAnchor && startDate < new Date(b.endTime) && new Date(b.startTime) < endDate);
-  if (collides) {
-    toast({ title: 'Anchor collision', description: 'Cannot overlap an immovable anchor block.', variant: 'destructive' });
+
+  // Scheduling a task from the tray onto the timeline.
+  if (taskId) {
+    const task = store.tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    const endDate = new Date(startDate.getTime() + Math.max(15, task.estimatedMinutes) * 60000);
+    if (anchorCollision(startDate, endDate, null)) {
+      toast({ title: 'Anchor collision', description: 'Cannot place a task over a health anchor.', variant: 'destructive' });
+      return;
+    }
+    await store.moveTaskToTimeline(taskId, startDate.toISOString(), endDate.toISOString());
+    toast({ title: 'Scheduled', description: `${task.title} · ${formatRange(startDate, endDate)}` });
     return;
   }
-  await store.updateTimeBlock(id, { startTime: startDate.toISOString(), endTime: endDate.toISOString() });
+
+  // Moving an existing task block.
+  if (blockId) {
+    const block = store.timeBlocks.find((b) => b.id === blockId);
+    if (!block || block.isAnchor) return;
+    const dur = blockDurationMinutes(block.startTime, block.endTime);
+    const endDate = new Date(startDate.getTime() + dur * 60000);
+    if (anchorCollision(startDate, endDate, blockId)) {
+      toast({ title: 'Anchor collision', description: 'Cannot overlap an immovable anchor block.', variant: 'destructive' });
+      return;
+    }
+    await store.updateTimeBlock(blockId, { startTime: startDate.toISOString(), endTime: endDate.toISOString() });
+  }
 }
 </script>
