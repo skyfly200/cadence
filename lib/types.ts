@@ -71,6 +71,15 @@ export interface PlanningStreak {
   lastPlannedDate: string | null; // YYYY-MM-DD of the most recent planned day
 }
 
+export interface BrainDumpEntry {
+  id: string;
+  content: string;
+  context?: string | null; // free-form tag: "work", "idea", "errand"…
+  date: string;            // YYYY-MM-DD the thought belongs to
+  createdAt: string;       // ISO
+  updatedAt: string;       // ISO
+}
+
 export interface Settings {
   id: string;
   wakeTime: string;

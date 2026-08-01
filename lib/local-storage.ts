@@ -111,6 +111,15 @@ export interface PlanningStreakRow {
   lastPlannedDate: string | null;
 }
 
+export interface BrainDumpRow {
+  id: string;
+  content: string;
+  context?: string | null;
+  date: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Storage keys ──────────────────────────────────────────
 
 const STORAGE_PREFIX = 'cadence:';
@@ -126,6 +135,7 @@ const KEYS = {
   activeTimer: `${STORAGE_PREFIX}activeTimer`,
   lastActiveDate: `${STORAGE_PREFIX}lastActiveDate`,
   planningStreak: `${STORAGE_PREFIX}planningStreak`,
+  brainDump: `${STORAGE_PREFIX}brainDump`,
 } as const;
 
 // ── Safe JSON parse/stringify ───────────────────────────────
@@ -414,6 +424,45 @@ export function getPlanningStreak(): PlanningStreakRow {
 
 export function savePlanningStreak(streak: PlanningStreakRow): void {
   save(KEYS.planningStreak, streak);
+}
+
+// ── Brain dump ─────────────────────────────────────────────
+
+export function getBrainDump(): BrainDumpRow[] {
+  return load<BrainDumpRow[]>(KEYS.brainDump, []);
+}
+
+export function saveBrainDump(rows: BrainDumpRow[]): void {
+  save(KEYS.brainDump, rows);
+}
+
+export function addBrainDumpEntry(entry: { content: string; context?: string | null; date: string }): BrainDumpRow {
+  const rows = getBrainDump();
+  const now = nowISO();
+  const row: BrainDumpRow = {
+    id: uid(),
+    content: entry.content,
+    context: entry.context ?? null,
+    date: entry.date,
+    createdAt: now,
+    updatedAt: now,
+  };
+  rows.push(row);
+  saveBrainDump(rows);
+  return row;
+}
+
+export function updateBrainDumpEntry(id: string, patch: Partial<BrainDumpRow>): BrainDumpRow | null {
+  const rows = getBrainDump();
+  const idx = rows.findIndex((r) => r.id === id);
+  if (idx === -1) return null;
+  rows[idx] = { ...rows[idx], ...patch, updatedAt: nowISO() };
+  saveBrainDump(rows);
+  return rows[idx];
+}
+
+export function deleteBrainDumpEntry(id: string): void {
+  saveBrainDump(getBrainDump().filter((r) => r.id !== id));
 }
 
 // ── Google Calendar operations ───────────────────────────────

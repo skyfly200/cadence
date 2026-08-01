@@ -4,7 +4,7 @@ import type {
   Task, TimeBlock, TimeLogSession, DailyCapacity, Settings, GamificationLog,
   TaskStatus, GoogleCalendarStatus,
 } from '~/lib/types';
-import type { PlanningStreak } from '~/lib/types';
+import type { PlanningStreak, BrainDumpEntry } from '~/lib/types';
 import { getMaxFocusForScore } from '~/lib/types';
 import { todayKey, yesterdayKey, isSameDay, blockDurationMinutes } from '~/lib/time-utils';
 import {
@@ -23,6 +23,7 @@ import {
   getActiveTimer, saveActiveTimer,
   getLastActiveDate, setLastActiveDate,
   getPlanningStreak, savePlanningStreak,
+  getBrainDump, addBrainDumpEntry, updateBrainDumpEntry, deleteBrainDumpEntry,
   nowISO,
   type SettingsRow, type CapacityRow, type GoogleCalendarRow, type ActiveTimerRow,
 } from '~/lib/local-storage';
@@ -58,6 +59,7 @@ export const useAppStore = defineStore('app', () => {
     connected: false, calendarEmail: null, hasCredentials: false, lastSyncAt: null,
   });
   const planningStreak = ref<PlanningStreak>({ current: 0, longest: 0, lastPlannedDate: null });
+  const brainDump = ref<BrainDumpEntry[]>([]);
 
   function persistTimer(t: ActiveTimer | null) {
     activeTimer.value = t;
@@ -134,6 +136,7 @@ export const useAppStore = defineStore('app', () => {
       if (persisted) activeTimer.value = persisted as ActiveTimer;
 
       planningStreak.value = getPlanningStreak();
+      brainDump.value = getBrainDump() as BrainDumpEntry[];
 
       computeDailyScore();
 
@@ -474,6 +477,38 @@ export const useAppStore = defineStore('app', () => {
     else await updateTask(taskId, { status: 'today' as TaskStatus });
   }
 
+  // ── Brain dump ──────────────────────────────────────────
+  async function addBrainDump(content: string, context?: string | null): Promise<BrainDumpEntry | null> {
+    const text = content.trim();
+    if (!text) return null;
+    try {
+      const row = addBrainDumpEntry({ content: text, context: context?.trim() || null, date: todayKey() });
+      brainDump.value = [...brainDump.value, row as BrainDumpEntry];
+      return row as BrainDumpEntry;
+    } catch (e) {
+      console.error('addBrainDump failed', e);
+      return null;
+    }
+  }
+
+  async function updateBrainDump(id: string, patch: Partial<BrainDumpEntry>) {
+    try {
+      const row = updateBrainDumpEntry(id, patch);
+      if (row) brainDump.value = brainDump.value.map((x) => (x.id === id ? (row as BrainDumpEntry) : x));
+    } catch (e) {
+      console.error('updateBrainDump failed', e);
+    }
+  }
+
+  async function deleteBrainDump(id: string) {
+    try {
+      deleteBrainDumpEntry(id);
+      brainDump.value = brainDump.value.filter((x) => x.id !== id);
+    } catch (e) {
+      console.error('deleteBrainDump failed', e);
+    }
+  }
+
   // ── Gamification ────────────────────────────────────────
   async function awardPoints(type: GamificationLog['type'], points: number, note?: string) {
     const date = todayKey();
@@ -625,7 +660,7 @@ export const useAppStore = defineStore('app', () => {
   return {
     // state
     tasks, timeBlocks, timerSessions, capacity, settings, gamification,
-    todayScore, loading, activeTab, activeTimer, googleCalendar, planningStreak,
+    todayScore, loading, activeTab, activeTimer, googleCalendar, planningStreak, brainDump,
     // selectors
     todayTasks, backlogTasks, incubatorTasks, triageTasks, completedToday, todayBlocks,
     committedMinutes, scheduledFocusMinutes, availableFocusMinutes,
@@ -637,6 +672,7 @@ export const useAppStore = defineStore('app', () => {
     saveSettings, setCapacity, generateAnchors,
     startTimer, stopTimer, tickTimer,
     runMidnightRollover, resolveTriageItem,
+    addBrainDump, updateBrainDump, deleteBrainDump,
     awardPoints, computeDailyScore, recordPlanningActivity,
     loadGoogleCalendarStatus, connectGoogleCalendar, disconnectGoogleCalendar, syncGoogleCalendar,
   };

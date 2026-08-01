@@ -55,7 +55,7 @@
     <main class="flex-1 mx-auto w-full max-w-7xl px-2 sm:px-3 md:px-4 py-2">
       <div class="space-y-2">
         <!-- Tab bar -->
-        <div class="grid w-full grid-cols-3 xs:grid-cols-6 h-auto rounded-md bg-muted p-1 gap-1">
+        <div class="grid w-full grid-cols-4 xs:grid-cols-7 h-auto rounded-md bg-muted p-1 gap-1">
           <button v-for="tab in tabs" :key="tab.value"
             :class="cn(
               'relative flex flex-col xs:flex-row items-center justify-center gap-0.5 py-1.5 rounded-md text-[10px] xs:text-xs transition-colors',
@@ -76,6 +76,7 @@
           <Dashboard v-if="activeTab === 'dashboard'" />
           <TimelineView v-else-if="activeTab === 'timeline'" />
           <BacklogIncubator v-else-if="activeTab === 'backlog'" variant="backlog" />
+          <BrainDump v-else-if="activeTab === 'braindump'" />
           <BacklogIncubator v-else-if="activeTab === 'incubator'" variant="incubator" />
           <TriagePanel v-else-if="activeTab === 'triage'" />
           <StatsView v-else-if="activeTab === 'stats'" />
@@ -117,7 +118,7 @@
 import { ref, computed, onMounted } from 'vue';
 import {
   LayoutDashboard, Calendar, Inbox, AlertTriangle, BarChart3, Settings as SettingsIcon,
-  Moon, Sun, Sparkles, Mic, Flame,
+  Moon, Sun, Sparkles, Mic, Flame, NotebookPen,
 } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { cn } from '~/lib/utils';
@@ -140,6 +141,7 @@ const tabs = computed(() => [
   { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, hiddenMobile: false, badge: 0 },
   { value: 'timeline', label: 'Timeline', icon: Calendar, hiddenMobile: false, badge: 0 },
   { value: 'backlog', label: 'Backlog', icon: Inbox, hiddenMobile: false, badge: backlogCount.value },
+  { value: 'braindump', label: 'Brain Dump', icon: NotebookPen, hiddenMobile: false, badge: 0 },
   { value: 'incubator', label: 'Incubator', icon: Sparkles, hiddenMobile: true, badge: incubatorCount.value },
   { value: 'triage', label: 'Triage', icon: AlertTriangle, hiddenMobile: true, badge: triageCount.value },
   { value: 'stats', label: 'Stats', icon: BarChart3, hiddenMobile: true, badge: 0 },
