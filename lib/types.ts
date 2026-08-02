@@ -33,6 +33,7 @@ export interface TimeBlock {
   isExternalEvent: boolean;
   anchorType?: string | null;
   colorTag?: string | null;
+  completed?: boolean; // for anchors: honored/checked off for the day
 }
 
 export interface TimeLogSession {

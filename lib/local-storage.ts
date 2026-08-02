@@ -43,6 +43,7 @@ export interface TimeBlockRow {
   isExternalEvent: boolean;
   anchorType?: string | null;
   colorTag?: string | null;
+  completed?: boolean;
 }
 
 export interface CapacityRow {

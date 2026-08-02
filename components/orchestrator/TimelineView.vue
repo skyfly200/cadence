@@ -66,6 +66,7 @@
               blockColor(b),
               b.isAnchor || b.isExternalEvent ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing hover:shadow-md',
               draggingId === b.id && 'opacity-30',
+              b.isAnchor && b.completed && 'opacity-60',
             )"
             :style="{ gridRow: `${blockRow(b)} / span ${blockSpan(b)}` }"
             @dragstart="onDragStart(b)"
@@ -73,12 +74,21 @@
             <div class="flex items-start justify-between gap-1 h-full">
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-1">
-                  <Lock v-if="b.isAnchor || b.isExternalEvent" class="size-2 sm:size-2.5 shrink-0" />
-                  <span class="font-medium truncate text-[10px] sm:text-[11px]">{{ b.title }}</span>
+                  <Lock v-if="b.isExternalEvent" class="size-2 sm:size-2.5 shrink-0" />
+                  <span :class="cn('font-medium truncate text-[10px] sm:text-[11px]', b.isAnchor && b.completed && 'line-through')">{{ b.title }}</span>
                 </div>
                 <div class="text-[9px] sm:text-[10px] opacity-80">{{ formatRange(b.startTime, b.endTime) }}</div>
               </div>
-              <button v-if="!b.isAnchor && !b.isExternalEvent" type="button"
+              <!-- Anchor: tap to honor it (anchor-discipline points) -->
+              <button v-if="b.isAnchor" type="button"
+                :class="cn('shrink-0 rounded-full border flex items-center justify-center size-4 transition-colors',
+                  b.completed ? 'bg-current/20 border-current' : 'border-current/40 hover:border-current')"
+                :aria-label="b.completed ? `Un-mark ${b.title}` : `Mark ${b.title} done`"
+                :title="b.completed ? 'Honored — tap to undo' : 'Mark as honored'"
+                @pointerdown.stop @click.stop="store.toggleAnchorDone(b.id)">
+                <Check v-if="b.completed" class="size-2.5" />
+              </button>
+              <button v-else-if="!b.isExternalEvent" type="button"
                 class="opacity-0 group-hover:opacity-100 hover:text-destructive shrink-0 transition-opacity p-0.5"
                 aria-label="Remove block"
                 @pointerdown.stop @click.stop="store.deleteTimeBlock(b.id)">
@@ -100,7 +110,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { Trash2, Lock, Calendar, GripVertical } from 'lucide-vue-next';
+import { Trash2, Lock, Calendar, GripVertical, Check } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { ANCHOR_COLORS, CATEGORY_COLORS, EXTERNAL_EVENT_COLORS, type TimeBlock, type Task } from '~/lib/types';
 import { SLOT_MINUTES, timeToGridRow, durationToRows, formatTime, formatRange, formatDuration, blockDurationMinutes } from '~/lib/time-utils';

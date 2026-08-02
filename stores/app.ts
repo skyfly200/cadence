@@ -212,6 +212,16 @@ export const useAppStore = defineStore('app', () => {
       if (row) {
         tasks.value = tasks.value.map((x) => (x.id === id ? (row as Task) : x));
         await awardPoints('completion', 10, `Completed: ${row.title}`);
+        // Realism: reward accurate estimates, but only when the task was
+        // actually timed (otherwise we have no real duration to compare).
+        if (row.actualMinutes > 0 && row.estimatedMinutes > 0) {
+          const dev = Math.abs(row.actualMinutes / row.estimatedMinutes - 1);
+          if (dev <= 0.2) {
+            await awardPoints('realism', 8, `On-target estimate · ${row.actualMinutes}m vs ${row.estimatedMinutes}m est`);
+          } else if (dev <= 0.4) {
+            await awardPoints('realism', 3, `Close estimate · ${row.actualMinutes}m vs ${row.estimatedMinutes}m est`);
+          }
+        }
         await recalcScheduledFocus();
       }
     } catch (e) {
@@ -285,6 +295,24 @@ export const useAppStore = defineStore('app', () => {
       await recalcScheduledFocus();
     } catch (e) {
       console.error('deleteTimeBlock failed', e);
+    }
+  }
+
+  /**
+   * Honor (or un-honor) a health anchor for the day. Marking one done rewards
+   * anchor discipline — meals/workout/sleep are worth more than a hydration sip.
+   * Points are only awarded on the false→true transition, so toggling can't farm.
+   */
+  async function toggleAnchorDone(id: string) {
+    const block = timeBlocks.value.find((b) => b.id === id);
+    if (!block || !block.isAnchor) return;
+    const nowDone = !block.completed;
+    const row = updateTimeBlockRow(id, { completed: nowDone });
+    if (!row) return;
+    timeBlocks.value = timeBlocks.value.map((x) => (x.id === id ? (row as TimeBlock) : x));
+    if (nowDone) {
+      const pts = block.anchorType === 'water' ? 1 : 5;
+      await awardPoints('anchor_discipline', pts, `Honored ${block.title.toLowerCase()}`);
     }
   }
 
@@ -668,7 +696,7 @@ export const useAppStore = defineStore('app', () => {
     // actions
     setActiveTab, loadData, loadSettings,
     createTask, updateTask, deleteTask, completeTask, uncompleteTask, reorderTasks,
-    createTimeBlock, updateTimeBlock, deleteTimeBlock, moveTaskToTimeline, recalcScheduledFocus,
+    createTimeBlock, updateTimeBlock, deleteTimeBlock, toggleAnchorDone, moveTaskToTimeline, recalcScheduledFocus,
     saveSettings, setCapacity, generateAnchors,
     startTimer, stopTimer, tickTimer,
     runMidnightRollover, resolveTriageItem,
