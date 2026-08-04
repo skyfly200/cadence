@@ -26,6 +26,12 @@
               <span class="text-[9px] sm:text-[10px] font-medium text-muted-foreground">SCORE</span>
               <span class="text-xs sm:text-sm font-bold tabular-nums">{{ todayScore }}</span>
             </div>
+            <Button v-if="store.canUndo" variant="ghost" size="icon" aria-label="Undo" title="Undo (⌘Z)" class="size-8 sm:size-9 hidden sm:inline-flex" @click="store.undo()">
+              <Undo2 class="size-4" />
+            </Button>
+            <Button v-if="store.canRedo" variant="ghost" size="icon" aria-label="Redo" title="Redo (⇧⌘Z)" class="size-8 sm:size-9 hidden sm:inline-flex" @click="store.redo()">
+              <Redo2 class="size-4" />
+            </Button>
             <Button variant="ghost" size="icon" aria-label="Quick capture" class="size-8 sm:size-9" @click="captureOpen = true">
               <Mic class="size-4" />
             </Button>
@@ -115,10 +121,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import {
   LayoutDashboard, Calendar, Inbox, AlertTriangle, BarChart3, Settings as SettingsIcon,
-  Moon, Sun, Sparkles, Mic, Flame, NotebookPen,
+  Moon, Sun, Sparkles, Mic, Flame, NotebookPen, Undo2, Redo2,
 } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { cn } from '~/lib/utils';
@@ -151,8 +157,26 @@ function toggleTheme() {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
 }
 
+function onKey(e: KeyboardEvent) {
+  const mod = e.metaKey || e.ctrlKey;
+  if (!mod) return;
+  const el = document.activeElement as HTMLElement | null;
+  const editable = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+  if (editable) return; // let native text undo/redo work inside fields
+  const key = e.key.toLowerCase();
+  if (key === 'z') {
+    e.preventDefault();
+    if (e.shiftKey) store.redo(); else store.undo();
+  } else if (key === 'y') {
+    e.preventDefault();
+    store.redo();
+  }
+}
+
 onMounted(() => {
   store.loadData();
   store.loadSettings();
+  window.addEventListener('keydown', onKey);
 });
+onUnmounted(() => window.removeEventListener('keydown', onKey));
 </script>

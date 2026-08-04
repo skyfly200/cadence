@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import type {
   Task, TimeBlock, TimeLogSession, DailyCapacity, Settings, GamificationLog,
   TaskStatus, GoogleCalendarStatus,
@@ -28,6 +28,7 @@ import {
   getBrainDump, addBrainDumpEntry, updateBrainDumpEntry, deleteBrainDumpEntry,
   getProjects, addProject as addProjectRow, updateProject as updateProjectRow, deleteProject as deleteProjectRow,
   getHabits, addHabit as addHabitRow, updateHabit as updateHabitRow, deleteHabit as deleteHabitRow,
+  exportAllData, importAllData,
   nowISO,
   type SettingsRow, type CapacityRow, type GoogleCalendarRow, type ActiveTimerRow,
 } from '~/lib/local-storage';
@@ -129,24 +130,7 @@ export const useAppStore = defineStore('app', () => {
       pruneStaleDayBlocks(date);
       setLastActiveDate(date);
 
-      const data = loadAll();
-      tasks.value = data.tasks as Task[];
-      timeBlocks.value = data.timeBlocks as TimeBlock[];
-      timerSessions.value = data.timerSessions as TimeLogSession[];
-      capacity.value = (data.capacityMap[date] as DailyCapacity | undefined) ?? null;
-      settings.value = data.settings as Settings;
-      gamification.value = (data.gamificationMap[date] as GamificationLog[] | undefined) ?? [];
-
-      // Fix: resilient timer — restore any in-progress session across reloads.
-      const persisted = getActiveTimer();
-      if (persisted) activeTimer.value = persisted as ActiveTimer;
-
-      planningStreak.value = getPlanningStreak();
-      brainDump.value = getBrainDump() as BrainDumpEntry[];
-      projects.value = getProjects() as Project[];
-      habits.value = getHabits() as Habit[];
-
-      computeDailyScore();
+      hydrate();
 
       // Auto-refresh calendar so connecting actually surfaces events without
       // a manual Sync click.
@@ -156,6 +140,28 @@ export const useAppStore = defineStore('app', () => {
     } finally {
       loading.value = false;
     }
+  }
+
+  /** Read all persisted state into the reactive refs (no rollover/side-effects). */
+  function hydrate() {
+    const date = todayKey();
+    const data = loadAll();
+    tasks.value = data.tasks as Task[];
+    timeBlocks.value = data.timeBlocks as TimeBlock[];
+    timerSessions.value = data.timerSessions as TimeLogSession[];
+    capacity.value = (data.capacityMap[date] as DailyCapacity | undefined) ?? null;
+    settings.value = data.settings as Settings;
+    gamification.value = (data.gamificationMap[date] as GamificationLog[] | undefined) ?? [];
+
+    const persisted = getActiveTimer();
+    activeTimer.value = persisted ? (persisted as ActiveTimer) : null;
+
+    planningStreak.value = getPlanningStreak();
+    brainDump.value = getBrainDump() as BrainDumpEntry[];
+    projects.value = getProjects() as Project[];
+    habits.value = getHabits() as Habit[];
+
+    computeDailyScore();
   }
 
   function loadSettings() {
@@ -633,6 +639,57 @@ export const useAppStore = defineStore('app', () => {
     void awardPoints('planning_streak', points, note);
   }
 
+  // ── Undo / redo (snapshot history) ──────────────────────
+  const historyStack = ref<string[]>([]);
+  const historyIndex = ref(-1);
+  let restoring = false;
+  let commitTimer: ReturnType<typeof setTimeout> | null = null;
+  const canUndo = computed(() => historyIndex.value > 0);
+  const canRedo = computed(() => historyIndex.value < historyStack.value.length - 1);
+
+  function commitHistory() {
+    commitTimer = null;
+    if (restoring) return;
+    const snap = JSON.stringify(exportAllData());
+    if (historyStack.value[historyIndex.value] === snap) return;
+    const trimmed = historyStack.value.slice(0, historyIndex.value + 1);
+    trimmed.push(snap);
+    if (trimmed.length > 60) trimmed.shift();
+    historyStack.value = trimmed;
+    historyIndex.value = trimmed.length - 1;
+  }
+  function scheduleCommit() {
+    if (restoring) return;
+    if (commitTimer) clearTimeout(commitTimer);
+    commitTimer = setTimeout(commitHistory, 300);
+  }
+  async function restoreSnapshot(snap: string) {
+    restoring = true;
+    try {
+      importAllData(JSON.parse(snap));
+      hydrate();
+    } finally {
+      await nextTick();
+      restoring = false;
+    }
+  }
+  function undo() {
+    if (commitTimer) { clearTimeout(commitTimer); commitHistory(); } // flush pending edit
+    if (!canUndo.value) return;
+    historyIndex.value--;
+    void restoreSnapshot(historyStack.value[historyIndex.value]);
+  }
+  function redo() {
+    if (!canRedo.value) return;
+    historyIndex.value++;
+    void restoreSnapshot(historyStack.value[historyIndex.value]);
+  }
+  watch(
+    [tasks, timeBlocks, capacity, gamification, settings, brainDump, projects, habits, planningStreak],
+    scheduleCommit,
+    { deep: true },
+  );
+
   function computeDailyScore() {
     todayScore.value = gamification.value.reduce((sum, g) => sum + g.points, 0);
   }
@@ -755,6 +812,7 @@ export const useAppStore = defineStore('app', () => {
     todayTasks, backlogTasks, incubatorTasks, triageTasks, completedToday, todayBlocks,
     committedMinutes, scheduledFocusMinutes, availableFocusMinutes,
     planningStreakDisplay, plannedToday,
+    canUndo, canRedo, undo, redo,
     // actions
     setActiveTab, loadData, loadSettings,
     createTask, updateTask, deleteTask, completeTask, uncompleteTask, reorderTasks,
