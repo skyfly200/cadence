@@ -127,6 +127,7 @@ import {
   Moon, Sun, Sparkles, Mic, Flame, NotebookPen, Undo2, Redo2,
 } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
+import { captureGoogleOAuthTokens } from '~/lib/local-storage';
 import { cn } from '~/lib/utils';
 
 const store = useAppStore();
@@ -174,8 +175,14 @@ function onKey(e: KeyboardEvent) {
 }
 
 onMounted(() => {
+  // Capture the Google OAuth redirect here (not in the collapsed Settings
+  // panel) so returning from Google always registers the connection.
+  if (captureGoogleOAuthTokens(window.location.hash)) {
+    window.history.replaceState({}, '', '/');
+  }
   store.loadData();
   store.loadSettings();
+  store.loadGoogleCalendarStatus();
   window.addEventListener('keydown', onKey);
 });
 onUnmounted(() => window.removeEventListener('keydown', onKey));

@@ -113,6 +113,7 @@ export interface GoogleCalendarRow {
   tokenExpiresAt?: string | null;
   calendarEmail?: string | null;
   lastSyncAt?: string | null;
+  autoSync?: boolean;
 }
 
 export interface ActiveTimerRow {
@@ -533,7 +534,33 @@ const DEFAULT_GCAL: GoogleCalendarRow = {
   tokenExpiresAt: null,
   calendarEmail: null,
   lastSyncAt: null,
+  autoSync: true,
 };
+
+/** Parse the OAuth `#gcal_tokens=` fragment (base64url JSON) and persist it. */
+export function captureGoogleOAuthTokens(hash: string): boolean {
+  const marker = '#gcal_tokens=';
+  if (typeof window === 'undefined' || !hash.startsWith(marker)) return false;
+  try {
+    let b64 = hash.slice(marker.length).replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const t = JSON.parse(decodeURIComponent(escape(atob(b64))));
+    const existing = getGoogleCalendar();
+    saveGoogleCalendar({
+      ...existing,
+      connected: true,
+      accessToken: t.access_token,
+      refreshToken: t.refresh_token,
+      tokenExpiresAt: new Date(Date.now() + (t.expires_in ?? 3600) * 1000).toISOString(),
+      calendarEmail: t.calendar_email || existing.calendarEmail || null,
+      lastSyncAt: null,
+    });
+    return true;
+  } catch (e) {
+    console.error('Failed to capture Google OAuth tokens', e);
+    return false;
+  }
+}
 
 export function getGoogleCalendar(): GoogleCalendarRow {
   return load<GoogleCalendarRow>(KEYS.googleCalendar, DEFAULT_GCAL);

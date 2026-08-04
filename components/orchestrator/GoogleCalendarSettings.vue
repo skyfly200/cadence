@@ -20,12 +20,22 @@
           <span class="text-muted-foreground">Linked as <span class="font-medium text-foreground">{{ gcal.calendarEmail }}</span></span>
         </div>
         <p v-if="gcal.lastSyncAt" class="text-[10px] text-muted-foreground mb-2">Last synced: {{ new Date(gcal.lastSyncAt).toLocaleString() }}</p>
+
+        <label class="flex items-center gap-2 mb-2 cursor-pointer select-none">
+          <button type="button" role="switch" :aria-checked="gcal.autoSync"
+            :class="cn('relative h-4 w-7 rounded-full transition-colors', gcal.autoSync ? 'bg-primary' : 'bg-muted-foreground/30')"
+            @click="store.setGcalAutoSync(!gcal.autoSync)">
+            <span :class="cn('absolute top-0.5 size-3 rounded-full bg-background transition-transform', gcal.autoSync ? 'translate-x-3.5' : 'translate-x-0.5')" />
+          </button>
+          <span class="text-[11px] text-muted-foreground">Auto-sync when I open the app</span>
+        </label>
+
         <div class="flex flex-wrap gap-1.5">
           <Button size="sm" class="h-7 text-[11px]" :disabled="syncing" @click="handleSync">
-            <Loader2 v-if="syncing" class="size-3 animate-spin" /><RefreshCw v-else class="size-3" /> Sync Now
+            <Loader2 v-if="syncing" class="size-3 animate-spin" /><RefreshCw v-else class="size-3" /> Sync now
           </Button>
           <Button size="sm" variant="outline" class="h-7 text-[11px] text-destructive hover:text-destructive" @click="store.disconnectGoogleCalendar()">
-            <Unlink class="size-3" /> Disconnect
+            <Unlink class="size-3" /> Unlink
           </Button>
         </div>
       </div>
@@ -71,7 +81,7 @@ import { ref, computed, onMounted } from 'vue';
 import { Calendar, Unlink, RefreshCw, ExternalLink, CheckCircle2, AlertCircle, Loader2 } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
-import { saveGoogleCalendar } from '~/lib/local-storage';
+import { cn } from '~/lib/utils';
 
 const store = useAppStore();
 const { toast } = useToast();
@@ -80,34 +90,11 @@ const gcal = computed(() => store.googleCalendar);
 
 onMounted(() => {
   store.loadGoogleCalendarStatus();
-
-  // OAuth callback tokens from URL fragment
-  const hash = window.location.hash;
-  if (hash.startsWith('#gcal_tokens=')) {
-    try {
-      const tokenB64 = hash.slice('#gcal_tokens='.length);
-      const json = atob(tokenB64.replace(/-/g, '+').replace(/_/g, '/'));
-      const tokenData = JSON.parse(json);
-      saveGoogleCalendar({
-        connected: true,
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token,
-        tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
-        calendarEmail: tokenData.calendar_email || null,
-        lastSyncAt: null,
-      });
-      store.loadGoogleCalendarStatus();
-      toast({ title: 'Google Calendar connected!', description: 'Syncing today’s events…' });
-      window.history.replaceState({}, '', '/');
-      // Pull events immediately so connecting actually surfaces value.
-      void store.syncGoogleCalendar();
-    } catch (e) {
-      console.error('Failed to parse OAuth tokens:', e);
-      toast({ title: 'Connection failed', variant: 'destructive' });
-      window.history.replaceState({}, '', '/');
-    }
+  // Token capture happens on page load (pages/index.vue); if we just connected
+  // and this panel is open, greet + sync.
+  if (gcal.value.connected && !gcal.value.lastSyncAt) {
+    void store.syncGoogleCalendar();
   }
-
   const params = new URLSearchParams(window.location.search);
   const gcalError = params.get('gcal_error');
   if (gcalError) {

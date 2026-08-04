@@ -61,7 +61,7 @@ export const useAppStore = defineStore('app', () => {
   const activeTab = ref('dashboard');
   const activeTimer = ref<ActiveTimer | null>(null);
   const googleCalendar = ref<GoogleCalendarStatus>({
-    connected: false, calendarEmail: null, hasCredentials: false, lastSyncAt: null,
+    connected: false, calendarEmail: null, hasCredentials: false, lastSyncAt: null, autoSync: true,
   });
   const planningStreak = ref<PlanningStreak>({ current: 0, longest: 0, lastPlannedDate: null });
   const brainDump = ref<BrainDumpEntry[]>([]);
@@ -133,8 +133,9 @@ export const useAppStore = defineStore('app', () => {
       hydrate();
 
       // Auto-refresh calendar so connecting actually surfaces events without
-      // a manual Sync click.
-      if (getGoogleCalendarRow().accessToken) void syncGoogleCalendar();
+      // a manual Sync click (unless the user turned auto-sync off).
+      const gc = getGoogleCalendarRow();
+      if (gc.accessToken && gc.autoSync !== false) void syncGoogleCalendar();
     } catch (e) {
       console.error('loadData failed', e);
     } finally {
@@ -703,7 +704,13 @@ export const useAppStore = defineStore('app', () => {
       calendarEmail: gc.calendarEmail ?? null,
       hasCredentials: !!cfg.public.googleClientId,
       lastSyncAt: gc.lastSyncAt ?? null,
+      autoSync: gc.autoSync !== false,
     };
+  }
+
+  function setGcalAutoSync(v: boolean) {
+    persistGoogleCalendar({ ...getGoogleCalendarRow(), autoSync: v });
+    loadGoogleCalendarStatus();
   }
 
   function connectGoogleCalendar() {
@@ -824,6 +831,6 @@ export const useAppStore = defineStore('app', () => {
     createHabit, updateHabit, deleteHabit, toggleHabitDone,
     addBrainDump, updateBrainDump, deleteBrainDump,
     awardPoints, computeDailyScore, recordPlanningActivity,
-    loadGoogleCalendarStatus, connectGoogleCalendar, disconnectGoogleCalendar, syncGoogleCalendar,
+    loadGoogleCalendarStatus, connectGoogleCalendar, disconnectGoogleCalendar, syncGoogleCalendar, setGcalAutoSync,
   };
 });

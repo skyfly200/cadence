@@ -130,6 +130,7 @@ export interface GoogleCalendarStatus {
   calendarEmail: string | null;
   hasCredentials: boolean;
   lastSyncAt: string | null;
+  autoSync: boolean;
 }
 
 // Capacity tier mapping
