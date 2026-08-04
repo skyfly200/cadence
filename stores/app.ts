@@ -7,6 +7,7 @@ import type {
 import type { PlanningStreak, BrainDumpEntry } from '~/lib/types';
 import { getMaxFocusForScore } from '~/lib/types';
 import { todayKey, yesterdayKey, isSameDay, blockDurationMinutes } from '~/lib/time-utils';
+import { fireConfetti } from '~/lib/confetti';
 import {
   loadAll, saveSettings as persistSettings,
   getTasks as getTasksRaw,
@@ -211,6 +212,7 @@ export const useAppStore = defineStore('app', () => {
       });
       if (row) {
         tasks.value = tasks.value.map((x) => (x.id === id ? (row as Task) : x));
+        fireConfetti();
         await awardPoints('completion', 10, `Completed: ${row.title}`);
         // Realism: reward accurate estimates, but only when the task was
         // actually timed (otherwise we have no real duration to compare).
@@ -328,7 +330,9 @@ export const useAppStore = defineStore('app', () => {
         isAnchor: false, isExternalEvent: false, colorTag: task.category,
       });
     }
-    if (task.status !== 'today') {
+    // Only pull into "today" when it's actually scheduled for today; future
+    // scheduling leaves the task where it is but still creates the block.
+    if (task.status !== 'today' && isSameDay(new Date(startISO), new Date())) {
       await updateTask(taskId, { status: 'today' as TaskStatus });
     }
     recordPlanningActivity();
@@ -384,16 +388,17 @@ export const useAppStore = defineStore('app', () => {
     if (input.readinessScore != null || input.triageCompleted === true) recordPlanningActivity();
   }
 
-  async function generateAnchors() {
+  async function generateAnchors(forDate?: Date) {
     if (!settings.value) return;
-    // Fix: only guard against anchors that belong to *today*.
-    const todaysAnchors = timeBlocks.value.filter(
-      (b) => b.isAnchor && isSameDay(new Date(b.startTime), new Date()),
+    const day = forDate ?? new Date();
+    // Only guard against anchors that belong to the target day.
+    const existing = timeBlocks.value.filter(
+      (b) => b.isAnchor && isSameDay(new Date(b.startTime), day),
     );
-    if (todaysAnchors.length > 0) return;
+    if (existing.length > 0) return;
 
     const s = settings.value;
-    const today = new Date();
+    const today = day;
     const make = (timeStr: string, title: string, anchorType: string, durationMin: number) => {
       const [h, m] = timeStr.split(':').map(Number);
       const start = new Date(today);

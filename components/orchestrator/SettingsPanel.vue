@@ -58,16 +58,33 @@
       </div>
     </Card>
 
+    <!-- Data backup -->
+    <Card class="p-3 sm:p-4 max-w-2xl">
+      <div class="flex items-center gap-2 mb-2">
+        <Database class="size-4" />
+        <h3 class="text-sm font-semibold">Data</h3>
+      </div>
+      <p class="text-[11px] text-muted-foreground mb-3">
+        Everything lives in this browser. Export a backup to keep it safe or move it to another device.
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <Button variant="outline" @click="exportBackup"><Download class="size-4" /> Export backup</Button>
+        <Button variant="outline" @click="fileInput?.click()"><Upload class="size-4" /> Import backup</Button>
+        <input ref="fileInput" type="file" accept="application/json,.json" class="hidden" @change="importBackup" />
+      </div>
+    </Card>
+
     <GoogleCalendarSettings />
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from 'vue';
-import { Settings as SettingsIcon, Save, RefreshCw } from 'lucide-vue-next';
+import { reactive, ref, watch } from 'vue';
+import { Settings as SettingsIcon, Save, RefreshCw, Database, Download, Upload } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { formatDuration } from '~/lib/time-utils';
+import { exportAllData, importAllData } from '~/lib/local-storage';
 
 const store = useAppStore();
 const { toast } = useToast();
@@ -103,5 +120,44 @@ async function regenerateAnchors() {
   for (const a of anchors) await store.deleteTimeBlock(a.id);
   await store.generateAnchors();
   toast({ title: 'Anchors regenerated' });
+}
+
+// ── Data backup ──────────────────────────────────────────
+const fileInput = ref<HTMLInputElement | null>(null);
+
+function exportBackup() {
+  const payload = {
+    app: 'cadence',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: exportAllData(),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `cadence-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast({ title: 'Backup downloaded' });
+}
+
+async function importBackup(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    const data = (parsed?.data ?? parsed) as Record<string, unknown>;
+    if (!data || typeof data !== 'object') throw new Error('bad');
+    importAllData(data);
+    store.loadData();
+    store.loadSettings();
+    toast({ title: 'Backup imported', description: 'Your data has been restored.' });
+  } catch {
+    toast({ title: 'Import failed', description: 'That file isn’t a valid Cadence backup.', variant: 'destructive' });
+  } finally {
+    input.value = '';
+  }
 }
 </script>

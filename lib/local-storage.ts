@@ -489,6 +489,29 @@ export function disconnectGoogleCalendar(): void {
   saveGoogleCalendar({ ...DEFAULT_GCAL });
 }
 
+// ── Full backup export / import ─────────────────────────────
+
+export function exportAllData(): Record<string, unknown> {
+  if (typeof window === 'undefined') return {};
+  const out: Record<string, unknown> = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(STORAGE_PREFIX)) {
+      const raw = localStorage.getItem(key);
+      try { out[key] = raw ? JSON.parse(raw) : null; } catch { out[key] = raw; }
+    }
+  }
+  return out;
+}
+
+export function importAllData(data: Record<string, unknown>): void {
+  if (typeof window === 'undefined') return;
+  for (const [key, value] of Object.entries(data)) {
+    if (!key.startsWith(STORAGE_PREFIX)) continue;
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota */ }
+  }
+}
+
 // ── Bulk operations (for initial load) ──────────────────────
 
 export function loadAll(): StoredData {
