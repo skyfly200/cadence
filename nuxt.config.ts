@@ -6,9 +6,42 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   ssr: true,
 
-  modules: ['@pinia/nuxt', '@vueuse/nuxt', '@nuxtjs/color-mode'],
+  modules: ['@pinia/nuxt', '@vueuse/nuxt', '@nuxtjs/color-mode', '@vite-pwa/nuxt'],
 
   components: [{ path: '~/components', pathPrefix: false }],
+
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      name: 'Cadence',
+      short_name: 'Cadence',
+      description: 'Capacity-aware daily planner: timeline, habits, triage, and process-based scoring.',
+      theme_color: '#a855f7',
+      background_color: '#ffffff',
+      display: 'standalone',
+      start_url: '/',
+      icons: [
+        { src: '/logo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        { src: '/logo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+      ],
+    },
+    workbox: {
+      navigateFallback: '/',
+      globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,json}'],
+      // Cache-first for same-origin assets; app data is localStorage so it's
+      // already offline. AI/Calendar API calls simply fail gracefully offline.
+      runtimeCaching: [
+        {
+          urlPattern: ({ sameOrigin, request }: { sameOrigin: boolean; request: Request }) =>
+            sameOrigin && request.destination !== '',
+          handler: 'StaleWhileRevalidate',
+          options: { cacheName: 'cadence-assets' },
+        },
+      ],
+    },
+    client: { installPrompt: true },
+    devOptions: { enabled: false },
+  },
 
   css: ['~/assets/css/main.css'],
 
