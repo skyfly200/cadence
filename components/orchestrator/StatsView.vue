@@ -1,5 +1,6 @@
 <template>
   <div class="space-y-2 sm:space-y-3">
+    <!-- Stat tiles -->
     <div class="grid grid-cols-2 xs:grid-cols-4 gap-2">
       <Card v-for="s in statCards" :key="s.label" class="p-2 sm:p-2.5 flex items-center gap-2">
         <component :is="s.icon" :class="cn('size-4 shrink-0', s.color)" />
@@ -11,26 +12,31 @@
     </div>
 
     <div class="grid gap-2 sm:gap-3 md:grid-cols-2">
+      <!-- 7-day chart -->
       <Card class="p-2 sm:p-2.5">
-        <h3 class="text-[11px] sm:text-xs font-semibold mb-2 flex items-center gap-1.5"><Calendar class="size-3" /> Last 7 days</h3>
+        <h3 class="text-[11px] sm:text-xs font-semibold mb-2 flex items-center gap-1.5">
+          <Calendar class="size-3" /> Completed · last 7 days
+          <span class="ml-auto text-[9px] text-muted-foreground font-normal">{{ weekTotal }} total</span>
+        </h3>
         <div class="flex items-end justify-between gap-1 sm:gap-1.5 h-24 sm:h-28">
           <div v-for="(d, i) in completedByDay" :key="i" class="flex-1 flex flex-col items-center gap-0.5">
             <span class="text-[9px] font-medium tabular-nums">{{ d.count }}</span>
             <div class="w-full flex items-end justify-center" style="height: 72px">
-              <div class="w-full max-w-[1.25rem] rounded-t bg-primary/70"
+              <div :class="cn('w-full max-w-[1.25rem] rounded-t', d.isToday ? 'bg-primary' : 'bg-primary/50')"
                 :style="{ height: `${(d.count / maxCompleted) * 100}%`, minHeight: d.count > 0 ? '4px' : '1px' }" />
             </div>
-            <span class="text-[8px] sm:text-[9px] text-muted-foreground">{{ d.date.toLocaleDateString('en', { weekday: 'short' }) }}</span>
+            <span :class="cn('text-[8px] sm:text-[9px]', d.isToday ? 'text-foreground font-semibold' : 'text-muted-foreground')">{{ d.label }}</span>
           </div>
         </div>
       </Card>
 
+      <!-- Time by category -->
       <Card class="p-2 sm:p-2.5">
-        <h3 class="text-[11px] sm:text-xs font-semibold mb-2 flex items-center gap-1.5"><Anchor class="size-3" /> Focus by category</h3>
-        <p v-if="catEntries.length === 0" class="text-[10px] text-muted-foreground py-4 text-center">No data yet.</p>
+        <h3 class="text-[11px] sm:text-xs font-semibold mb-2 flex items-center gap-1.5"><Anchor class="size-3" /> Time by category</h3>
+        <p v-if="catEntries.length === 0" class="text-[10px] text-muted-foreground py-4 text-center">Complete a task to see this.</p>
         <div v-else class="space-y-1.5">
           <div v-for="[cat, v] in catEntries" :key="cat" class="flex items-center gap-2 text-[10px] sm:text-xs">
-            <span class="w-12 sm:w-14 truncate font-medium">{{ cat }}</span>
+            <span class="w-12 sm:w-16 truncate font-medium">{{ cat }}</span>
             <div class="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
               <div class="h-full rounded-full bg-primary/60" :style="{ width: `${(v.minutes / maxCatMin) * 100}%` }" />
             </div>
@@ -40,8 +46,23 @@
       </Card>
     </div>
 
+    <!-- Projects -->
+    <Card v-if="projectEntries.length > 0" class="p-2 sm:p-2.5">
+      <h3 class="text-[11px] sm:text-xs font-semibold mb-2 flex items-center gap-1.5"><FolderOpen class="size-3" /> Completed by project</h3>
+      <div class="space-y-1.5">
+        <div v-for="p in projectEntries" :key="p.name" class="flex items-center gap-2 text-[10px] sm:text-xs">
+          <span :class="cn('w-16 sm:w-24 truncate font-medium rounded px-1 py-px border', p.color)">{{ p.name }}</span>
+          <div class="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+            <div class="h-full rounded-full bg-primary/60" :style="{ width: `${(p.count / maxProject) * 100}%` }" />
+          </div>
+          <span class="tabular-nums text-muted-foreground w-8 text-right">{{ p.count }}</span>
+        </div>
+      </div>
+    </Card>
+
+    <!-- Scoring events -->
     <Card v-if="gamification.length > 0" class="p-2 sm:p-2.5">
-      <h3 class="text-[11px] sm:text-xs font-semibold mb-2 flex items-center gap-1.5"><Trophy class="size-3 text-amber-500" /> Scoring events</h3>
+      <h3 class="text-[11px] sm:text-xs font-semibold mb-2 flex items-center gap-1.5"><Trophy class="size-3 text-amber-500" /> Today's scoring events</h3>
       <div class="max-h-40 overflow-y-auto">
         <div class="overflow-x-auto">
           <table class="w-full text-left min-w-[280px]">
@@ -53,8 +74,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="g in gamification" :key="g.id" class="border-b border-border/30 last:border-0">
-                <td class="px-1.5 py-1 text-[10px] capitalize text-muted-foreground">{{ g.type.replace('_', ' ') }}</td>
+              <tr v-for="g in reversedGamification" :key="g.id" class="border-b border-border/30 last:border-0">
+                <td class="px-1.5 py-1 text-[10px] capitalize text-muted-foreground">{{ g.type.replace(/_/g, ' ') }}</td>
                 <td class="px-1.5 py-1 text-[10px] truncate max-w-[200px] text-muted-foreground">{{ g.note ?? '—' }}</td>
                 <td :class="cn('px-1.5 py-1 text-[10px] font-semibold tabular-nums text-right', g.points > 0 ? 'text-emerald-600' : 'text-rose-600')">
                   {{ g.points > 0 ? '+' : '' }}{{ g.points }}
@@ -70,14 +91,16 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Trophy, Target, TrendingUp, Flame, Calendar, Anchor } from 'lucide-vue-next';
+import { Trophy, Target, TrendingUp, Flame, Calendar, Anchor, FolderOpen, Repeat, CalendarRange } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { formatDuration } from '~/lib/time-utils';
 import { cn } from '~/lib/utils';
+import { PROJECT_COLORS, type Habit } from '~/lib/types';
 
 const store = useAppStore();
 const tasks = computed(() => store.tasks);
 const gamification = computed(() => store.gamification);
+const reversedGamification = computed(() => [...gamification.value].reverse());
 const todayScore = computed(() => store.todayScore);
 
 const completed = computed(() => tasks.value.filter((t) => t.status === 'completed' && t.completedAt));
@@ -87,38 +110,65 @@ const last7Days = computed(() => Array.from({ length: 7 }, (_, i) => {
   d.setDate(d.getDate() - (6 - i));
   return d;
 }));
+const todayStr = new Date().toDateString();
 const completedByDay = computed(() => last7Days.value.map((d) => ({
   date: d,
+  label: d.toLocaleDateString('en', { weekday: 'short' }),
+  isToday: d.toDateString() === todayStr,
   count: completed.value.filter((t) => t.completedAt && new Date(t.completedAt).toDateString() === d.toDateString()).length,
 })));
 const maxCompleted = computed(() => Math.max(1, ...completedByDay.value.map((x) => x.count)));
+const weekTotal = computed(() => completedByDay.value.reduce((s, d) => s + d.count, 0));
 
 const completedToday = computed(() => completed.value.filter(
-  (t) => t.completedAt && new Date(t.completedAt).toDateString() === new Date().toDateString()));
+  (t) => t.completedAt && new Date(t.completedAt).toDateString() === todayStr));
 const realistic = computed(() => completedToday.value.filter((t) => {
-  if (t.estimatedMinutes === 0) return false;
+  if (t.estimatedMinutes === 0 || t.actualMinutes === 0) return false;
   const ratio = t.actualMinutes / t.estimatedMinutes;
   return ratio >= 0.8 && ratio <= 1.2;
 }));
-const realismPct = computed(() => completedToday.value.length > 0
-  ? Math.round((realistic.value.length / completedToday.value.length) * 100) : 0);
+const timedToday = computed(() => completedToday.value.filter((t) => t.actualMinutes > 0).length);
+const realismPct = computed(() => timedToday.value > 0 ? Math.round((realistic.value.length / timedToday.value) * 100) : 0);
 const totalFocusMin = computed(() => tasks.value.reduce((s, t) => s + t.actualMinutes, 0));
 
+// Time by category — fall back to the estimate when a task wasn't timed, so
+// the chart reflects effort even without running the timer.
 const catEntries = computed(() => {
   const byCategory: Record<string, { count: number; minutes: number }> = {};
   for (const t of completed.value) {
     if (!byCategory[t.category]) byCategory[t.category] = { count: 0, minutes: 0 };
     byCategory[t.category].count++;
-    byCategory[t.category].minutes += t.actualMinutes;
+    byCategory[t.category].minutes += t.actualMinutes > 0 ? t.actualMinutes : t.estimatedMinutes;
   }
   return Object.entries(byCategory).sort((a, b) => b[1].minutes - a[1].minutes);
 });
 const maxCatMin = computed(() => Math.max(1, ...catEntries.value.map(([, v]) => v.minutes)));
 
+// Completed by project
+const projectEntries = computed(() => {
+  const counts = new Map<string, number>();
+  for (const t of completed.value) if (t.projectId) counts.set(t.projectId, (counts.get(t.projectId) ?? 0) + 1);
+  return store.projects
+    .map((p) => ({ name: p.name, color: PROJECT_COLORS[p.color] ?? '', count: counts.get(p.id) ?? 0 }))
+    .filter((p) => p.count > 0)
+    .sort((a, b) => b.count - a.count);
+});
+const maxProject = computed(() => Math.max(1, ...projectEntries.value.map((p) => p.count)));
+
+// Habits today
+function isHabitDueToday(h: Habit): boolean {
+  return h.cadence === 'daily' || h.days.includes(new Date().getDay());
+}
+const habitsDue = computed(() => store.habits.filter(isHabitDueToday));
+const habitsDone = computed(() => habitsDue.value.filter((h) => h.completions.includes(new Date().toISOString().slice(0, 10))).length);
+
 const statCards = computed(() => [
-  { icon: Trophy, color: 'text-amber-500', value: String(todayScore.value), label: 'Score' },
-  { icon: Target, color: 'text-purple-500', value: `${realismPct.value}%`, label: 'Realism' },
-  { icon: TrendingUp, color: 'text-emerald-500', value: String(completed.value.length), label: 'Completed' },
-  { icon: Flame, color: 'text-orange-500', value: formatDuration(totalFocusMin.value), label: 'Focus' },
+  { icon: Trophy, color: 'text-amber-500', value: String(todayScore.value), label: 'Score today' },
+  { icon: Flame, color: 'text-orange-500', value: `${store.planningStreakDisplay}d`, label: 'Plan streak' },
+  { icon: TrendingUp, color: 'text-emerald-500', value: String(completed.value.length), label: 'Done (all-time)' },
+  { icon: CalendarRange, color: 'text-sky-500', value: String(weekTotal.value), label: 'Done this week' },
+  { icon: Target, color: 'text-purple-500', value: timedToday.value > 0 ? `${realismPct.value}%` : '—', label: 'Realism' },
+  { icon: Anchor, color: 'text-teal-500', value: formatDuration(totalFocusMin.value), label: 'Focus logged' },
+  { icon: Repeat, color: 'text-indigo-500', value: habitsDue.value.length ? `${habitsDone.value}/${habitsDue.value.length}` : '—', label: 'Habits today' },
 ]);
 </script>
