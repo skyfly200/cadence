@@ -11,6 +11,12 @@
         <Search class="absolute left-1.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
         <Input v-model="query" placeholder="Search…" class="h-7 sm:h-6 pl-6 text-[11px] bg-muted/50 border-border/50" />
       </div>
+      <select v-if="store.projects.length > 0" v-model="projectFilter"
+        class="h-7 sm:h-6 text-[11px] rounded-md border bg-muted/50 border-border/50 px-1.5 outline-none">
+        <option value="">All projects</option>
+        <option value="__none__">No project</option>
+        <option v-for="p in store.projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
       <div v-if="isBacklog" class="inline-flex rounded-md border border-border/50 overflow-hidden">
         <button :class="cn('size-7 sm:size-6 flex items-center justify-center', view === 'matrix' ? 'bg-muted' : 'hover:bg-muted/50')" aria-label="Matrix view" @click="view = 'matrix'"><Grid2x2 class="size-3" /></button>
         <button :class="cn('size-7 sm:size-6 flex items-center justify-center', view === 'list' ? 'bg-muted' : 'hover:bg-muted/50')" aria-label="List view" @click="view = 'list'"><ListIcon class="size-3" /></button>
@@ -69,7 +75,8 @@
               <td class="px-1.5 py-1 min-w-0">
                 <div class="flex items-center gap-1.5">
                   <Checkbox :checked="t.status === 'completed'" :aria-label="`Complete ${t.title}`" @change="(v) => v ? store.completeTask(t.id) : store.uncompleteTask(t.id)" />
-                  <span :class="cn('block text-xs font-medium truncate max-w-[150px] xs:max-w-[220px] sm:max-w-[320px] md:max-w-[480px]', t.status === 'completed' && 'line-through text-muted-foreground')">{{ t.title }}</span>
+                  <span :class="cn('block text-xs font-medium truncate max-w-[130px] xs:max-w-[200px] sm:max-w-[300px] md:max-w-[440px]', t.status === 'completed' && 'line-through text-muted-foreground')">{{ t.title }}</span>
+                  <span v-if="projectName(t.projectId)" :class="cn('text-[8px] rounded px-1 py-px font-medium shrink-0 hidden sm:inline border', projectColor(t.projectId))">{{ projectName(t.projectId) }}</span>
                 </div>
               </td>
               <td class="px-1.5 py-1 text-[10px] whitespace-nowrap hidden xs:table-cell">
@@ -100,7 +107,7 @@ import { Inbox, Lightbulb, Plus, Search, Grid2x2, List as ListIcon, Pencil, Tras
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { cn } from '~/lib/utils';
-import { CATEGORY_COLORS, EISENHOWER_LABELS, type Task, type EisenhowerCategory } from '~/lib/types';
+import { CATEGORY_COLORS, PROJECT_COLORS, EISENHOWER_LABELS, type Task, type EisenhowerCategory } from '~/lib/types';
 import { formatDuration } from '~/lib/time-utils';
 import QuadrantCard from './QuadrantCard.vue';
 
@@ -110,6 +117,7 @@ const { toast } = useToast();
 
 const view = ref<'matrix' | 'list'>(props.variant === 'backlog' ? 'matrix' : 'list');
 const query = ref('');
+const projectFilter = ref('');
 const createOpen = ref(false);
 const importOpen = ref(false);
 const editTask = ref<Task | null>(null);
@@ -117,10 +125,21 @@ const editTask = ref<Task | null>(null);
 const isBacklog = computed(() => props.variant === 'backlog');
 const title = computed(() => (isBacklog.value ? 'Backlog' : 'Idea Incubator'));
 const catColor = (c: string) => CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Admin;
+const projectName = (id?: string | null) => store.projects.find((p) => p.id === id)?.name;
+const projectColor = (id?: string | null) => {
+  const p = store.projects.find((x) => x.id === id);
+  return p ? PROJECT_COLORS[p.color] ?? '' : '';
+};
 
 const tasks = computed(() => store.tasks.filter((t) => t.status === props.variant));
-const filtered = computed(() => tasks.value.filter((t) =>
-  t.title.toLowerCase().includes(query.value.toLowerCase()) || t.notes?.toLowerCase().includes(query.value.toLowerCase())));
+const filtered = computed(() => tasks.value.filter((t) => {
+  const q = query.value.toLowerCase();
+  const matchesQuery = t.title.toLowerCase().includes(q) || t.notes?.toLowerCase().includes(q);
+  if (!matchesQuery) return false;
+  if (projectFilter.value === '__none__') return !t.projectId;
+  if (projectFilter.value) return t.projectId === projectFilter.value;
+  return true;
+}));
 
 const grouped = computed(() => {
   const map: Record<EisenhowerCategory, Task[]> = { do_first: [], schedule: [], delegate: [], eliminate: [] };

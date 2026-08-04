@@ -26,7 +26,10 @@
                 @change="(v) => v ? store.completeTask(t.id) : store.uncompleteTask(t.id)" />
             </td>
             <td class="px-1 md:px-1.5 py-1 md:py-1.5 min-w-0">
-              <span :class="cn('block text-xs font-medium truncate max-w-[120px] xs:max-w-[180px] sm:max-w-[260px] md:max-w-[400px]', t.status === 'completed' && 'line-through text-muted-foreground')">{{ t.title }}</span>
+              <div class="flex items-center gap-1">
+                <span :class="cn('block text-xs font-medium truncate max-w-[110px] xs:max-w-[160px] sm:max-w-[240px] md:max-w-[360px]', t.status === 'completed' && 'line-through text-muted-foreground')">{{ t.title }}</span>
+                <span v-if="projectName(t.projectId)" :class="cn('text-[8px] rounded px-1 py-px font-medium shrink-0 hidden sm:inline border', projectColor(t.projectId))">{{ projectName(t.projectId) }}</span>
+              </div>
             </td>
             <td class="px-1 md:px-1.5 py-1 md:py-1.5 text-[10px] whitespace-nowrap hidden xs:table-cell">
               <span :class="cn('inline-block rounded px-1 py-px font-medium', catColor(t.category))">{{ t.category }}</span>
@@ -51,10 +54,15 @@ import { computed } from 'vue';
 import { GripVertical, Pencil, Trash2, CalendarClock } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { cn } from '~/lib/utils';
-import { CATEGORY_COLORS, EISENHOWER_LABELS, type Task, type EisenhowerCategory } from '~/lib/types';
+import { CATEGORY_COLORS, PROJECT_COLORS, EISENHOWER_LABELS, type Task, type EisenhowerCategory } from '~/lib/types';
 import { formatDuration } from '~/lib/time-utils';
 
 const props = defineProps<{ cat: EisenhowerCategory; tasks: Task[]; hovered: boolean; label?: string }>();
+const projectName = (id?: string | null) => store.projects.find((p) => p.id === id)?.name;
+const projectColor = (id?: string | null) => {
+  const p = store.projects.find((x) => x.id === id);
+  return p ? PROJECT_COLORS[p.color] ?? '' : '';
+};
 defineEmits<{
   (e: 'drop-task', cat: EisenhowerCategory): void;
   (e: 'dragover-cat', cat: EisenhowerCategory): void;

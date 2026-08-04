@@ -18,10 +18,30 @@ export interface Task {
   rolledOverCount: number;
   priority: number;
   sortOrder: number;
+  projectId?: string | null;
   createdAt: string;
   updatedAt: string;
   completedAt?: string | null;
 }
+
+export interface Project {
+  id: string;
+  name: string;
+  color: string; // key into PROJECT_COLORS
+  createdAt: string;
+}
+
+export const PROJECT_COLORS: Record<string, string> = {
+  purple: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30',
+  pink: 'bg-pink-500/15 text-pink-700 dark:text-pink-300 border-pink-500/30',
+  orange: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30',
+  emerald: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+  teal: 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30',
+  amber: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+  rose: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
+  sky: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30',
+};
+export const PROJECT_COLOR_KEYS = Object.keys(PROJECT_COLORS);
 
 export interface TimeBlock {
   id: string;

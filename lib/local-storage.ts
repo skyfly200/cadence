@@ -28,9 +28,17 @@ export interface TaskRow {
   rolledOverCount: number;
   priority: number;
   sortOrder: number;
+  projectId?: string | null;
   createdAt: string;
   updatedAt: string;
   completedAt?: string | null;
+}
+
+export interface ProjectRow {
+  id: string;
+  name: string;
+  color: string;
+  createdAt: string;
 }
 
 export interface TimeBlockRow {
@@ -137,6 +145,7 @@ const KEYS = {
   lastActiveDate: `${STORAGE_PREFIX}lastActiveDate`,
   planningStreak: `${STORAGE_PREFIX}planningStreak`,
   brainDump: `${STORAGE_PREFIX}brainDump`,
+  projects: `${STORAGE_PREFIX}projects`,
 } as const;
 
 // ── Safe JSON parse/stringify ───────────────────────────────
@@ -464,6 +473,44 @@ export function updateBrainDumpEntry(id: string, patch: Partial<BrainDumpRow>): 
 
 export function deleteBrainDumpEntry(id: string): void {
   saveBrainDump(getBrainDump().filter((r) => r.id !== id));
+}
+
+// ── Projects ───────────────────────────────────────────────
+
+export function getProjects(): ProjectRow[] {
+  return load<ProjectRow[]>(KEYS.projects, []);
+}
+
+export function saveProjects(rows: ProjectRow[]): void {
+  save(KEYS.projects, rows);
+}
+
+export function addProject(entry: { name: string; color: string }): ProjectRow {
+  const rows = getProjects();
+  const row: ProjectRow = { id: uid(), name: entry.name, color: entry.color, createdAt: nowISO() };
+  rows.push(row);
+  saveProjects(rows);
+  return row;
+}
+
+export function updateProject(id: string, patch: Partial<ProjectRow>): ProjectRow | null {
+  const rows = getProjects();
+  const idx = rows.findIndex((r) => r.id === id);
+  if (idx === -1) return null;
+  rows[idx] = { ...rows[idx], ...patch };
+  saveProjects(rows);
+  return rows[idx];
+}
+
+export function deleteProject(id: string): void {
+  saveProjects(getProjects().filter((r) => r.id !== id));
+  // Un-assign any tasks that pointed at it.
+  const tasks = getTasks();
+  let changed = false;
+  for (const t of tasks) {
+    if (t.projectId === id) { t.projectId = null; t.updatedAt = nowISO(); changed = true; }
+  }
+  if (changed) saveTasks(tasks);
 }
 
 // ── Google Calendar operations ───────────────────────────────

@@ -19,6 +19,15 @@
           </select>
         </div>
 
+        <div class="flex items-center gap-1.5">
+          <FolderOpen class="size-3 text-muted-foreground shrink-0" />
+          <select v-model="projectId" class="flex-1 h-8 text-xs rounded-md border bg-background px-2 outline-none" @change="onProjectChange">
+            <option :value="null">No project</option>
+            <option v-for="p in store.projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+            <option value="__new__">＋ New project…</option>
+          </select>
+        </div>
+
         <div>
           <Label class="text-[11px] text-muted-foreground mb-1">Eisenhower</Label>
           <div class="grid grid-cols-4 gap-1">
@@ -93,7 +102,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { Sparkles, Clock, Loader2, ChevronDown, ChevronUp } from 'lucide-vue-next';
+import { Sparkles, Clock, Loader2, ChevronDown, ChevronUp, FolderOpen } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { TASK_CATEGORIES, PRESET_DURATIONS, type Task, type EisenhowerCategory, type TaskStatus } from '~/lib/types';
@@ -123,8 +132,17 @@ const status = ref<TaskStatus>(props.defaultStatus);
 const eisenhower = ref<EisenhowerCategory>('schedule');
 const estimatedMinutes = ref(30);
 const priority = ref(2);
+const projectId = ref<string | null>(null);
 const estimating = ref(false);
 const showNotes = ref(false);
+
+async function onProjectChange() {
+  if (projectId.value === '__new__') {
+    const name = window.prompt('New project name');
+    const p = name ? await store.createProject(name) : null;
+    projectId.value = p ? p.id : null;
+  }
+}
 
 watch(() => props.open, (isOpen) => {
   if (!isOpen) return;
@@ -137,11 +155,12 @@ watch(() => props.open, (isOpen) => {
     eisenhower.value = t.eisenhowerCategory;
     estimatedMinutes.value = t.estimatedMinutes;
     priority.value = t.priority;
+    projectId.value = t.projectId ?? null;
     showNotes.value = !!t.notes;
   } else {
     title.value = ''; notes.value = ''; category.value = 'Admin';
     status.value = props.defaultStatus; eisenhower.value = 'schedule';
-    estimatedMinutes.value = 30; priority.value = 2; showNotes.value = false;
+    estimatedMinutes.value = 30; priority.value = 2; projectId.value = null; showNotes.value = false;
   }
 });
 
@@ -174,6 +193,7 @@ async function save() {
     title: title.value.trim(), notes: notes.value.trim() || undefined,
     category: category.value, status: status.value, eisenhowerCategory: eisenhower.value,
     estimatedMinutes: estimatedMinutes.value, priority: priority.value,
+    projectId: projectId.value === '__new__' ? null : projectId.value,
   };
   if (props.editTask) {
     await store.updateTask(props.editTask.id, payload);

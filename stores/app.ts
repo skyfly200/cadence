@@ -4,7 +4,8 @@ import type {
   Task, TimeBlock, TimeLogSession, DailyCapacity, Settings, GamificationLog,
   TaskStatus, GoogleCalendarStatus,
 } from '~/lib/types';
-import type { PlanningStreak, BrainDumpEntry } from '~/lib/types';
+import type { PlanningStreak, BrainDumpEntry, Project } from '~/lib/types';
+import { PROJECT_COLOR_KEYS } from '~/lib/types';
 import { getMaxFocusForScore } from '~/lib/types';
 import { todayKey, yesterdayKey, isSameDay, blockDurationMinutes } from '~/lib/time-utils';
 import { fireConfetti } from '~/lib/confetti';
@@ -25,6 +26,7 @@ import {
   getLastActiveDate, setLastActiveDate,
   getPlanningStreak, savePlanningStreak,
   getBrainDump, addBrainDumpEntry, updateBrainDumpEntry, deleteBrainDumpEntry,
+  getProjects, addProject as addProjectRow, updateProject as updateProjectRow, deleteProject as deleteProjectRow,
   nowISO,
   type SettingsRow, type CapacityRow, type GoogleCalendarRow, type ActiveTimerRow,
 } from '~/lib/local-storage';
@@ -61,6 +63,7 @@ export const useAppStore = defineStore('app', () => {
   });
   const planningStreak = ref<PlanningStreak>({ current: 0, longest: 0, lastPlannedDate: null });
   const brainDump = ref<BrainDumpEntry[]>([]);
+  const projects = ref<Project[]>([]);
 
   function persistTimer(t: ActiveTimer | null) {
     activeTimer.value = t;
@@ -138,6 +141,7 @@ export const useAppStore = defineStore('app', () => {
 
       planningStreak.value = getPlanningStreak();
       brainDump.value = getBrainDump() as BrainDumpEntry[];
+      projects.value = getProjects() as Project[];
 
       computeDailyScore();
 
@@ -169,6 +173,7 @@ export const useAppStore = defineStore('app', () => {
         rolledOverCount: input.rolledOverCount ?? 0,
         priority: input.priority ?? 2,
         sortOrder: input.sortOrder ?? 0,
+        projectId: input.projectId ?? null,
         completedAt: input.completedAt ?? null,
       });
       tasks.value = [...tasks.value, row as Task];
@@ -510,6 +515,26 @@ export const useAppStore = defineStore('app', () => {
     else await updateTask(taskId, { status: 'today' as TaskStatus });
   }
 
+  // ── Projects ────────────────────────────────────────────
+  async function createProject(name: string, color?: string): Promise<Project | null> {
+    const n = name.trim();
+    if (!n) return null;
+    const col = color ?? PROJECT_COLOR_KEYS[projects.value.length % PROJECT_COLOR_KEYS.length];
+    const row = addProjectRow({ name: n, color: col });
+    projects.value = [...projects.value, row as Project];
+    return row as Project;
+  }
+  async function renameProject(id: string, patch: Partial<Project>) {
+    const row = updateProjectRow(id, patch);
+    if (row) projects.value = projects.value.map((p) => (p.id === id ? (row as Project) : p));
+  }
+  async function deleteProject(id: string) {
+    deleteProjectRow(id);
+    projects.value = projects.value.filter((p) => p.id !== id);
+    // Reflect the un-assignment the storage layer just did.
+    tasks.value = tasks.value.map((t) => (t.projectId === id ? { ...t, projectId: null } : t));
+  }
+
   // ── Brain dump ──────────────────────────────────────────
   async function addBrainDump(content: string, context?: string | null): Promise<BrainDumpEntry | null> {
     const text = content.trim();
@@ -693,7 +718,7 @@ export const useAppStore = defineStore('app', () => {
   return {
     // state
     tasks, timeBlocks, timerSessions, capacity, settings, gamification,
-    todayScore, loading, activeTab, activeTimer, googleCalendar, planningStreak, brainDump,
+    todayScore, loading, activeTab, activeTimer, googleCalendar, planningStreak, brainDump, projects,
     // selectors
     todayTasks, backlogTasks, incubatorTasks, triageTasks, completedToday, todayBlocks,
     committedMinutes, scheduledFocusMinutes, availableFocusMinutes,
@@ -705,6 +730,7 @@ export const useAppStore = defineStore('app', () => {
     saveSettings, setCapacity, generateAnchors,
     startTimer, stopTimer, tickTimer,
     runMidnightRollover, resolveTriageItem,
+    createProject, renameProject, deleteProject,
     addBrainDump, updateBrainDump, deleteBrainDump,
     awardPoints, computeDailyScore, recordPlanningActivity,
     loadGoogleCalendarStatus, connectGoogleCalendar, disconnectGoogleCalendar, syncGoogleCalendar,
