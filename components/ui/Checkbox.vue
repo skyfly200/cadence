@@ -5,7 +5,7 @@
     :aria-checked="checked"
     :aria-label="ariaLabel"
     :class="cn(
-      'shrink-0 rounded border shadow-sm flex items-center justify-center transition-colors',
+      'size-4 shrink-0 rounded border shadow-sm flex items-center justify-center transition-colors',
       checked ? 'bg-primary border-primary text-primary-foreground' : 'border-input bg-transparent',
       props.class,
     )"
