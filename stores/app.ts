@@ -4,7 +4,7 @@ import type {
   Task, TimeBlock, TimeLogSession, DailyCapacity, Settings, GamificationLog,
   TaskStatus, GoogleCalendarStatus,
 } from '~/lib/types';
-import type { PlanningStreak, BrainDumpEntry, Project } from '~/lib/types';
+import type { PlanningStreak, BrainDumpEntry, Project, Habit } from '~/lib/types';
 import { PROJECT_COLOR_KEYS } from '~/lib/types';
 import { getMaxFocusForScore } from '~/lib/types';
 import { todayKey, yesterdayKey, isSameDay, blockDurationMinutes } from '~/lib/time-utils';
@@ -27,6 +27,7 @@ import {
   getPlanningStreak, savePlanningStreak,
   getBrainDump, addBrainDumpEntry, updateBrainDumpEntry, deleteBrainDumpEntry,
   getProjects, addProject as addProjectRow, updateProject as updateProjectRow, deleteProject as deleteProjectRow,
+  getHabits, addHabit as addHabitRow, updateHabit as updateHabitRow, deleteHabit as deleteHabitRow,
   nowISO,
   type SettingsRow, type CapacityRow, type GoogleCalendarRow, type ActiveTimerRow,
 } from '~/lib/local-storage';
@@ -64,6 +65,7 @@ export const useAppStore = defineStore('app', () => {
   const planningStreak = ref<PlanningStreak>({ current: 0, longest: 0, lastPlannedDate: null });
   const brainDump = ref<BrainDumpEntry[]>([]);
   const projects = ref<Project[]>([]);
+  const habits = ref<Habit[]>([]);
 
   function persistTimer(t: ActiveTimer | null) {
     activeTimer.value = t;
@@ -142,6 +144,7 @@ export const useAppStore = defineStore('app', () => {
       planningStreak.value = getPlanningStreak();
       brainDump.value = getBrainDump() as BrainDumpEntry[];
       projects.value = getProjects() as Project[];
+      habits.value = getHabits() as Habit[];
 
       computeDailyScore();
 
@@ -535,6 +538,35 @@ export const useAppStore = defineStore('app', () => {
     tasks.value = tasks.value.map((t) => (t.projectId === id ? { ...t, projectId: null } : t));
   }
 
+  // ── Habits ──────────────────────────────────────────────
+  async function createHabit(input: { name: string; cadence: 'daily' | 'weekly'; days?: number[]; emoji?: string | null }): Promise<Habit | null> {
+    const name = input.name.trim();
+    if (!name) return null;
+    const row = addHabitRow({ name, cadence: input.cadence, days: input.days ?? [], emoji: input.emoji ?? null });
+    habits.value = [...habits.value, row as Habit];
+    return row as Habit;
+  }
+  async function updateHabit(id: string, patch: Partial<Habit>) {
+    const row = updateHabitRow(id, patch);
+    if (row) habits.value = habits.value.map((h) => (h.id === id ? (row as Habit) : h));
+  }
+  async function deleteHabit(id: string) {
+    deleteHabitRow(id);
+    habits.value = habits.value.filter((h) => h.id !== id);
+  }
+  async function toggleHabitDone(id: string, date?: string) {
+    const habit = habits.value.find((h) => h.id === id);
+    if (!habit) return;
+    const d = date ?? todayKey();
+    const done = habit.completions.includes(d);
+    const completions = done ? habit.completions.filter((x) => x !== d) : [...habit.completions, d];
+    const row = updateHabitRow(id, { completions });
+    if (row) {
+      habits.value = habits.value.map((h) => (h.id === id ? (row as Habit) : h));
+      if (!done) await awardPoints('habit', 4, `Habit: ${habit.name}`);
+    }
+  }
+
   // ── Brain dump ──────────────────────────────────────────
   async function addBrainDump(content: string, context?: string | null): Promise<BrainDumpEntry | null> {
     const text = content.trim();
@@ -718,7 +750,7 @@ export const useAppStore = defineStore('app', () => {
   return {
     // state
     tasks, timeBlocks, timerSessions, capacity, settings, gamification,
-    todayScore, loading, activeTab, activeTimer, googleCalendar, planningStreak, brainDump, projects,
+    todayScore, loading, activeTab, activeTimer, googleCalendar, planningStreak, brainDump, projects, habits,
     // selectors
     todayTasks, backlogTasks, incubatorTasks, triageTasks, completedToday, todayBlocks,
     committedMinutes, scheduledFocusMinutes, availableFocusMinutes,
@@ -731,6 +763,7 @@ export const useAppStore = defineStore('app', () => {
     startTimer, stopTimer, tickTimer,
     runMidnightRollover, resolveTriageItem,
     createProject, renameProject, deleteProject,
+    createHabit, updateHabit, deleteHabit, toggleHabitDone,
     addBrainDump, updateBrainDump, deleteBrainDump,
     awardPoints, computeDailyScore, recordPlanningActivity,
     loadGoogleCalendarStatus, connectGoogleCalendar, disconnectGoogleCalendar, syncGoogleCalendar,

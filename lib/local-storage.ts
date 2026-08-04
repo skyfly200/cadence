@@ -41,6 +41,16 @@ export interface ProjectRow {
   createdAt: string;
 }
 
+export interface HabitRow {
+  id: string;
+  name: string;
+  emoji?: string | null;
+  cadence: 'daily' | 'weekly';
+  days: number[];
+  createdAt: string;
+  completions: string[];
+}
+
 export interface TimeBlockRow {
   id: string;
   taskId?: string | null;
@@ -146,6 +156,7 @@ const KEYS = {
   planningStreak: `${STORAGE_PREFIX}planningStreak`,
   brainDump: `${STORAGE_PREFIX}brainDump`,
   projects: `${STORAGE_PREFIX}projects`,
+  habits: `${STORAGE_PREFIX}habits`,
 } as const;
 
 // ── Safe JSON parse/stringify ───────────────────────────────
@@ -534,6 +545,37 @@ export function saveGoogleCalendar(data: GoogleCalendarRow): void {
 
 export function disconnectGoogleCalendar(): void {
   saveGoogleCalendar({ ...DEFAULT_GCAL });
+}
+
+// ── Habits ─────────────────────────────────────────────────
+
+export function getHabits(): HabitRow[] {
+  return load<HabitRow[]>(KEYS.habits, []);
+}
+
+export function saveHabits(rows: HabitRow[]): void {
+  save(KEYS.habits, rows);
+}
+
+export function addHabit(entry: Omit<HabitRow, 'id' | 'createdAt' | 'completions'>): HabitRow {
+  const rows = getHabits();
+  const row: HabitRow = { ...entry, id: uid(), createdAt: nowISO(), completions: [] };
+  rows.push(row);
+  saveHabits(rows);
+  return row;
+}
+
+export function updateHabit(id: string, patch: Partial<HabitRow>): HabitRow | null {
+  const rows = getHabits();
+  const idx = rows.findIndex((r) => r.id === id);
+  if (idx === -1) return null;
+  rows[idx] = { ...rows[idx], ...patch };
+  saveHabits(rows);
+  return rows[idx];
+}
+
+export function deleteHabit(id: string): void {
+  saveHabits(getHabits().filter((r) => r.id !== id));
 }
 
 // ── Full backup export / import ─────────────────────────────

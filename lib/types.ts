@@ -81,7 +81,7 @@ export interface DailyCapacity {
 export interface GamificationLog {
   id: string;
   date: string;
-  type: 'realism' | 'anchor_discipline' | 'triage_streak' | 'completion' | 'focus_session' | 'planning_streak';
+  type: 'realism' | 'anchor_discipline' | 'triage_streak' | 'completion' | 'focus_session' | 'planning_streak' | 'habit';
   points: number;
   note?: string | null;
 }
@@ -90,6 +90,18 @@ export interface PlanningStreak {
   current: number;        // consecutive days planned, up to and including lastPlannedDate
   longest: number;        // best run ever
   lastPlannedDate: string | null; // YYYY-MM-DD of the most recent planned day
+}
+
+export type HabitCadence = 'daily' | 'weekly';
+
+export interface Habit {
+  id: string;
+  name: string;
+  emoji?: string | null;
+  cadence: HabitCadence;
+  days: number[];          // weekly: weekday numbers (0=Sun … 6=Sat); empty for daily
+  createdAt: string;
+  completions: string[];   // YYYY-MM-DD dates completed
 }
 
 export interface BrainDumpEntry {

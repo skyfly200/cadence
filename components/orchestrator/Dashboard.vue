@@ -109,6 +109,7 @@
       <div class="space-y-2 md:col-span-1 min-w-0">
         <CapacityPanel />
         <TimerPanel />
+        <HabitsPanel />
         <GamificationPanel />
       </div>
     </div>

@@ -55,7 +55,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Trophy, Target, Anchor, Flame, CheckCircle2, Clock } from 'lucide-vue-next';
+import { Trophy, Target, Anchor, Flame, CheckCircle2, Clock, Repeat } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { cn } from '~/lib/utils';
 
@@ -77,6 +77,7 @@ const TYPE_META: Record<string, { icon: any; color: string; label: string }> = {
   completion: { icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', label: 'Done' },
   focus_session: { icon: Clock, color: 'text-teal-600 dark:text-teal-400', label: 'Focus' },
   planning_streak: { icon: Flame, color: 'text-orange-600 dark:text-orange-400', label: 'Streak' },
+  habit: { icon: Repeat, color: 'text-indigo-600 dark:text-indigo-400', label: 'Habit' },
 };
 const meta = (type: string) => TYPE_META[type] ?? TYPE_META.completion;
 </script>
