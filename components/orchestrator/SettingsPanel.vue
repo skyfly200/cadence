@@ -58,6 +58,47 @@
       </div>
     </Card>
 
+    <!-- Notifications -->
+    <Card class="p-3 sm:p-4 max-w-2xl">
+      <div class="flex items-center gap-2 mb-2">
+        <Bell class="size-4" />
+        <h3 class="text-sm font-semibold">Notifications</h3>
+      </div>
+      <p class="text-[11px] text-muted-foreground mb-3">
+        Local reminders while Cadence is open (an installed app counts). Nothing leaves your device.
+      </p>
+
+      <p v-if="!notifSupported" class="text-[11px] text-amber-600">This browser doesn’t support notifications.</p>
+
+      <div v-else-if="!prefs.enabled">
+        <Button size="sm" @click="enableNotifs"><Bell class="size-4" /> Enable notifications</Button>
+      </div>
+
+      <div v-else class="space-y-2.5">
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <span :class="switchCls(prefs.anchors)" @click="store.setNotificationPrefs({ anchors: !prefs.anchors })">
+            <span :class="knobCls(prefs.anchors)" />
+          </span>
+          <span class="text-[11px]">Anchor &amp; meal reminders</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <span :class="switchCls(prefs.timer)" @click="store.setNotificationPrefs({ timer: !prefs.timer })">
+            <span :class="knobCls(prefs.timer)" />
+          </span>
+          <span class="text-[11px]">Pomodoro complete</span>
+        </label>
+        <div class="flex items-center gap-2">
+          <span class="text-[11px]">Daily habit reminder</span>
+          <Input type="time" v-model="habitsReminder" class="h-7 w-28 text-[11px]" />
+          <Button v-if="habitsReminder" size="sm" variant="ghost" class="h-6 text-[10px] px-2" @click="habitsReminder = ''">off</Button>
+        </div>
+        <div class="flex gap-2 pt-1">
+          <Button size="sm" variant="outline" @click="testNotif">Send test</Button>
+          <Button size="sm" variant="ghost" class="text-muted-foreground" @click="store.setNotificationPrefs({ enabled: false })">Turn off</Button>
+        </div>
+      </div>
+    </Card>
+
     <!-- Data backup -->
     <Card class="p-3 sm:p-4 max-w-2xl">
       <div class="flex items-center gap-2 mb-2">
@@ -79,12 +120,14 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue';
-import { Settings as SettingsIcon, Save, RefreshCw, Database, Download, Upload } from 'lucide-vue-next';
+import { reactive, ref, computed, watch } from 'vue';
+import { Settings as SettingsIcon, Save, RefreshCw, Database, Download, Upload, Bell } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { formatDuration } from '~/lib/time-utils';
 import { exportAllData, importAllData } from '~/lib/local-storage';
+import { notificationsSupported, showNotification } from '~/lib/notifications';
+import { cn } from '~/lib/utils';
 
 const store = useAppStore();
 const { toast } = useToast();
@@ -121,6 +164,21 @@ async function regenerateAnchors() {
   await store.generateAnchors();
   toast({ title: 'Anchors regenerated' });
 }
+
+// ── Notifications ────────────────────────────────────────
+const notifSupported = notificationsSupported();
+const prefs = computed(() => store.notificationPrefs);
+const habitsReminder = computed({
+  get: () => prefs.value.habitsReminder,
+  set: (v: string) => store.setNotificationPrefs({ habitsReminder: v }),
+});
+const switchCls = (on: boolean) => cn('relative h-4 w-7 rounded-full transition-colors inline-block', on ? 'bg-primary' : 'bg-muted-foreground/30');
+const knobCls = (on: boolean) => cn('absolute top-0.5 size-3 rounded-full bg-background transition-transform', on ? 'translate-x-3.5' : 'translate-x-0.5');
+async function enableNotifs() {
+  const ok = await store.enableNotifications();
+  if (!ok) toast({ title: 'Permission denied', description: 'Allow notifications for this site in your browser settings.', variant: 'destructive' });
+}
+function testNotif() { void showNotification('Test reminder', { body: 'This is how Cadence reminders look.', tag: 'test' }); }
 
 // ── Data backup ──────────────────────────────────────────
 const fileInput = ref<HTMLInputElement | null>(null);

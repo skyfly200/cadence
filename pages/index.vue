@@ -128,9 +128,11 @@ import {
 } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { captureGoogleOAuthTokens } from '~/lib/local-storage';
+import { useReminders } from '~/composables/useReminders';
 import { cn } from '~/lib/utils';
 
 const store = useAppStore();
+useReminders();
 const colorMode = useColorMode();
 const captureOpen = ref(false);
 

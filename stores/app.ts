@@ -4,7 +4,8 @@ import type {
   Task, TimeBlock, TimeLogSession, DailyCapacity, Settings, GamificationLog,
   TaskStatus, GoogleCalendarStatus,
 } from '~/lib/types';
-import type { PlanningStreak, BrainDumpEntry, Project, Habit } from '~/lib/types';
+import type { PlanningStreak, BrainDumpEntry, Project, Habit, NotificationPrefs } from '~/lib/types';
+import { showNotification, requestNotificationPermission } from '~/lib/notifications';
 import { PROJECT_COLOR_KEYS } from '~/lib/types';
 import { getMaxFocusForScore } from '~/lib/types';
 import { todayKey, yesterdayKey, isSameDay, blockDurationMinutes } from '~/lib/time-utils';
@@ -28,6 +29,7 @@ import {
   getBrainDump, addBrainDumpEntry, updateBrainDumpEntry, deleteBrainDumpEntry,
   getProjects, addProject as addProjectRow, updateProject as updateProjectRow, deleteProject as deleteProjectRow,
   getHabits, addHabit as addHabitRow, updateHabit as updateHabitRow, deleteHabit as deleteHabitRow,
+  getNotificationPrefs, saveNotificationPrefs,
   exportAllData, importAllData,
   nowISO,
   type SettingsRow, type CapacityRow, type GoogleCalendarRow, type ActiveTimerRow,
@@ -67,6 +69,7 @@ export const useAppStore = defineStore('app', () => {
   const brainDump = ref<BrainDumpEntry[]>([]);
   const projects = ref<Project[]>([]);
   const habits = ref<Habit[]>([]);
+  const notificationPrefs = ref<NotificationPrefs>({ enabled: false, anchors: true, timer: true, habitsReminder: '' });
 
   function persistTimer(t: ActiveTimer | null) {
     activeTimer.value = t;
@@ -161,6 +164,7 @@ export const useAppStore = defineStore('app', () => {
     brainDump.value = getBrainDump() as BrainDumpEntry[];
     projects.value = getProjects() as Project[];
     habits.value = getHabits() as Habit[];
+    notificationPrefs.value = getNotificationPrefs() as NotificationPrefs;
 
     computeDailyScore();
   }
@@ -492,7 +496,16 @@ export const useAppStore = defineStore('app', () => {
     if (!t || !t.running) return;
     if (t.type === 'pomodoro' && t.targetSeconds > 0) {
       const total = t.elapsedBeforeStart + Math.floor((Date.now() - t.startedAt) / 1000);
-      if (total >= t.targetSeconds) void stopTimer(false);
+      if (total >= t.targetSeconds) {
+        const task = tasks.value.find((x) => x.id === t.taskId);
+        void stopTimer(false);
+        if (notificationPrefs.value.enabled && notificationPrefs.value.timer) {
+          void showNotification('Pomodoro complete', {
+            body: task ? `Finished focus on “${task.title}”. Take a break.` : 'Focus block done. Take a break.',
+            tag: 'pomodoro',
+          });
+        }
+      }
     }
   }
 
@@ -708,6 +721,20 @@ export const useAppStore = defineStore('app', () => {
     };
   }
 
+  // ── Notifications ───────────────────────────────────────
+  function setNotificationPrefs(patch: Partial<NotificationPrefs>) {
+    const next = { ...notificationPrefs.value, ...patch };
+    notificationPrefs.value = next;
+    saveNotificationPrefs(next);
+  }
+  async function enableNotifications(): Promise<boolean> {
+    const result = await requestNotificationPermission();
+    const granted = result === 'granted';
+    setNotificationPrefs({ enabled: granted });
+    if (granted) void showNotification('Notifications on', { body: 'Cadence will remind you about anchors, timers, and habits while it’s open.', tag: 'welcome' });
+    return granted;
+  }
+
   function setGcalAutoSync(v: boolean) {
     persistGoogleCalendar({ ...getGoogleCalendarRow(), autoSync: v });
     loadGoogleCalendarStatus();
@@ -814,7 +841,7 @@ export const useAppStore = defineStore('app', () => {
   return {
     // state
     tasks, timeBlocks, timerSessions, capacity, settings, gamification,
-    todayScore, loading, activeTab, activeTimer, googleCalendar, planningStreak, brainDump, projects, habits,
+    todayScore, loading, activeTab, activeTimer, googleCalendar, planningStreak, brainDump, projects, habits, notificationPrefs,
     // selectors
     todayTasks, backlogTasks, incubatorTasks, triageTasks, completedToday, todayBlocks,
     committedMinutes, scheduledFocusMinutes, availableFocusMinutes,
@@ -832,5 +859,6 @@ export const useAppStore = defineStore('app', () => {
     addBrainDump, updateBrainDump, deleteBrainDump,
     awardPoints, computeDailyScore, recordPlanningActivity,
     loadGoogleCalendarStatus, connectGoogleCalendar, disconnectGoogleCalendar, syncGoogleCalendar, setGcalAutoSync,
+    setNotificationPrefs, enableNotifications,
   };
 });

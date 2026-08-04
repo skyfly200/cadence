@@ -158,6 +158,7 @@ const KEYS = {
   brainDump: `${STORAGE_PREFIX}brainDump`,
   projects: `${STORAGE_PREFIX}projects`,
   habits: `${STORAGE_PREFIX}habits`,
+  notifications: `${STORAGE_PREFIX}notifications`,
 } as const;
 
 // ── Safe JSON parse/stringify ───────────────────────────────
@@ -603,6 +604,27 @@ export function updateHabit(id: string, patch: Partial<HabitRow>): HabitRow | nu
 
 export function deleteHabit(id: string): void {
   saveHabits(getHabits().filter((r) => r.id !== id));
+}
+
+// ── Notification preferences ───────────────────────────────
+
+export interface NotificationPrefsRow {
+  enabled: boolean;
+  anchors: boolean;
+  timer: boolean;
+  habitsReminder: string;
+}
+
+const DEFAULT_NOTIFICATIONS: NotificationPrefsRow = {
+  enabled: false, anchors: true, timer: true, habitsReminder: '',
+};
+
+export function getNotificationPrefs(): NotificationPrefsRow {
+  return load<NotificationPrefsRow>(KEYS.notifications, { ...DEFAULT_NOTIFICATIONS });
+}
+
+export function saveNotificationPrefs(prefs: NotificationPrefsRow): void {
+  save(KEYS.notifications, prefs);
 }
 
 // ── Full backup export / import ─────────────────────────────

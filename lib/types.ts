@@ -125,6 +125,13 @@ export interface Settings {
   defaultBreakMinutes: number;
 }
 
+export interface NotificationPrefs {
+  enabled: boolean;
+  anchors: boolean;         // meal / hydration / anchor start reminders
+  timer: boolean;           // pomodoro complete
+  habitsReminder: string;   // 'HH:mm' daily nudge for unfinished habits, or '' to disable
+}
+
 export interface GoogleCalendarStatus {
   connected: boolean;
   calendarEmail: string | null;
