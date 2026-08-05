@@ -163,8 +163,16 @@ onMounted(() => {
   now.value = new Date();
   clockInterval = setInterval(() => { now.value = new Date(); }, 15_000);
   if (store.settings) void store.generateAnchors(selectedDate.value);
+  syncViewedDay();
   setTimeout(scrollToNow, 150);
 });
+
+/** Pull Google Calendar events for whichever day is on screen. */
+function syncViewedDay() {
+  if (store.googleCalendar.connected) {
+    void store.syncGoogleCalendar(format(selectedDate.value, 'yyyy-MM-dd'));
+  }
+}
 onUnmounted(() => {
   window.removeEventListener('resize', updateRowHeight);
   if (clockInterval) clearInterval(clockInterval);
@@ -190,8 +198,12 @@ function shiftDay(n: number) {
   d.setDate(d.getDate() + n);
   selectedDate.value = startOfDay(d);
   if (store.settings) void store.generateAnchors(selectedDate.value);
+  syncViewedDay();
 }
-function goToday() { selectedDate.value = startOfDay(new Date()); }
+function goToday() {
+  selectedDate.value = startOfDay(new Date());
+  syncViewedDay();
+}
 
 // ── Blocks & tasks for the viewed day ────────────────────
 const catColor = (c: string) => CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Admin;
