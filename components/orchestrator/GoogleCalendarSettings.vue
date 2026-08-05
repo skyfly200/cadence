@@ -72,13 +72,38 @@
           </div>
         </div>
       </div>
+
+      <!-- Connection details / troubleshooting -->
+      <details class="mt-3 group">
+        <summary class="cursor-pointer inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground">
+          <Wrench class="size-3" /> Connection details &amp; troubleshooting
+        </summary>
+        <div class="mt-2 space-y-1.5 text-[10px] text-muted-foreground">
+          <div class="flex items-center gap-1.5">
+            <component :is="gcal.hasCredentials ? CheckCircle2 : AlertCircle" :class="cn('size-3 shrink-0', gcal.hasCredentials ? 'text-emerald-500' : 'text-amber-500')" />
+            <span>Public client ID {{ gcal.hasCredentials ? 'detected' : 'missing (set NUXT_PUBLIC_GOOGLE_CLIENT_ID and redeploy)' }}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <component :is="gcal.connected ? CheckCircle2 : AlertCircle" :class="cn('size-3 shrink-0', gcal.connected ? 'text-emerald-500' : 'text-muted-foreground')" />
+            <span>{{ gcal.connected ? `Connected as ${gcal.calendarEmail || 'unknown'}` : 'Not connected yet' }}</span>
+          </div>
+          <div>
+            <p class="mb-0.5">Redirect URI to register in Google Cloud (must match exactly):</p>
+            <div class="flex items-center gap-1">
+              <code class="block flex-1 bg-muted px-1.5 py-1 rounded font-mono break-all">{{ redirectUri || '…' }}</code>
+              <Button size="sm" variant="ghost" class="h-6 text-[10px] px-1.5 shrink-0" @click="copyRedirect"><Copy class="size-3" /></Button>
+            </div>
+          </div>
+          <p>Server needs <code class="font-mono">GOOGLE_CLIENT_ID</code> + <code class="font-mono">GOOGLE_CLIENT_SECRET</code>. If Google says the app isn’t verified, add your account under the consent screen’s Test users.</p>
+        </div>
+      </details>
     </div>
   </Card>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { Calendar, Unlink, RefreshCw, ExternalLink, CheckCircle2, AlertCircle, Loader2 } from 'lucide-vue-next';
+import { Calendar, Unlink, RefreshCw, ExternalLink, CheckCircle2, AlertCircle, Loader2, Wrench, Copy } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { cn } from '~/lib/utils';
@@ -87,8 +112,17 @@ const store = useAppStore();
 const { toast } = useToast();
 const syncing = ref(false);
 const gcal = computed(() => store.googleCalendar);
+const redirectUri = ref('');
+
+function copyRedirect() {
+  navigator.clipboard?.writeText(redirectUri.value).then(
+    () => toast({ title: 'Redirect URI copied' }),
+    () => { /* clipboard blocked */ },
+  );
+}
 
 onMounted(() => {
+  redirectUri.value = `${window.location.origin}/api/google-calendar/callback`;
   store.loadGoogleCalendarStatus();
   // Token capture happens on page load (pages/index.vue); if we just connected
   // and this panel is open, greet + sync.
