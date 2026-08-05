@@ -530,11 +530,13 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function resolveTriageItem(taskId: string, action: 'schedule_today' | 'incubator' | 'delete') {
+  async function resolveTriageItem(taskId: string, action: 'schedule_today' | 'incubator' | 'backlog' | 'complete' | 'delete') {
     const task = tasks.value.find((t) => t.id === taskId);
     if (!task) return;
     if (action === 'delete') await deleteTask(taskId);
+    else if (action === 'complete') await completeTask(taskId);
     else if (action === 'incubator') await updateTask(taskId, { status: 'incubator' as TaskStatus });
+    else if (action === 'backlog') await updateTask(taskId, { status: 'backlog' as TaskStatus });
     else await updateTask(taskId, { status: 'today' as TaskStatus });
   }
 

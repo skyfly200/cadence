@@ -38,14 +38,20 @@
                 <span class="inline-block rounded border border-border/60 px-1 py-px text-[9px] text-muted-foreground">{{ EISENHOWER_LABELS[task.eisenhowerCategory].short }}</span>
               </td>
               <td class="px-2 py-1.5 sm:py-2">
-                <div class="flex items-center justify-end gap-0.5 sm:gap-1">
+                <div class="flex items-center justify-end gap-0.5 sm:gap-1 flex-wrap">
+                  <Button size="sm" variant="ghost" class="h-6 sm:h-5 text-[9px] px-1.5 text-emerald-600 hover:text-emerald-600 gap-0.5" title="Mark complete" @click="resolve(task.id, 'complete', task.title)">
+                    <CheckCircle2 class="size-2.5" /> <span class="hidden xs:inline">Done</span>
+                  </Button>
                   <Button size="sm" class="h-6 sm:h-5 text-[9px] px-1.5 gap-0.5" @click="resolve(task.id, 'schedule_today', task.title)">
                     <CalendarClock class="size-2.5" /> <span class="hidden xs:inline">Today</span>
+                  </Button>
+                  <Button size="sm" variant="outline" class="h-6 sm:h-5 text-[9px] px-1.5 gap-0.5" @click="resolve(task.id, 'backlog', task.title)">
+                    <Inbox class="size-2.5" /> <span class="hidden xs:inline">Backlog</span>
                   </Button>
                   <Button size="sm" variant="outline" class="h-6 sm:h-5 text-[9px] px-1.5 gap-0.5" @click="resolve(task.id, 'incubator', task.title)">
                     <Lightbulb class="size-2.5" /> <span class="hidden xs:inline">Incubate</span>
                   </Button>
-                  <Button size="sm" variant="ghost" class="h-6 sm:h-5 text-[9px] px-1.5 text-destructive hover:text-destructive gap-0.5" @click="resolve(task.id, 'delete', task.title)">
+                  <Button size="sm" variant="ghost" class="h-6 sm:h-5 text-[9px] px-1.5 text-destructive hover:text-destructive gap-0.5" title="Delete" @click="resolve(task.id, 'delete', task.title)">
                     <Trash2 class="size-2.5" />
                   </Button>
                 </div>
@@ -60,7 +66,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { CalendarClock, Lightbulb, Trash2, CheckCircle2 } from 'lucide-vue-next';
+import { CalendarClock, Lightbulb, Trash2, CheckCircle2, Inbox } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { cn } from '~/lib/utils';
@@ -73,10 +79,13 @@ const resolved = ref(0);
 const triageTasks = computed(() => store.triageTasks);
 const catColor = (c: string) => CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Admin;
 
-async function resolve(taskId: string, action: 'schedule_today' | 'incubator' | 'delete', title: string) {
+type TriageAction = 'schedule_today' | 'incubator' | 'backlog' | 'complete' | 'delete';
+async function resolve(taskId: string, action: TriageAction, title: string) {
   await store.resolveTriageItem(taskId, action);
   resolved.value++;
-  const labels = { schedule_today: '→ today', incubator: '→ incubator', delete: 'deleted' };
+  const labels: Record<TriageAction, string> = {
+    schedule_today: '→ today', incubator: '→ incubator', backlog: '→ backlog', complete: 'completed', delete: 'deleted',
+  };
   toast({ title: `${title} ${labels[action]}` });
 }
 
