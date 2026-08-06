@@ -129,12 +129,7 @@ onMounted(() => {
   if (gcal.value.connected && !gcal.value.lastSyncAt) {
     void store.syncGoogleCalendar();
   }
-  const params = new URLSearchParams(window.location.search);
-  const gcalError = params.get('gcal_error');
-  if (gcalError) {
-    toast({ title: 'Connection failed', description: decodeURIComponent(gcalError).replace(/_/g, ' '), variant: 'destructive' });
-    window.history.replaceState({}, '', '/');
-  }
+  // gcal_error is handled once at page load (pages/index.vue).
 });
 
 async function handleSync() {

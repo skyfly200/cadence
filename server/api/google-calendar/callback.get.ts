@@ -12,8 +12,13 @@ export default defineEventHandler(async (event) => {
   const code = query.code as string | undefined;
   const error = query.error as string | undefined;
 
+  // Behind Netlify's proxy the raw request is often http:// on an internal
+  // host — but the redirect_uri MUST byte-match what the browser used
+  // (https://<public-host>/…), or Google returns redirect_uri_mismatch.
   const reqUrl = getRequestURL(event);
-  const origin = `${reqUrl.protocol}//${reqUrl.host}`;
+  const host = getHeader(event, 'x-forwarded-host') || getHeader(event, 'host') || reqUrl.host;
+  const proto = getHeader(event, 'x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
+  const origin = `${proto}://${host}`;
 
   if (error) return sendRedirect(event, `/?gcal_error=${encodeURIComponent(error)}`);
   if (!code) return sendRedirect(event, '/?gcal_error=no_code');
@@ -34,8 +39,13 @@ export default defineEventHandler(async (event) => {
     });
 
     if (!tokenRes.ok) {
-      console.error('Token exchange failed:', await tokenRes.text());
-      return sendRedirect(event, '/?gcal_error=token_exchange_failed');
+      const body = await tokenRes.text();
+      console.error('Token exchange failed:', body);
+      // Surface Google's actual error code (e.g. redirect_uri_mismatch,
+      // invalid_grant) so the app can show a useful message.
+      let reason = 'token_exchange_failed';
+      try { const j = JSON.parse(body); if (j.error) reason = j.error; } catch { /* keep default */ }
+      return sendRedirect(event, `/?gcal_error=${encodeURIComponent(reason)}`);
     }
 
     const tokens = await tokenRes.json();

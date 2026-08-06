@@ -129,9 +129,11 @@ import {
 import { useAppStore } from '~/stores/app';
 import { captureGoogleOAuthTokens } from '~/lib/local-storage';
 import { useReminders } from '~/composables/useReminders';
+import { useToast } from '~/composables/useToast';
 import { cn } from '~/lib/utils';
 
 const store = useAppStore();
+const { toast } = useToast();
 useReminders();
 const colorMode = useColorMode();
 const captureOpen = ref(false);
@@ -177,9 +179,22 @@ function onKey(e: KeyboardEvent) {
 }
 
 onMounted(() => {
-  // Capture the Google OAuth redirect here (not in the collapsed Settings
-  // panel) so returning from Google always registers the connection.
+  // Handle the Google OAuth redirect here (not in the collapsed Settings
+  // panel) so returning from Google always registers — or reports failure.
   if (captureGoogleOAuthTokens(window.location.hash)) {
+    window.history.replaceState({}, '', '/');
+    toast({ title: 'Google Calendar connected', description: 'Syncing your events…' });
+  }
+  const gcalError = new URLSearchParams(window.location.search).get('gcal_error');
+  if (gcalError) {
+    const map: Record<string, string> = {
+      redirect_uri_mismatch: 'Redirect URI doesn’t match the one registered in Google Cloud.',
+      invalid_grant: 'The sign-in code expired or was already used — try connecting again.',
+      access_denied: 'You declined access on Google.',
+      no_credentials: 'Server is missing GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.',
+      no_code: 'Google didn’t return an authorization code.',
+    };
+    toast({ title: 'Calendar connection failed', description: map[gcalError] ?? gcalError.replace(/_/g, ' '), variant: 'destructive' });
     window.history.replaceState({}, '', '/');
   }
   store.loadData();
