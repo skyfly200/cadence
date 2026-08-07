@@ -77,9 +77,10 @@ export const useAppStore = defineStore('app', () => {
   }
 
   // ── Derived selectors ────────────────────────────────────
-  const todayTasks = computed(() => tasks.value.filter((t) => t.status === 'today'));
-  const backlogTasks = computed(() => tasks.value.filter((t) => t.status === 'backlog'));
-  const incubatorTasks = computed(() => tasks.value.filter((t) => t.status === 'incubator'));
+  const bySortOrder = (a: Task, b: Task) => (a.sortOrder - b.sortOrder) || a.createdAt.localeCompare(b.createdAt);
+  const todayTasks = computed(() => tasks.value.filter((t) => t.status === 'today').sort(bySortOrder));
+  const backlogTasks = computed(() => tasks.value.filter((t) => t.status === 'backlog').sort(bySortOrder));
+  const incubatorTasks = computed(() => tasks.value.filter((t) => t.status === 'incubator').sort(bySortOrder));
   const triageTasks = computed(() => tasks.value.filter((t) => t.status === 'triage_review'));
   const completedToday = computed(() =>
     tasks.value.filter((t) => t.status === 'completed' && t.completedAt

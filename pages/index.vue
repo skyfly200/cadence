@@ -26,6 +26,9 @@
               <span class="text-[9px] sm:text-[10px] font-medium text-muted-foreground">SCORE</span>
               <span class="text-xs sm:text-sm font-bold tabular-nums">{{ todayScore }}</span>
             </div>
+            <Button v-if="canInstall" variant="outline" size="sm" class="h-8 text-[11px] px-2 gap-1" aria-label="Install app" title="Install Cadence" @click="installApp">
+              <DownloadCloud class="size-4" /> <span class="hidden xs:inline">Install</span>
+            </Button>
             <Button v-if="store.canUndo" variant="ghost" size="icon" aria-label="Undo" title="Undo (⌘Z)" class="size-8 sm:size-9 hidden sm:inline-flex" @click="store.undo()">
               <Undo2 class="size-4" />
             </Button>
@@ -124,16 +127,18 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import {
   LayoutDashboard, Calendar, Inbox, AlertTriangle, BarChart3, Settings as SettingsIcon,
-  Moon, Sun, Sparkles, Mic, Flame, NotebookPen, Undo2, Redo2,
+  Moon, Sun, Sparkles, Mic, Flame, NotebookPen, Undo2, Redo2, DownloadCloud,
 } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { captureGoogleOAuthTokens } from '~/lib/local-storage';
 import { useReminders } from '~/composables/useReminders';
+import { useInstallPrompt } from '~/composables/useInstallPrompt';
 import { useToast } from '~/composables/useToast';
 import { cn } from '~/lib/utils';
 
 const store = useAppStore();
 const { toast } = useToast();
+const { canInstall, install: installApp } = useInstallPrompt();
 useReminders();
 const colorMode = useColorMode();
 const captureOpen = ref(false);

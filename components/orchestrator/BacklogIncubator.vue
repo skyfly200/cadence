@@ -70,7 +70,7 @@
           <tbody>
             <tr v-for="(t, idx) in liveList" :key="t.id" draggable="true"
               :class="cn('group border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors cursor-grab active:cursor-grabbing', dragIndex === idx && 'opacity-40')"
-              @dragstart="onListDragStart(idx)" @dragover.prevent="onListDragOver(idx)" @dragend="onListDragEnd">
+              @dragstart="onListDragStart(idx, $event)" @dragover.prevent="onListDragOver(idx)" @drop.prevent="onListDragEnd" @dragend="onListDragEnd">
               <td class="px-1.5 py-1 w-6"><GripVertical class="size-3 text-muted-foreground/50" /></td>
               <td class="px-1.5 py-1 min-w-0">
                 <div class="flex items-center gap-1.5">
@@ -131,7 +131,9 @@ const projectColor = (id?: string | null) => {
   return p ? PROJECT_COLORS[p.color] ?? '' : '';
 };
 
-const tasks = computed(() => store.tasks.filter((t) => t.status === props.variant));
+const tasks = computed(() => store.tasks
+  .filter((t) => t.status === props.variant)
+  .sort((a, b) => (a.sortOrder - b.sortOrder) || a.createdAt.localeCompare(b.createdAt)));
 const filtered = computed(() => tasks.value.filter((t) => {
   const q = query.value.toLowerCase();
   const matchesQuery = t.title.toLowerCase().includes(q) || t.notes?.toLowerCase().includes(q);
@@ -174,7 +176,10 @@ async function onQuadrantDrop(cat: EisenhowerCategory) {
 const liveList = ref<Task[]>([]);
 watch(filtered, (v) => { liveList.value = [...v]; }, { immediate: true });
 const dragIndex = ref<number | null>(null);
-function onListDragStart(idx: number) { dragIndex.value = idx; }
+function onListDragStart(idx: number, e: DragEvent) {
+  dragIndex.value = idx;
+  if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(idx)); }
+}
 function onListDragOver(idx: number) {
   if (dragIndex.value === null || dragIndex.value === idx) return;
   const arr = [...liveList.value];
@@ -184,6 +189,7 @@ function onListDragOver(idx: number) {
   dragIndex.value = idx;
 }
 function onListDragEnd() {
+  if (dragIndex.value === null) return;
   dragIndex.value = null;
   store.reorderTasks(liveList.value.map((t) => t.id));
 }

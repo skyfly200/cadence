@@ -19,10 +19,14 @@ export default defineNuxtConfig({
       theme_color: '#a855f7',
       background_color: '#ffffff',
       display: 'standalone',
+      id: '/',
       start_url: '/',
+      orientation: 'portrait-primary',
+      categories: ['productivity', 'lifestyle'],
       icons: [
-        { src: '/logo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-        { src: '/logo.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+        { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: '/maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ],
     },
     workbox: {
@@ -58,9 +62,16 @@ export default defineNuxtConfig({
   app: {
     head: {
       title: 'Cadence',
+      link: [
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+      ],
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-title', content: 'Cadence' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
         {
           name: 'description',
           content:

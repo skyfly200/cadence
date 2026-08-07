@@ -64,8 +64,9 @@
                 'flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-1.5 md:py-1 rounded-md border border-border/50 bg-background hover:bg-muted/30 transition-all group cursor-grab active:cursor-grabbing',
                 dragIndex === idx && 'opacity-40',
               )"
-              @dragstart="onDragStart(idx)"
+              @dragstart="onDragStart(idx, $event)"
               @dragover.prevent="onDragOver(idx)"
+              @drop.prevent="onDragEnd"
               @dragend="onDragEnd">
               <GripVertical class="size-3 text-muted-foreground/50 shrink-0" />
               <Checkbox :checked="t.status === 'completed'" :aria-label="`Complete ${t.title}`"
@@ -155,7 +156,10 @@ onMounted(() => store.loadGoogleCalendarStatus());
 const liveTasks = ref<Task[]>([]);
 watch(todayTasks, (v) => { liveTasks.value = [...v]; }, { immediate: true });
 const dragIndex = ref<number | null>(null);
-function onDragStart(idx: number) { dragIndex.value = idx; }
+function onDragStart(idx: number, e: DragEvent) {
+  dragIndex.value = idx;
+  if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(idx)); }
+}
 function onDragOver(idx: number) {
   if (dragIndex.value === null || dragIndex.value === idx) return;
   const arr = [...liveTasks.value];
@@ -165,6 +169,7 @@ function onDragOver(idx: number) {
   dragIndex.value = idx;
 }
 function onDragEnd() {
+  if (dragIndex.value === null) return;
   dragIndex.value = null;
   store.reorderTasks(liveTasks.value.map((t) => t.id));
 }
