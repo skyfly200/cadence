@@ -223,16 +223,17 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function completeTask(id: string, actualMinutes?: number) {
+  async function completeTask(id: string, actualMinutes?: number, completedAt?: string) {
     try {
+      const backfill = !!completedAt; // completing for a past day
       const row = updateTaskRow(id, {
         status: 'completed',
-        completedAt: nowISO(),
+        completedAt: completedAt ?? nowISO(),
         actualMinutes: actualMinutes ?? tasks.value.find((t) => t.id === id)?.actualMinutes ?? 0,
       });
       if (row) {
         tasks.value = tasks.value.map((x) => (x.id === id ? (row as Task) : x));
-        fireConfetti();
+        if (!backfill) fireConfetti();
         await awardPoints('completion', 10, `Completed: ${row.title}`);
         // Realism: reward accurate estimates, but only when the task was
         // actually timed (otherwise we have no real duration to compare).

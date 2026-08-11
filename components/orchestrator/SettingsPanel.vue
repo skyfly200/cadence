@@ -58,6 +58,26 @@
       </div>
     </Card>
 
+    <!-- Install app -->
+    <Card class="p-3 sm:p-4 max-w-2xl">
+      <div class="flex items-center gap-2 mb-2">
+        <DownloadCloud class="size-4" />
+        <h3 class="text-sm font-semibold">Install app</h3>
+      </div>
+      <p v-if="installed" class="text-[11px] text-emerald-600 flex items-center gap-1"><Check class="size-3" /> Installed on this device.</p>
+      <template v-else-if="canInstall">
+        <p class="text-[11px] text-muted-foreground mb-2">Install Cadence for a full-screen, offline experience.</p>
+        <Button size="sm" @click="installApp"><DownloadCloud class="size-4" /> Install Cadence</Button>
+      </template>
+      <p v-else-if="isIOS" class="text-[11px] text-muted-foreground">
+        On iPhone/iPad: open in <strong>Safari</strong>, tap the <strong>Share</strong> icon, then <strong>Add to Home Screen</strong>.
+      </p>
+      <p v-else class="text-[11px] text-muted-foreground">
+        No install prompt yet. In Chrome/Edge, use the browser menu (⋮) → <strong>Install app</strong> / <strong>Add to Home screen</strong>.
+        The header <strong>Install</strong> button appears automatically once your browser allows it (needs HTTPS + a little interaction).
+      </p>
+    </Card>
+
     <!-- Notifications -->
     <Card class="p-3 sm:p-4 max-w-2xl">
       <div class="flex items-center gap-2 mb-2">
@@ -121,13 +141,16 @@
 
 <script setup lang="ts">
 import { reactive, ref, computed, watch } from 'vue';
-import { Settings as SettingsIcon, Save, RefreshCw, Database, Download, Upload, Bell } from 'lucide-vue-next';
+import { Settings as SettingsIcon, Save, RefreshCw, Database, Download, Upload, Bell, DownloadCloud, Check } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
+import { useInstallPrompt } from '~/composables/useInstallPrompt';
 import { formatDuration } from '~/lib/time-utils';
 import { exportAllData, importAllData } from '~/lib/local-storage';
 import { notificationsSupported, showNotification } from '~/lib/notifications';
 import { cn } from '~/lib/utils';
+
+const { canInstall, installed, isIOS, install: installApp } = useInstallPrompt();
 
 const store = useAppStore();
 const { toast } = useToast();

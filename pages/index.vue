@@ -44,6 +44,9 @@
                 <Moon v-else class="size-4" />
               </Button>
             </ClientOnly>
+            <Button variant="ghost" size="icon" aria-label="Settings" title="Settings" class="size-8 sm:size-9" @click="settingsOpen = true">
+              <SettingsIcon class="size-4" />
+            </Button>
           </div>
         </div>
       </div>
@@ -92,14 +95,12 @@
         </div>
       </div>
 
-      <!-- Settings -->
-      <details class="mt-4 group">
-        <summary class="cursor-pointer inline-flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground">
-          <SettingsIcon class="size-3.5" /> Settings &amp; anchor configuration
-        </summary>
-        <div class="mt-3"><SettingsPanel /></div>
-      </details>
     </main>
+
+    <!-- Settings dialog -->
+    <Dialog :open="settingsOpen" content-class="sm:max-w-2xl max-h-[88vh] overflow-y-auto" @update:open="settingsOpen = $event">
+      <SettingsPanel />
+    </Dialog>
 
     <!-- Footer -->
     <footer class="border-t bg-background mt-auto">
@@ -140,6 +141,7 @@ const store = useAppStore();
 const { toast } = useToast();
 const { canInstall, install: installApp } = useInstallPrompt();
 useReminders();
+const settingsOpen = ref(false);
 const colorMode = useColorMode();
 const captureOpen = ref(false);
 

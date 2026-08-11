@@ -39,9 +39,14 @@
               </td>
               <td class="px-2 py-1.5 sm:py-2">
                 <div class="flex items-center justify-end gap-0.5 sm:gap-1 flex-wrap">
-                  <Button size="sm" variant="ghost" class="h-6 sm:h-5 text-[9px] px-1.5 text-emerald-600 hover:text-emerald-600 gap-0.5" title="Mark complete" @click="resolve(task.id, 'complete', task.title)">
+                  <Button size="sm" variant="ghost" class="h-6 sm:h-5 text-[9px] px-1.5 text-emerald-600 hover:text-emerald-600 gap-0.5" title="Mark complete today" @click="resolve(task.id, 'complete', task.title)">
                     <CheckCircle2 class="size-2.5" /> <span class="hidden xs:inline">Done</span>
                   </Button>
+                  <label class="inline-flex items-center h-6 sm:h-5 rounded border border-border bg-background px-1 gap-0.5 cursor-pointer hover:bg-muted/50" title="Mark done on a past day">
+                    <CalendarDays class="size-2.5 text-muted-foreground" />
+                    <input type="date" :max="today" class="w-[4.2rem] text-[9px] bg-transparent outline-none cursor-pointer"
+                      @change="completeOn(task, $event)" />
+                  </label>
                   <Button size="sm" class="h-6 sm:h-5 text-[9px] px-1.5 gap-0.5" @click="resolve(task.id, 'schedule_today', task.title)">
                     <CalendarClock class="size-2.5" /> <span class="hidden xs:inline">Today</span>
                   </Button>
@@ -66,16 +71,27 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { CalendarClock, Lightbulb, Trash2, CheckCircle2, Inbox } from 'lucide-vue-next';
+import { CalendarClock, CalendarDays, Lightbulb, Trash2, CheckCircle2, Inbox } from 'lucide-vue-next';
+import type { Task } from '~/lib/types';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { cn } from '~/lib/utils';
 import { CATEGORY_COLORS, EISENHOWER_LABELS } from '~/lib/types';
-import { formatDuration } from '~/lib/time-utils';
+import { formatDuration, todayKey } from '~/lib/time-utils';
 
 const store = useAppStore();
 const { toast } = useToast();
 const resolved = ref(0);
+const today = todayKey();
+
+async function completeOn(task: Task, e: Event) {
+  const val = (e.target as HTMLInputElement).value; // yyyy-mm-dd
+  if (!val) return;
+  const iso = new Date(`${val}T12:00:00`).toISOString();
+  await store.completeTask(task.id, undefined, iso);
+  resolved.value++;
+  toast({ title: `${task.title} completed`, description: `Backdated to ${val}` });
+}
 const triageTasks = computed(() => store.triageTasks);
 const catColor = (c: string) => CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Admin;
 
