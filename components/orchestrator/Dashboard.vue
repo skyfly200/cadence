@@ -34,9 +34,14 @@
               <h3 class="text-xs sm:text-sm font-semibold">Today's Plan</h3>
               <span class="text-[10px] text-muted-foreground hidden sm:inline">{{ todayTasks.length }} scheduled · {{ completedToday.length }} done</span>
             </div>
-            <Button size="sm" variant="outline" class="h-7 sm:h-6 text-[10px] px-2" @click="openCreate()">
-              <Plus class="size-3" /> Add
-            </Button>
+            <div class="flex items-center gap-1">
+              <Button size="sm" variant="outline" class="h-7 sm:h-6 text-[10px] px-2" title="Auto-plan today onto the timeline" :disabled="planning" @click="autoPlan">
+                <Wand2 :class="cn('size-3', planning && 'animate-pulse')" /> <span class="hidden xs:inline">Auto-plan</span>
+              </Button>
+              <Button size="sm" variant="outline" class="h-7 sm:h-6 text-[10px] px-2" @click="openCreate()">
+                <Plus class="size-3" /> Add
+              </Button>
+            </div>
           </div>
 
           <div class="mb-1.5 sm:mb-2">
@@ -72,6 +77,9 @@
               <Checkbox :checked="t.status === 'completed'" :aria-label="`Complete ${t.title}`"
                 @change="(v) => v && store.completeTask(t.id)" />
               <span :class="cn('flex-1 min-w-0 text-xs font-medium truncate', t.status === 'completed' && 'line-through text-muted-foreground')">{{ t.title }}</span>
+              <span v-if="t.location" class="text-[9px] text-muted-foreground shrink-0 hidden md:inline-flex items-center gap-0.5"><MapPin class="size-2.5" />{{ t.location }}</span>
+              <span v-if="(t.dependsOn?.length ?? 0) > 0" class="text-[9px] text-muted-foreground shrink-0 hidden md:inline-flex items-center gap-0.5" :title="`${t.dependsOn!.length} prerequisite(s)`"><Link2 class="size-2.5" />{{ t.dependsOn!.length }}</span>
+              <span v-if="t.deadline" :class="cn('text-[9px] shrink-0 hidden sm:inline-flex items-center gap-0.5', new Date(t.deadline) < new Date() ? 'text-rose-600' : 'text-amber-600')" :title="`Due ${new Date(t.deadline).toLocaleString()}`"><CalendarClock class="size-2.5" />{{ deadlineShort(t.deadline) }}</span>
               <span :class="cn('text-[9px] rounded px-1 py-px font-medium shrink-0 hidden sm:inline-block', catColor(t.category))">{{ t.category }}</span>
               <span class="text-[10px] text-muted-foreground tabular-nums shrink-0 hidden xs:inline">{{ formatDuration(t.estimatedMinutes) }}</span>
               <div class="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -121,16 +129,37 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
-import { Plus, Clock, Play, CalendarClock, CheckCircle2, AlertCircle, Pencil, Trash2, GripVertical, RefreshCw } from 'lucide-vue-next';
+import { Plus, Clock, Play, CalendarClock, CheckCircle2, AlertCircle, Pencil, Trash2, GripVertical, RefreshCw, Wand2, MapPin, Link2 } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
+import { useToast } from '~/composables/useToast';
 import { cn } from '~/lib/utils';
 import { CATEGORY_COLORS, type Task } from '~/lib/types';
 import { formatDuration } from '~/lib/time-utils';
 
 const store = useAppStore();
+const { toast } = useToast();
 const createOpen = ref(false);
 const editTask = ref<Task | null>(null);
 const syncing = ref(false);
+const planning = ref(false);
+
+async function autoPlan() {
+  planning.value = true;
+  try {
+    const res = await store.autoPlanDay();
+    if (res.placed === 0 && res.skipped.length === 0) {
+      toast({ title: 'Nothing to plan', description: 'Add tasks to Today first.' });
+    } else {
+      const skippedNote = res.skipped.length
+        ? `${res.skipped.length} didn’t fit: ${res.skipped.slice(0, 3).map((s) => `${s.title} (${s.reason})`).join('; ')}`
+        : 'Ordered around your anchors & events.';
+      toast({ title: `Auto-planned ${res.placed} task${res.placed !== 1 ? 's' : ''}`, description: skippedNote });
+      store.setActiveTab('timeline');
+    }
+  } finally {
+    planning.value = false;
+  }
+}
 
 const todayTasks = computed(() => store.todayTasks);
 const completedToday = computed(() => store.completedToday);
@@ -139,6 +168,7 @@ const gcal = computed(() => store.googleCalendar);
 const capacity = computed(() => store.capacity);
 
 const catColor = (c: string) => CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Admin;
+const deadlineShort = (iso: string) => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 const totalEstimated = computed(() => todayTasks.value.reduce((s, t) => s + t.estimatedMinutes, 0));
 const committed = computed(() => store.committedMinutes);

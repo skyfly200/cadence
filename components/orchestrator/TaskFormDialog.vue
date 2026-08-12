@@ -90,6 +90,58 @@
           </div>
           <Textarea v-model="notes" :rows="2" placeholder="Context, sub-steps, links…" class="text-xs" />
         </div>
+
+        <!-- Planning constraints -->
+        <button v-if="!showPlanning" type="button"
+          class="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+          @click="showPlanning = true">
+          <ChevronDown class="size-3" /> Location, timing &amp; dependencies
+        </button>
+        <div v-else class="space-y-2 rounded-md border border-border/60 bg-muted/20 p-2">
+          <div class="flex items-center justify-between">
+            <Label class="text-[11px] font-medium">Planning</Label>
+            <button type="button" class="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1" @click="showPlanning = false">
+              <ChevronUp class="size-3" /> Hide
+            </button>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <MapPin class="size-3 text-muted-foreground shrink-0" />
+            <Input v-model="location" placeholder="Location (e.g. Hardware store, Home)" class="h-7 text-[11px] flex-1" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="space-y-0.5">
+              <Label class="text-[10px] text-muted-foreground">Deadline</Label>
+              <Input type="datetime-local" v-model="deadline" class="h-7 text-[11px]" />
+            </div>
+            <div class="space-y-0.5">
+              <Label class="text-[10px] text-muted-foreground">Open hours (from / until)</Label>
+              <div class="flex items-center gap-1">
+                <Input type="time" v-model="windowStart" class="h-7 text-[11px]" />
+                <span class="text-[10px] text-muted-foreground">–</span>
+                <Input type="time" v-model="windowEnd" class="h-7 text-[11px]" />
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-0.5">
+            <Label class="text-[10px] text-muted-foreground">Depends on (must be done first)</Label>
+            <select v-model="dependsOn" multiple class="w-full min-h-[3.5rem] text-[11px] rounded-md border bg-background px-1.5 py-1 outline-none">
+              <option v-for="t in dependencyOptions" :key="t.id" :value="t.id">{{ t.title }}</option>
+            </select>
+            <p v-if="dependencyOptions.length === 0" class="text-[10px] text-muted-foreground">No other tasks yet.</p>
+          </div>
+
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button" :class="chip(dirty)" @click="dirty = !dirty">🧤 Gets me dirty</button>
+            <button type="button" :class="chip(isHygiene)" @click="isHygiene = !isHygiene">🚿 Shower / cleanup</button>
+            <button type="button" :class="chip(needsClean)" @click="needsClean = !needsClean">✨ Do while clean</button>
+          </div>
+          <p class="text-[9px] text-muted-foreground leading-tight">
+            Auto-plan orders grimy work first, then cleanup, then clean errands — grouping by location and honoring deadlines &amp; open hours.
+          </p>
+        </div>
       </div>
 
       <div class="flex justify-end gap-2 pt-1">
@@ -101,8 +153,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import { Sparkles, Clock, Loader2, ChevronDown, ChevronUp, FolderOpen } from 'lucide-vue-next';
+import { ref, computed, watch } from 'vue';
+import { Sparkles, Clock, Loader2, ChevronDown, ChevronUp, FolderOpen, MapPin } from 'lucide-vue-next';
+import { cn } from '~/lib/utils';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { TASK_CATEGORIES, PRESET_DURATIONS, type Task, type EisenhowerCategory, type TaskStatus } from '~/lib/types';
@@ -136,6 +189,25 @@ const projectId = ref<string | null>(null);
 const estimating = ref(false);
 const showNotes = ref(false);
 
+// Planning constraints
+const showPlanning = ref(false);
+const location = ref('');
+const deadline = ref('');       // datetime-local value
+const windowStart = ref('');
+const windowEnd = ref('');
+const dependsOn = ref<string[]>([]);
+const dirty = ref(false);
+const needsClean = ref(false);
+const isHygiene = ref(false);
+
+// Other tasks that can be prerequisites (exclude self + completed).
+const dependencyOptions = computed(() => store.tasks.filter(
+  (t) => t.id !== props.editTask?.id && t.status !== 'completed'));
+
+const chip = (on: boolean) => cn(
+  'h-6 px-2 text-[10px] rounded-full border transition-colors',
+  on ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted');
+
 async function onProjectChange() {
   if (projectId.value === '__new__') {
     const name = window.prompt('New project name');
@@ -157,12 +229,29 @@ watch(() => props.open, (isOpen) => {
     priority.value = t.priority;
     projectId.value = t.projectId ?? null;
     showNotes.value = !!t.notes;
+    location.value = t.location ?? '';
+    deadline.value = t.deadline ? isoToLocalInput(t.deadline) : '';
+    windowStart.value = t.windowStart ?? '';
+    windowEnd.value = t.windowEnd ?? '';
+    dependsOn.value = [...(t.dependsOn ?? [])];
+    dirty.value = !!t.dirty;
+    needsClean.value = !!t.needsClean;
+    isHygiene.value = !!t.isHygiene;
+    showPlanning.value = !!(t.location || t.deadline || t.windowStart || t.windowEnd || (t.dependsOn?.length) || t.dirty || t.needsClean || t.isHygiene);
   } else {
     title.value = ''; notes.value = ''; category.value = 'Admin';
     status.value = props.defaultStatus; eisenhower.value = 'schedule';
     estimatedMinutes.value = 30; priority.value = 2; projectId.value = null; showNotes.value = false;
+    location.value = ''; deadline.value = ''; windowStart.value = ''; windowEnd.value = '';
+    dependsOn.value = []; dirty.value = false; needsClean.value = false; isHygiene.value = false; showPlanning.value = false;
   }
 });
+
+function isoToLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 async function runAiEstimate() {
   if (!title.value.trim()) { toast({ title: 'Enter a title first', variant: 'destructive' }); return; }
@@ -194,6 +283,14 @@ async function save() {
     category: category.value, status: status.value, eisenhowerCategory: eisenhower.value,
     estimatedMinutes: estimatedMinutes.value, priority: priority.value,
     projectId: projectId.value === '__new__' ? null : projectId.value,
+    location: location.value.trim() || null,
+    deadline: deadline.value ? new Date(deadline.value).toISOString() : null,
+    windowStart: windowStart.value || null,
+    windowEnd: windowEnd.value || null,
+    dependsOn: [...dependsOn.value],
+    dirty: dirty.value,
+    needsClean: needsClean.value,
+    isHygiene: isHygiene.value,
   };
   if (props.editTask) {
     await store.updateTask(props.editTask.id, payload);

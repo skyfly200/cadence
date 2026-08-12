@@ -19,6 +19,15 @@ export interface Task {
   priority: number;
   sortOrder: number;
   projectId?: string | null;
+  // Planning constraints
+  location?: string | null;      // where it happens (for grouping errands)
+  deadline?: string | null;      // ISO datetime it must be done by
+  windowStart?: string | null;   // HH:mm earliest it can be done (e.g. store opens)
+  windowEnd?: string | null;     // HH:mm latest it can be done (e.g. store closes)
+  dependsOn?: string[];          // task ids that must be completed first
+  dirty?: boolean;               // this task makes me dirty / is grimy
+  needsClean?: boolean;          // best done while clean / presentable
+  isHygiene?: boolean;           // this is the shower / cleanup pivot
   createdAt: string;
   updatedAt: string;
   completedAt?: string | null;

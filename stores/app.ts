@@ -189,6 +189,14 @@ export const useAppStore = defineStore('app', () => {
         priority: input.priority ?? 2,
         sortOrder: input.sortOrder ?? 0,
         projectId: input.projectId ?? null,
+        location: input.location ?? null,
+        deadline: input.deadline ?? null,
+        windowStart: input.windowStart ?? null,
+        windowEnd: input.windowEnd ?? null,
+        dependsOn: input.dependsOn ?? [],
+        dirty: input.dirty ?? false,
+        needsClean: input.needsClean ?? false,
+        isHygiene: input.isHygiene ?? false,
         completedAt: input.completedAt ?? null,
       });
       tasks.value = [...tasks.value, row as Task];
@@ -357,6 +365,82 @@ export const useAppStore = defineStore('app', () => {
       await updateTask(taskId, { status: 'today' as TaskStatus });
     }
     recordPlanningActivity();
+  }
+
+  /**
+   * Greedy auto-planner. Orders today's tasks by dependencies, then a
+   * "phase" (dirty/grimy → hygiene → clean errands → flexible), grouping by
+   * location and honoring deadlines and open-hours windows, then lays them
+   * onto the timeline around anchors and calendar events. Heuristic, not an
+   * optimal solver — and fully undoable.
+   */
+  async function autoPlanDay(): Promise<{ placed: number; skipped: { title: string; reason: string }[] }> {
+    const day = new Date();
+    const skipped: { title: string; reason: string }[] = [];
+    const candidates = tasks.value.filter((t) => t.status === 'today');
+    if (candidates.length === 0) return { placed: 0, skipped };
+
+    // Clear existing task blocks for today (undo restores them).
+    const existing = timeBlocks.value.filter(
+      (b) => b.taskId && !b.isAnchor && !b.isExternalEvent && isSameDay(new Date(b.startTime), day));
+    for (const b of existing) await deleteTimeBlock(b.id);
+
+    // Priority-topological ordering.
+    const completedIds = new Set(tasks.value.filter((t) => t.status === 'completed').map((t) => t.id));
+    const idSet = new Set(candidates.map((t) => t.id));
+    const phase = (t: Task) => (t.dirty ? 0 : t.isHygiene ? 1 : t.needsClean ? 2 : 1.5);
+    const key = (t: Task): [number, string, string, number] => [phase(t), t.location || '~', t.deadline || '~', t.priority ?? 3];
+    const cmp = (a: Task, b: Task) => {
+      const ka = key(a); const kb = key(b);
+      for (let i = 0; i < ka.length; i++) { if (ka[i] < kb[i]) return -1; if (ka[i] > kb[i]) return 1; }
+      return 0;
+    };
+    const placedIds = new Set<string>();
+    const ordered: Task[] = [];
+    const depsOk = (t: Task) => (t.dependsOn ?? []).every((id) => completedIds.has(id) || placedIds.has(id) || !idSet.has(id));
+    while (ordered.length < candidates.length) {
+      const ready = candidates.filter((t) => !placedIds.has(t.id) && depsOk(t)).sort(cmp);
+      if (ready.length === 0) { // dependency cycle — append the remainder
+        candidates.filter((t) => !placedIds.has(t.id)).sort(cmp).forEach((t) => { ordered.push(t); placedIds.add(t.id); });
+        break;
+      }
+      ordered.push(ready[0]); placedIds.add(ready[0].id);
+    }
+
+    // Lay onto the timeline around anchors / calendar events.
+    const anchors = timeBlocks.value.filter(
+      (b) => (b.isAnchor || b.isExternalEvent) && isSameDay(new Date(b.startTime), day));
+    const round15 = (d: Date) => { const x = new Date(d); x.setSeconds(0, 0); x.setMinutes(Math.ceil(x.getMinutes() / 15) * 15, 0, 0); return x; };
+    const [wh, wm] = (settings.value?.wakeTime ?? '08:00').split(':').map(Number);
+    const wakeDate = new Date(day); wakeDate.setHours(wh, wm, 0, 0);
+    let cursor = round15(new Date(Math.max(Date.now(), wakeDate.getTime())));
+    const endOfDay = new Date(day); endOfDay.setHours(23, 59, 0, 0);
+
+    const freeStart = (from: Date, durMin: number): Date | null => {
+      let s = new Date(from);
+      for (let g = 0; g < 300; g++) {
+        const e = new Date(s.getTime() + durMin * 60000);
+        const clash = anchors.find((b) => s < new Date(b.endTime) && new Date(b.startTime) < e);
+        if (!clash) return s;
+        s = round15(new Date(clash.endTime));
+      }
+      return null;
+    };
+
+    for (const t of ordered) {
+      const dur = Math.max(15, t.estimatedMinutes);
+      let earliest = new Date(cursor);
+      if (t.windowStart) { const [h, m] = t.windowStart.split(':').map(Number); const w = new Date(day); w.setHours(h, m, 0, 0); if (w > earliest) earliest = w; }
+      const s = freeStart(earliest, dur);
+      if (!s) { skipped.push({ title: t.title, reason: 'no free time today' }); continue; }
+      const e = new Date(s.getTime() + dur * 60000);
+      if (t.windowEnd) { const [h, m] = t.windowEnd.split(':').map(Number); const we = new Date(day); we.setHours(h, m, 0, 0); if (e > we) { skipped.push({ title: t.title, reason: `closes ${t.windowEnd}` }); continue; } }
+      if (t.deadline && e > new Date(t.deadline)) { skipped.push({ title: t.title, reason: 'past deadline' }); continue; }
+      if (e > endOfDay) { skipped.push({ title: t.title, reason: 'day is full' }); continue; }
+      await moveTaskToTimeline(t.id, s.toISOString(), e.toISOString());
+      cursor = round15(e);
+    }
+    return { placed: ordered.length - skipped.length, skipped };
   }
 
   async function recalcScheduledFocus() {
@@ -854,7 +938,7 @@ export const useAppStore = defineStore('app', () => {
     // actions
     setActiveTab, loadData, loadSettings,
     createTask, updateTask, deleteTask, completeTask, uncompleteTask, reorderTasks,
-    createTimeBlock, updateTimeBlock, deleteTimeBlock, toggleAnchorDone, moveTaskToTimeline, recalcScheduledFocus,
+    createTimeBlock, updateTimeBlock, deleteTimeBlock, toggleAnchorDone, moveTaskToTimeline, recalcScheduledFocus, autoPlanDay,
     saveSettings, setCapacity, generateAnchors,
     startTimer, stopTimer, tickTimer,
     runMidnightRollover, resolveTriageItem,

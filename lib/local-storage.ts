@@ -29,6 +29,14 @@ export interface TaskRow {
   priority: number;
   sortOrder: number;
   projectId?: string | null;
+  location?: string | null;
+  deadline?: string | null;
+  windowStart?: string | null;
+  windowEnd?: string | null;
+  dependsOn?: string[];
+  dirty?: boolean;
+  needsClean?: boolean;
+  isHygiene?: boolean;
   createdAt: string;
   updatedAt: string;
   completedAt?: string | null;
