@@ -51,6 +51,19 @@
           </div>
         </div>
 
+        <div>
+          <h4 class="text-xs font-semibold text-muted-foreground mb-2">Travel</h4>
+          <div class="flex items-center gap-2 flex-wrap">
+            <Label class="text-xs">Default mode</Label>
+            <select v-model="form.travelMode" class="h-8 text-sm rounded-md border bg-background px-2 outline-none">
+              <option value="drive">🚗 Drive</option>
+              <option value="walk">🚶 Walk</option>
+              <option value="cycle">🚲 Cycle</option>
+            </select>
+            <span class="text-[10px] text-muted-foreground">Estimates travel time between task locations when auto-planning.</span>
+          </div>
+        </div>
+
         <div class="flex flex-wrap items-center gap-2 pt-2">
           <Button @click="save"><Save class="size-4" /> Save settings</Button>
           <Button variant="outline" @click="regenerateAnchors"><RefreshCw class="size-4" /> Regenerate anchors</Button>
@@ -158,6 +171,7 @@ const { toast } = useToast();
 const DEFAULTS = {
   wakeTime: '07:00', sleepTime: '23:00', breakfastTime: '08:00', lunchTime: '13:00',
   dinnerTime: '19:00', hydrationInterval: 90, defaultPomodoroMinutes: 25, defaultBreakMinutes: 5,
+  travelMode: 'drive' as 'drive' | 'walk' | 'cycle',
 };
 
 const form = reactive({ ...DEFAULTS });
@@ -168,6 +182,7 @@ function hydrate() {
     wakeTime: s.wakeTime, sleepTime: s.sleepTime, breakfastTime: s.breakfastTime,
     lunchTime: s.lunchTime, dinnerTime: s.dinnerTime, hydrationInterval: s.hydrationInterval,
     defaultPomodoroMinutes: s.defaultPomodoroMinutes, defaultBreakMinutes: s.defaultBreakMinutes,
+    travelMode: s.travelMode ?? 'drive',
   });
 }
 watch(() => store.settings, hydrate, { immediate: true });

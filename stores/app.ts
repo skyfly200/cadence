@@ -10,6 +10,7 @@ import { PROJECT_COLOR_KEYS } from '~/lib/types';
 import { getMaxFocusForScore } from '~/lib/types';
 import { todayKey, yesterdayKey, isSameDay, blockDurationMinutes } from '~/lib/time-utils';
 import { fireConfetti } from '~/lib/confetti';
+import { travelMatrix, type TravelMode } from '~/lib/geo';
 import {
   loadAll, saveSettings as persistSettings,
   getTasks as getTasksRaw,
@@ -190,6 +191,8 @@ export const useAppStore = defineStore('app', () => {
         sortOrder: input.sortOrder ?? 0,
         projectId: input.projectId ?? null,
         location: input.location ?? null,
+        locationLat: input.locationLat ?? null,
+        locationLon: input.locationLon ?? null,
         deadline: input.deadline ?? null,
         windowStart: input.windowStart ?? null,
         windowEnd: input.windowEnd ?? null,
@@ -380,9 +383,9 @@ export const useAppStore = defineStore('app', () => {
     const candidates = tasks.value.filter((t) => t.status === 'today');
     if (candidates.length === 0) return { placed: 0, skipped };
 
-    // Clear existing task blocks for today (undo restores them).
+    // Clear existing task + travel blocks for today (undo restores them).
     const existing = timeBlocks.value.filter(
-      (b) => b.taskId && !b.isAnchor && !b.isExternalEvent && isSameDay(new Date(b.startTime), day));
+      (b) => (b.taskId || b.colorTag === 'travel') && !b.isAnchor && !b.isExternalEvent && isSameDay(new Date(b.startTime), day));
     for (const b of existing) await deleteTimeBlock(b.id);
 
     // Priority-topological ordering.
@@ -427,9 +430,30 @@ export const useAppStore = defineStore('app', () => {
       return null;
     };
 
+    // Travel-time matrix (seconds) between geolocated tasks, via OSRM.
+    const TRAVEL_EMOJI: Record<TravelMode, string> = { drive: '🚗', walk: '🚶', cycle: '🚲' };
+    const mode = (settings.value?.travelMode ?? 'drive') as TravelMode;
+    const geoTasks = ordered.filter((t) => t.locationLat != null && t.locationLon != null);
+    const coordIdx = new Map<string, number>();
+    let matrix: number[][] | null = null;
+    if (geoTasks.length >= 2) {
+      geoTasks.forEach((t, i) => coordIdx.set(t.id, i));
+      matrix = await travelMatrix(geoTasks.map((t) => ({ lat: t.locationLat!, lon: t.locationLon! })), mode);
+    }
+    const sameSpot = (a: Task, b: Task) => a.locationLat === b.locationLat && a.locationLon === b.locationLon;
+
+    let prev: Task | null = null;
     for (const t of ordered) {
       const dur = Math.max(15, t.estimatedMinutes);
-      let earliest = new Date(cursor);
+
+      // Travel leg from the previous stop, if both are geolocated and differ.
+      let travelSec = 0;
+      if (prev && matrix && coordIdx.has(prev.id) && coordIdx.has(t.id) && !sameSpot(prev, t)) {
+        const d = matrix[coordIdx.get(prev.id)!]?.[coordIdx.get(t.id)!];
+        if (typeof d === 'number' && d > 60) travelSec = Math.round(d);
+      }
+
+      let earliest = new Date(cursor.getTime() + travelSec * 1000);
       if (t.windowStart) { const [h, m] = t.windowStart.split(':').map(Number); const w = new Date(day); w.setHours(h, m, 0, 0); if (w > earliest) earliest = w; }
       const s = freeStart(earliest, dur);
       if (!s) { skipped.push({ title: t.title, reason: 'no free time today' }); continue; }
@@ -437,8 +461,23 @@ export const useAppStore = defineStore('app', () => {
       if (t.windowEnd) { const [h, m] = t.windowEnd.split(':').map(Number); const we = new Date(day); we.setHours(h, m, 0, 0); if (e > we) { skipped.push({ title: t.title, reason: `closes ${t.windowEnd}` }); continue; } }
       if (t.deadline && e > new Date(t.deadline)) { skipped.push({ title: t.title, reason: 'past deadline' }); continue; }
       if (e > endOfDay) { skipped.push({ title: t.title, reason: 'day is full' }); continue; }
+
+      // A travel block filling the gap right before the task.
+      if (travelSec > 0) {
+        const travelStart = new Date(s.getTime() - travelSec * 1000);
+        const mins = Math.round(travelSec / 60);
+        await createTimeBlock({
+          taskId: null,
+          title: `${TRAVEL_EMOJI[mode]} Travel · ${mins}m${t.location ? ` → ${t.location.split(',')[0]}` : ''}`,
+          startTime: travelStart.toISOString(),
+          endTime: s.toISOString(),
+          isAnchor: false, isExternalEvent: false, colorTag: 'travel',
+        });
+      }
+
       await moveTaskToTimeline(t.id, s.toISOString(), e.toISOString());
       cursor = round15(e);
+      prev = t;
     }
     return { placed: ordered.length - skipped.length, skipped };
   }

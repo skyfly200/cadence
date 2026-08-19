@@ -30,6 +30,8 @@ export interface TaskRow {
   sortOrder: number;
   projectId?: string | null;
   location?: string | null;
+  locationLat?: number | null;
+  locationLon?: number | null;
   deadline?: string | null;
   windowStart?: string | null;
   windowEnd?: string | null;
@@ -112,6 +114,7 @@ export interface SettingsRow {
   hydrationInterval: number;
   defaultPomodoroMinutes: number;
   defaultBreakMinutes: number;
+  travelMode?: 'drive' | 'walk' | 'cycle';
 }
 
 export interface GoogleCalendarRow {
@@ -358,6 +361,7 @@ const DEFAULT_SETTINGS: SettingsRow = {
   hydrationInterval: 90,
   defaultPomodoroMinutes: 25,
   defaultBreakMinutes: 5,
+  travelMode: 'drive',
 };
 
 export function getSettings(): SettingsRow {

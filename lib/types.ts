@@ -21,6 +21,8 @@ export interface Task {
   projectId?: string | null;
   // Planning constraints
   location?: string | null;      // where it happens (for grouping errands)
+  locationLat?: number | null;   // geocoded (navigable) coordinates
+  locationLon?: number | null;
   deadline?: string | null;      // ISO datetime it must be done by
   windowStart?: string | null;   // HH:mm earliest it can be done (e.g. store opens)
   windowEnd?: string | null;     // HH:mm latest it can be done (e.g. store closes)
@@ -132,6 +134,7 @@ export interface Settings {
   hydrationInterval: number;
   defaultPomodoroMinutes: number;
   defaultBreakMinutes: number;
+  travelMode?: 'drive' | 'walk' | 'cycle';
 }
 
 export interface NotificationPrefs {

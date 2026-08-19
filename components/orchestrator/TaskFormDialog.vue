@@ -105,9 +105,20 @@
             </button>
           </div>
 
-          <div class="flex items-center gap-1.5">
-            <MapPin class="size-3 text-muted-foreground shrink-0" />
-            <Input v-model="location" placeholder="Location (e.g. Hardware store, Home)" class="h-7 text-[11px] flex-1" />
+          <div class="relative">
+            <div class="flex items-center gap-1.5">
+              <MapPin :class="cn('size-3 shrink-0', locationLat != null ? 'text-emerald-500' : 'text-muted-foreground')" />
+              <Input v-model="location" placeholder="Search a place (e.g. Home Depot, Boston)" class="h-7 text-[11px] flex-1"
+                @update:model-value="onLocationInput" />
+              <button v-if="location" type="button" class="text-muted-foreground hover:text-foreground shrink-0" title="Clear" @click="clearLocation"><X class="size-3" /></button>
+            </div>
+            <div v-if="placeResults.length" class="absolute z-20 left-0 right-0 mt-1 rounded-md border bg-background shadow-lg max-h-40 overflow-y-auto">
+              <button v-for="(p, i) in placeResults" :key="i" type="button"
+                class="block w-full text-left px-2 py-1 text-[10px] hover:bg-muted/60 border-b border-border/30 last:border-0"
+                @click="pickPlace(p)">{{ p.label }}</button>
+            </div>
+            <p v-if="locationLat != null" class="text-[9px] text-emerald-600 mt-0.5 flex items-center gap-0.5"><Check class="size-2.5" /> Navigable location set — travel time will be planned.</p>
+            <p v-else-if="searchingPlace" class="text-[9px] text-muted-foreground mt-0.5">Searching…</p>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -154,8 +165,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { Sparkles, Clock, Loader2, ChevronDown, ChevronUp, FolderOpen, MapPin } from 'lucide-vue-next';
+import { Sparkles, Clock, Loader2, ChevronDown, ChevronUp, FolderOpen, MapPin, X, Check } from 'lucide-vue-next';
 import { cn } from '~/lib/utils';
+import { searchPlaces, type Place } from '~/lib/geo';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { TASK_CATEGORIES, PRESET_DURATIONS, type Task, type EisenhowerCategory, type TaskStatus } from '~/lib/types';
@@ -192,7 +204,38 @@ const showNotes = ref(false);
 // Planning constraints
 const showPlanning = ref(false);
 const location = ref('');
+const locationLat = ref<number | null>(null);
+const locationLon = ref<number | null>(null);
+const placeResults = ref<Place[]>([]);
+const searchingPlace = ref(false);
+let placeTimer: ReturnType<typeof setTimeout> | null = null;
 const deadline = ref('');       // datetime-local value
+
+function onLocationInput() {
+  // Typing invalidates any previously picked coordinates.
+  locationLat.value = null;
+  locationLon.value = null;
+  if (placeTimer) clearTimeout(placeTimer);
+  const q = location.value.trim();
+  if (q.length < 3) { placeResults.value = []; searchingPlace.value = false; return; }
+  searchingPlace.value = true;
+  placeTimer = setTimeout(async () => {
+    placeResults.value = await searchPlaces(q);
+    searchingPlace.value = false;
+  }, 450);
+}
+function pickPlace(p: Place) {
+  location.value = p.label;
+  locationLat.value = p.lat;
+  locationLon.value = p.lon;
+  placeResults.value = [];
+}
+function clearLocation() {
+  location.value = '';
+  locationLat.value = null;
+  locationLon.value = null;
+  placeResults.value = [];
+}
 const windowStart = ref('');
 const windowEnd = ref('');
 const dependsOn = ref<string[]>([]);
@@ -230,6 +273,9 @@ watch(() => props.open, (isOpen) => {
     projectId.value = t.projectId ?? null;
     showNotes.value = !!t.notes;
     location.value = t.location ?? '';
+    locationLat.value = t.locationLat ?? null;
+    locationLon.value = t.locationLon ?? null;
+    placeResults.value = [];
     deadline.value = t.deadline ? isoToLocalInput(t.deadline) : '';
     windowStart.value = t.windowStart ?? '';
     windowEnd.value = t.windowEnd ?? '';
@@ -242,7 +288,8 @@ watch(() => props.open, (isOpen) => {
     title.value = ''; notes.value = ''; category.value = 'Admin';
     status.value = props.defaultStatus; eisenhower.value = 'schedule';
     estimatedMinutes.value = 30; priority.value = 2; projectId.value = null; showNotes.value = false;
-    location.value = ''; deadline.value = ''; windowStart.value = ''; windowEnd.value = '';
+    location.value = ''; locationLat.value = null; locationLon.value = null; placeResults.value = [];
+    deadline.value = ''; windowStart.value = ''; windowEnd.value = '';
     dependsOn.value = []; dirty.value = false; needsClean.value = false; isHygiene.value = false; showPlanning.value = false;
   }
 });
@@ -284,6 +331,8 @@ async function save() {
     estimatedMinutes: estimatedMinutes.value, priority: priority.value,
     projectId: projectId.value === '__new__' ? null : projectId.value,
     location: location.value.trim() || null,
+    locationLat: locationLat.value,
+    locationLon: locationLon.value,
     deadline: deadline.value ? new Date(deadline.value).toISOString() : null,
     windowStart: windowStart.value || null,
     windowEnd: windowEnd.value || null,

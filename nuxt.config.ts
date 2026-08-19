@@ -47,7 +47,7 @@ export default defineNuxtConfig({
     devOptions: { enabled: false },
   },
 
-  css: ['~/assets/css/main.css'],
+  css: ['~/assets/css/main.css', 'leaflet/dist/leaflet.css'],
 
   vite: {
     plugins: [tailwindcss()],
