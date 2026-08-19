@@ -6,7 +6,13 @@
         <h3 class="text-[11px] sm:text-xs font-semibold">Day map</h3>
         <span class="text-[9px] text-muted-foreground hidden sm:inline">places you'll be today, in order</span>
       </div>
-      <span class="text-[9px] text-muted-foreground tabular-nums">{{ stops.length }} stop{{ stops.length !== 1 ? 's' : '' }}</span>
+      <div class="flex items-center gap-2">
+        <Button v-if="stops.length" size="sm" variant="outline" class="h-6 text-[10px] px-1.5 gap-1" :disabled="savingOffline" title="Cache the current map area for offline use" @click="saveOffline">
+          <DownloadCloud :class="cn('size-3', savingOffline && 'animate-pulse')" />
+          <span class="hidden sm:inline">{{ savingOffline ? `Saving ${savedCount}…` : 'Save area offline' }}</span>
+        </Button>
+        <span class="text-[9px] text-muted-foreground tabular-nums">{{ stops.length }} stop{{ stops.length !== 1 ? 's' : '' }}</span>
+      </div>
     </div>
 
     <div v-if="stops.length === 0" class="py-10 text-center text-xs text-muted-foreground px-4">
@@ -32,9 +38,17 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
-import { Map as MapIcon, MapPin } from 'lucide-vue-next';
+import { Map as MapIcon, MapPin, DownloadCloud } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
+import { useToast } from '~/composables/useToast';
+import { cn } from '~/lib/utils';
+import { routeGeometry, type TravelMode } from '~/lib/geo';
 import { isSameDay, formatTime } from '~/lib/time-utils';
+
+const { toast } = useToast();
+const savingOffline = ref(false);
+const savedCount = ref(0);
+const MODE_COLOR: Record<TravelMode, string> = { drive: '#a855f7', walk: '#10b981', cycle: '#f59e0b', transit: '#0ea5e9' };
 
 const store = useAppStore();
 const mapEl = ref<HTMLElement | null>(null);
@@ -78,7 +92,7 @@ async function ensureMap() {
   render();
 }
 
-function render() {
+async function render() {
   if (!map || !L) return;
   if (layer) { map.removeLayer(layer); layer = null; }
   const s = stops.value;
@@ -97,10 +111,51 @@ function render() {
       .bindPopup(`<strong>${i + 1}. ${escapeHtml(stop.title)}</strong><br>${stop.time}${stop.place ? `<br><span style="opacity:.7">${escapeHtml(stop.place)}</span>` : ''}`);
     latlngs.push([stop.lat, stop.lon]);
   });
-  if (latlngs.length > 1) {
-    L.polyline(latlngs, { color: '#a855f7', weight: 3, opacity: 0.6, dashArray: '6 6' }).addTo(layer);
-  }
   map.fitBounds(L.latLngBounds(latlngs).pad(0.25), { maxZoom: 15 });
+
+  if (latlngs.length > 1) {
+    const mode = (store.settings?.travelMode ?? 'drive') as TravelMode;
+    const color = MODE_COLOR[mode] ?? '#a855f7';
+    // Real road geometry when available; straight dashed line otherwise.
+    const geom = await routeGeometry(s.map((x) => ({ lat: x.lat, lon: x.lon })), mode);
+    if (!map || !layer) return; // could have unmounted during await
+    if (geom && geom.length > 1) {
+      L.polyline(geom, { color, weight: 4, opacity: 0.7 }).addTo(layer);
+    } else {
+      L.polyline(latlngs, { color, weight: 3, opacity: 0.5, dashArray: '6 6' }).addTo(layer);
+    }
+  }
+}
+
+// ── Offline: cache the current map area's tiles ──────────────
+function lonToTileX(lon: number, z: number) { return Math.floor(((lon + 180) / 360) * 2 ** z); }
+function latToTileY(lat: number, z: number) {
+  const r = (lat * Math.PI) / 180;
+  return Math.floor(((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * 2 ** z);
+}
+async function saveOffline() {
+  if (!map || savingOffline.value) return;
+  const b = map.getBounds();
+  const z0 = Math.round(map.getZoom());
+  const urls: string[] = [];
+  const CAP = 400;
+  for (const z of [z0, Math.min(z0 + 1, 18)]) {
+    const x1 = lonToTileX(b.getWest(), z); const x2 = lonToTileX(b.getEast(), z);
+    const y1 = latToTileY(b.getNorth(), z); const y2 = latToTileY(b.getSouth(), z);
+    for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
+      for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
+        urls.push(`https://a.tile.openstreetmap.org/${z}/${x}/${y}.png`);
+      }
+    }
+    if (urls.length >= CAP) break;
+  }
+  const capped = urls.slice(0, CAP);
+  savingOffline.value = true; savedCount.value = 0;
+  for (const u of capped) {
+    try { await fetch(u, { mode: 'no-cors' }); savedCount.value++; } catch { /* ignore */ }
+  }
+  savingOffline.value = false;
+  toast({ title: `Saved ${savedCount.value} tiles offline`, description: 'This area will load without a connection.' });
 }
 
 function escapeHtml(s: string) {

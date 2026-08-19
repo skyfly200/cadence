@@ -134,7 +134,9 @@ export interface Settings {
   hydrationInterval: number;
   defaultPomodoroMinutes: number;
   defaultBreakMinutes: number;
-  travelMode?: 'drive' | 'walk' | 'cycle';
+  travelMode?: 'drive' | 'walk' | 'cycle' | 'transit';
+  transitEnabled?: boolean;
+  transitApiKey?: string;
 }
 
 export interface NotificationPrefs {

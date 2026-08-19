@@ -114,7 +114,9 @@ export interface SettingsRow {
   hydrationInterval: number;
   defaultPomodoroMinutes: number;
   defaultBreakMinutes: number;
-  travelMode?: 'drive' | 'walk' | 'cycle';
+  travelMode?: 'drive' | 'walk' | 'cycle' | 'transit';
+  transitEnabled?: boolean;
+  transitApiKey?: string;
 }
 
 export interface GoogleCalendarRow {
@@ -362,6 +364,8 @@ const DEFAULT_SETTINGS: SettingsRow = {
   defaultPomodoroMinutes: 25,
   defaultBreakMinutes: 5,
   travelMode: 'drive',
+  transitEnabled: false,
+  transitApiKey: '',
 };
 
 export function getSettings(): SettingsRow {

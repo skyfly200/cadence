@@ -59,8 +59,24 @@
               <option value="drive">🚗 Drive</option>
               <option value="walk">🚶 Walk</option>
               <option value="cycle">🚲 Cycle</option>
+              <option v-if="form.transitEnabled" value="transit">🚆 Transit</option>
             </select>
             <span class="text-[10px] text-muted-foreground">Estimates travel time between task locations when auto-planning.</span>
+          </div>
+
+          <div class="mt-2 rounded-md border border-border/60 bg-muted/20 p-2 space-y-1.5">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <span :class="switchCls(form.transitEnabled)" @click="form.transitEnabled = !form.transitEnabled">
+                <span :class="knobCls(form.transitEnabled)" />
+              </span>
+              <span class="text-[11px] font-medium">Enable public transit (bring your own key)</span>
+            </label>
+            <template v-if="form.transitEnabled">
+              <Input v-model="form.transitApiKey" type="password" placeholder="HERE API key" class="h-7 text-[11px]" />
+              <p class="text-[10px] text-muted-foreground">
+                Transit uses the <a href="https://platform.here.com/" target="_blank" rel="noopener noreferrer" class="text-sky-600 dark:text-sky-400 underline">HERE</a> Transit API — create a free key, paste it here. Stored only on this device; not verified until you Save &amp; auto-plan.
+              </p>
+            </template>
           </div>
         </div>
 
@@ -171,7 +187,9 @@ const { toast } = useToast();
 const DEFAULTS = {
   wakeTime: '07:00', sleepTime: '23:00', breakfastTime: '08:00', lunchTime: '13:00',
   dinnerTime: '19:00', hydrationInterval: 90, defaultPomodoroMinutes: 25, defaultBreakMinutes: 5,
-  travelMode: 'drive' as 'drive' | 'walk' | 'cycle',
+  travelMode: 'drive' as 'drive' | 'walk' | 'cycle' | 'transit',
+  transitEnabled: false,
+  transitApiKey: '',
 };
 
 const form = reactive({ ...DEFAULTS });
@@ -183,6 +201,8 @@ function hydrate() {
     lunchTime: s.lunchTime, dinnerTime: s.dinnerTime, hydrationInterval: s.hydrationInterval,
     defaultPomodoroMinutes: s.defaultPomodoroMinutes, defaultBreakMinutes: s.defaultBreakMinutes,
     travelMode: s.travelMode ?? 'drive',
+    transitEnabled: s.transitEnabled ?? false,
+    transitApiKey: s.transitApiKey ?? '',
   });
 }
 watch(() => store.settings, hydrate, { immediate: true });

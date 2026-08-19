@@ -10,7 +10,7 @@ import { PROJECT_COLOR_KEYS } from '~/lib/types';
 import { getMaxFocusForScore } from '~/lib/types';
 import { todayKey, yesterdayKey, isSameDay, blockDurationMinutes } from '~/lib/time-utils';
 import { fireConfetti } from '~/lib/confetti';
-import { travelMatrix, type TravelMode } from '~/lib/geo';
+import { travelMatrix, transitDurationSec, isOsrmMode, type TravelMode } from '~/lib/geo';
 import {
   loadAll, saveSettings as persistSettings,
   getTasks as getTasksRaw,
@@ -430,13 +430,16 @@ export const useAppStore = defineStore('app', () => {
       return null;
     };
 
-    // Travel-time matrix (seconds) between geolocated tasks, via OSRM.
-    const TRAVEL_EMOJI: Record<TravelMode, string> = { drive: '🚗', walk: '🚶', cycle: '🚲' };
+    // Travel-time between geolocated tasks.
+    const TRAVEL_EMOJI: Record<TravelMode, string> = { drive: '🚗', walk: '🚶', cycle: '🚲', transit: '🚆' };
     const mode = (settings.value?.travelMode ?? 'drive') as TravelMode;
-    const geoTasks = ordered.filter((t) => t.locationLat != null && t.locationLon != null);
+    const transitKey = settings.value?.transitApiKey ?? '';
+    const useTransit = mode === 'transit' && !!settings.value?.transitEnabled && !!transitKey;
+    const hasGeo = (t: Task) => t.locationLat != null && t.locationLon != null;
+    const geoTasks = ordered.filter(hasGeo);
     const coordIdx = new Map<string, number>();
     let matrix: number[][] | null = null;
-    if (geoTasks.length >= 2) {
+    if (isOsrmMode(mode) && geoTasks.length >= 2) {
       geoTasks.forEach((t, i) => coordIdx.set(t.id, i));
       matrix = await travelMatrix(geoTasks.map((t) => ({ lat: t.locationLat!, lon: t.locationLon! })), mode);
     }
@@ -448,9 +451,16 @@ export const useAppStore = defineStore('app', () => {
 
       // Travel leg from the previous stop, if both are geolocated and differ.
       let travelSec = 0;
-      if (prev && matrix && coordIdx.has(prev.id) && coordIdx.has(t.id) && !sameSpot(prev, t)) {
-        const d = matrix[coordIdx.get(prev.id)!]?.[coordIdx.get(t.id)!];
-        if (typeof d === 'number' && d > 60) travelSec = Math.round(d);
+      if (prev && hasGeo(prev) && hasGeo(t) && !sameSpot(prev, t)) {
+        if (useTransit) {
+          const d = await transitDurationSec(
+            { lat: prev.locationLat!, lon: prev.locationLon! },
+            { lat: t.locationLat!, lon: t.locationLon! }, transitKey);
+          if (d && d > 60) travelSec = Math.round(d);
+        } else if (matrix && coordIdx.has(prev.id) && coordIdx.has(t.id)) {
+          const d = matrix[coordIdx.get(prev.id)!]?.[coordIdx.get(t.id)!];
+          if (typeof d === 'number' && d > 60) travelSec = Math.round(d);
+        }
       }
 
       let earliest = new Date(cursor.getTime() + travelSec * 1000);

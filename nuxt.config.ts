@@ -41,6 +41,17 @@ export default defineNuxtConfig({
           handler: 'StaleWhileRevalidate',
           options: { cacheName: 'cadence-assets' },
         },
+        {
+          // OSM map tiles — cache what's viewed (and what "Save area offline"
+          // pre-fetches) so maps work offline for places you've looked at.
+          urlPattern: ({ url }: { url: URL }) => url.hostname.endsWith('tile.openstreetmap.org'),
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'osm-tiles',
+            expiration: { maxEntries: 1500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            cacheableResponse: { statuses: [0, 200] },
+          },
+        },
       ],
     },
     client: { installPrompt: true },

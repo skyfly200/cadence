@@ -12,15 +12,17 @@ export interface Place {
   lon: number;
 }
 
-export type TravelMode = 'drive' | 'walk' | 'cycle';
+export type TravelMode = 'drive' | 'walk' | 'cycle' | 'transit';
 
 export const TRAVEL_MODES: { value: TravelMode; label: string; emoji: string }[] = [
   { value: 'drive', label: 'Drive', emoji: '🚗' },
   { value: 'walk', label: 'Walk', emoji: '🚶' },
   { value: 'cycle', label: 'Cycle', emoji: '🚲' },
+  { value: 'transit', label: 'Transit', emoji: '🚆' },
 ];
 
-const OSRM_PROFILE: Record<TravelMode, string> = { drive: 'driving', walk: 'walking', cycle: 'cycling' };
+const OSRM_PROFILE: Record<string, string> = { drive: 'driving', walk: 'walking', cycle: 'cycling' };
+export const isOsrmMode = (m: TravelMode) => m === 'drive' || m === 'walk' || m === 'cycle';
 
 /** Search navigable places. Returns [] on any failure. */
 export async function searchPlaces(query: string, limit = 6): Promise<Place[]> {
@@ -59,6 +61,53 @@ export async function travelMatrix(
     if (!r.ok) return null;
     const data = await r.json();
     return (data && Array.isArray(data.durations)) ? data.durations : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Real road-path geometry for a sequence of stops (OSRM), as [lat,lon] points.
+ * null on failure or for non-OSRM modes (caller falls back to straight lines).
+ */
+export async function routeGeometry(
+  coords: { lat: number; lon: number }[],
+  mode: TravelMode,
+): Promise<[number, number][] | null> {
+  if (coords.length < 2 || !isOsrmMode(mode)) return null;
+  try {
+    const pts = coords.map((c) => `${c.lon},${c.lat}`).join(';');
+    const url = `https://router.project-osrm.org/route/v1/${OSRM_PROFILE[mode]}/${pts}?overview=full&geometries=geojson`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const data = await r.json();
+    const line = data?.routes?.[0]?.geometry?.coordinates;
+    if (!Array.isArray(line)) return null;
+    return line.map((p: [number, number]) => [p[1], p[0]]); // [lon,lat] -> [lat,lon]
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Public-transit travel time (seconds) between two points via the HERE
+ * Transit API v8 (user-provided key, browser-callable). null on failure.
+ */
+export async function transitDurationSec(
+  from: { lat: number; lon: number },
+  to: { lat: number; lon: number },
+  apiKey: string,
+): Promise<number | null> {
+  if (!apiKey) return null;
+  try {
+    const url = `https://transit.router.hereapi.com/v8/routes?origin=${from.lat},${from.lon}&destination=${to.lat},${to.lon}&return=travelSummary&apiKey=${encodeURIComponent(apiKey)}`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const data = await r.json();
+    const sections = data?.routes?.[0]?.sections;
+    if (!Array.isArray(sections) || sections.length === 0) return null;
+    const total = sections.reduce((sum: number, s: { travelSummary?: { duration?: number } }) => sum + (s.travelSummary?.duration ?? 0), 0);
+    return total > 0 ? total : null;
   } catch {
     return null;
   }
