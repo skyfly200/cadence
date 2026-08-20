@@ -113,6 +113,58 @@ export async function transitDurationSec(
   }
 }
 
+export interface Charger {
+  label: string;
+  network: string | null;
+  lat: number;
+  lon: number;
+  distanceKm: number | null;
+  powerKw: number | null;
+}
+
+/**
+ * Nearby EV charging stations via Open Charge Map (keyless, community-run —
+ * keep volume low). Returns [] on any failure. `near` is a coordinate;
+ * results are ordered by distance.
+ */
+export async function findEvChargers(
+  near: { lat: number; lon: number },
+  distanceKm = 25,
+  limit = 8,
+): Promise<Charger[]> {
+  try {
+    const url = `https://api.openchargemap.io/v3/poi/?output=json&latitude=${near.lat}&longitude=${near.lon}&distance=${distanceKm}&distanceunit=KM&maxresults=${limit}&compact=true&verbose=false`;
+    const r = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!r.ok) return [];
+    const data = await r.json();
+    if (!Array.isArray(data)) return [];
+    return data
+      .map((d: {
+        AddressInfo?: { Title?: string; Latitude?: number; Longitude?: number; Distance?: number };
+        OperatorInfo?: { Title?: string } | null;
+        Connections?: { PowerKW?: number }[];
+      }): Charger | null => {
+        const a = d.AddressInfo;
+        if (!a || a.Latitude == null || a.Longitude == null) return null;
+        const power = Array.isArray(d.Connections)
+          ? d.Connections.reduce((mx, c) => Math.max(mx, c?.PowerKW ?? 0), 0)
+          : 0;
+        return {
+          label: a.Title || 'Charging station',
+          network: d.OperatorInfo?.Title ?? null,
+          lat: a.Latitude,
+          lon: a.Longitude,
+          distanceKm: a.Distance != null ? Math.round(a.Distance * 10) / 10 : null,
+          powerKw: power > 0 ? power : null,
+        };
+      })
+      .filter((c): c is Charger => c !== null)
+      .sort((a, b) => (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9));
+  } catch {
+    return [];
+  }
+}
+
 /** Straight-line distance (km) — a cheap fallback for ordering when routing is unavailable. */
 export function haversineKm(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
   const R = 6371;

@@ -221,6 +221,7 @@ function blockHeight(b: TimeBlock) {
 function isShort(b: TimeBlock) { return blockDurationMinutes(b.startTime, b.endTime) <= 20; }
 function blockColor(b: TimeBlock): string {
   if (b.colorTag === 'travel') return 'bg-zinc-400/15 border-zinc-400/40 text-zinc-700 dark:text-zinc-300';
+  if (b.colorTag === 'trip') return 'bg-indigo-500/15 border-indigo-500/40 text-indigo-700 dark:text-indigo-300';
   if (b.isExternalEvent) return EXTERNAL_EVENT_COLORS[b.colorTag ?? 'external'] ?? EXTERNAL_EVENT_COLORS.external;
   if (b.isAnchor && b.anchorType) return ANCHOR_COLORS[b.anchorType] ?? 'bg-muted border-border text-foreground';
   return CATEGORY_COLORS[b.colorTag ?? ''] ?? 'bg-primary/10 border-primary/30 text-foreground';

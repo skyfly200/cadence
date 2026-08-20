@@ -4,7 +4,8 @@ import type {
   Task, TimeBlock, TimeLogSession, DailyCapacity, Settings, GamificationLog,
   TaskStatus, GoogleCalendarStatus,
 } from '~/lib/types';
-import type { PlanningStreak, BrainDumpEntry, Project, Habit, NotificationPrefs } from '~/lib/types';
+import type { PlanningStreak, BrainDumpEntry, Project, Habit, NotificationPrefs, Trip, TripSegment, TripSegmentMode, TripKind } from '~/lib/types';
+import { TRIP_SEGMENT_META } from '~/lib/types';
 import { showNotification, requestNotificationPermission } from '~/lib/notifications';
 import { PROJECT_COLOR_KEYS } from '~/lib/types';
 import { getMaxFocusForScore } from '~/lib/types';
@@ -31,8 +32,9 @@ import {
   getProjects, addProject as addProjectRow, updateProject as updateProjectRow, deleteProject as deleteProjectRow,
   getHabits, addHabit as addHabitRow, updateHabit as updateHabitRow, deleteHabit as deleteHabitRow,
   getNotificationPrefs, saveNotificationPrefs,
+  getTrips, saveTrips,
   exportAllData, importAllData,
-  nowISO,
+  uid, nowISO,
   type SettingsRow, type CapacityRow, type GoogleCalendarRow, type ActiveTimerRow,
 } from '~/lib/local-storage';
 
@@ -71,6 +73,7 @@ export const useAppStore = defineStore('app', () => {
   const projects = ref<Project[]>([]);
   const habits = ref<Habit[]>([]);
   const notificationPrefs = ref<NotificationPrefs>({ enabled: false, anchors: true, timer: true, habitsReminder: '' });
+  const trips = ref<Trip[]>([]);
 
   function persistTimer(t: ActiveTimer | null) {
     activeTimer.value = t;
@@ -167,6 +170,7 @@ export const useAppStore = defineStore('app', () => {
     projects.value = getProjects() as Project[];
     habits.value = getHabits() as Habit[];
     notificationPrefs.value = getNotificationPrefs() as NotificationPrefs;
+    trips.value = getTrips<Trip>();
 
     computeDailyScore();
   }
@@ -724,6 +728,104 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  // ── Trips ───────────────────────────────────────────────
+  function persistTrips() { saveTrips(trips.value); }
+  function mutateTrip(tripId: string, fn: (t: Trip) => void) {
+    const idx = trips.value.findIndex((t) => t.id === tripId);
+    if (idx < 0) return;
+    const copy: Trip = { ...trips.value[idx], segments: [...trips.value[idx].segments], updatedAt: nowISO() };
+    fn(copy);
+    const arr = [...trips.value]; arr[idx] = copy; trips.value = arr;
+    persistTrips();
+  }
+
+  async function createTrip(input: { name: string; kind?: TripKind; startDate?: string | null; endDate?: string | null }): Promise<Trip> {
+    const now = nowISO();
+    const trip: Trip = {
+      id: uid(), name: input.name.trim() || 'Trip', kind: input.kind ?? 'general',
+      startDate: input.startDate ?? null, endDate: input.endDate ?? null,
+      notes: null, segments: [], createdAt: now, updatedAt: now,
+    };
+    trips.value = [...trips.value, trip];
+    persistTrips();
+    return trip;
+  }
+  function updateTrip(id: string, patch: Partial<Trip>) {
+    trips.value = trips.value.map((t) => (t.id === id ? { ...t, ...patch, updatedAt: nowISO() } : t));
+    persistTrips();
+  }
+  function deleteTrip(id: string) {
+    trips.value = trips.value.filter((t) => t.id !== id);
+    persistTrips();
+  }
+  function addSegment(tripId: string, seg: Partial<TripSegment>): TripSegment | null {
+    const trip = trips.value.find((t) => t.id === tripId);
+    if (!trip) return null;
+    const order = trip.segments.length ? Math.max(...trip.segments.map((s) => s.sortOrder)) + 1 : 0;
+    const s: TripSegment = {
+      id: uid(), mode: seg.mode ?? 'drive', title: seg.title ?? null,
+      from: seg.from ?? { label: '' }, to: seg.to ?? { label: '' },
+      date: seg.date ?? trip.startDate ?? null, startTime: seg.startTime ?? null,
+      durationMin: seg.durationMin ?? null, distanceKm: seg.distanceKm ?? null, notes: seg.notes ?? null,
+      evNetwork: seg.evNetwork ?? null, chargeKwh: seg.chargeKwh ?? null, flightNumber: seg.flightNumber ?? null,
+      sortOrder: order,
+    };
+    mutateTrip(tripId, (tr) => { tr.segments = [...tr.segments, s]; });
+    return s;
+  }
+  function updateSegment(tripId: string, segId: string, patch: Partial<TripSegment>) {
+    mutateTrip(tripId, (tr) => {
+      tr.segments = tr.segments.map((s) => (s.id === segId ? { ...s, ...patch } : s));
+    });
+  }
+  function deleteSegment(tripId: string, segId: string) {
+    mutateTrip(tripId, (tr) => { tr.segments = tr.segments.filter((s) => s.id !== segId); });
+  }
+  function moveSegment(tripId: string, segId: string, dir: -1 | 1) {
+    mutateTrip(tripId, (tr) => {
+      const arr = [...tr.segments].sort((a, b) => a.sortOrder - b.sortOrder);
+      const i = arr.findIndex((s) => s.id === segId);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= arr.length) return;
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+      arr.forEach((s, idx) => { s.sortOrder = idx; });
+      tr.segments = arr;
+    });
+  }
+  function segLabel(s: TripSegment): string {
+    if (s.title) return s.title;
+    const a = (s.from?.label || '').split(',')[0];
+    const b = (s.to?.label || '').split(',')[0];
+    if (a && b) return `${a} → ${b}`;
+    return TRIP_SEGMENT_META[s.mode].label;
+  }
+  /** Lay a trip day's segments onto the timeline as trip blocks. */
+  async function scheduleTripDay(tripId: string, date: string): Promise<number> {
+    const trip = trips.value.find((t) => t.id === tripId);
+    if (!trip) return 0;
+    const day = new Date(`${date}T00:00:00`);
+    const existing = timeBlocks.value.filter((b) => b.colorTag === 'trip' && isSameDay(new Date(b.startTime), day));
+    for (const b of existing) await deleteTimeBlock(b.id);
+    const segs = trip.segments.filter((s) => s.date === date)
+      .sort((a, b) => (a.startTime || '~').localeCompare(b.startTime || '~') || a.sortOrder - b.sortOrder);
+    let cursor: Date | null = null; let count = 0;
+    for (const s of segs) {
+      const dur = Math.max(15, s.durationMin ?? 30);
+      let start: Date;
+      if (s.startTime) { const [h, m] = s.startTime.split(':').map(Number); start = new Date(day); start.setHours(h, m, 0, 0); }
+      else if (cursor) start = new Date(cursor);
+      else { start = new Date(day); start.setHours(8, 0, 0, 0); }
+      const end = new Date(start.getTime() + dur * 60000);
+      await createTimeBlock({
+        taskId: null, title: `${TRIP_SEGMENT_META[s.mode].emoji} ${segLabel(s)}`,
+        startTime: start.toISOString(), endTime: end.toISOString(),
+        isAnchor: false, isExternalEvent: false, colorTag: 'trip',
+      });
+      cursor = end; count++;
+    }
+    return count;
+  }
+
   // ── Brain dump ──────────────────────────────────────────
   async function addBrainDump(content: string, context?: string | null): Promise<BrainDumpEntry | null> {
     const text = content.trim();
@@ -978,7 +1080,7 @@ export const useAppStore = defineStore('app', () => {
   return {
     // state
     tasks, timeBlocks, timerSessions, capacity, settings, gamification,
-    todayScore, loading, activeTab, activeTimer, googleCalendar, planningStreak, brainDump, projects, habits, notificationPrefs,
+    todayScore, loading, activeTab, activeTimer, googleCalendar, planningStreak, brainDump, projects, habits, notificationPrefs, trips,
     // selectors
     todayTasks, backlogTasks, incubatorTasks, triageTasks, completedToday, todayBlocks,
     committedMinutes, scheduledFocusMinutes, availableFocusMinutes,
@@ -994,6 +1096,7 @@ export const useAppStore = defineStore('app', () => {
     createProject, renameProject, deleteProject,
     createHabit, updateHabit, deleteHabit, toggleHabitDone,
     addBrainDump, updateBrainDump, deleteBrainDump,
+    createTrip, updateTrip, deleteTrip, addSegment, updateSegment, deleteSegment, moveSegment, segLabel, scheduleTripDay,
     awardPoints, computeDailyScore, recordPlanningActivity,
     loadGoogleCalendarStatus, connectGoogleCalendar, disconnectGoogleCalendar, syncGoogleCalendar, setGcalAutoSync,
     setNotificationPrefs, enableNotifications,

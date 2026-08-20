@@ -172,6 +172,7 @@ const KEYS = {
   projects: `${STORAGE_PREFIX}projects`,
   habits: `${STORAGE_PREFIX}habits`,
   notifications: `${STORAGE_PREFIX}notifications`,
+  trips: `${STORAGE_PREFIX}trips`,
 } as const;
 
 // ── Safe JSON parse/stringify ───────────────────────────────
@@ -641,6 +642,17 @@ export function getNotificationPrefs(): NotificationPrefsRow {
 
 export function saveNotificationPrefs(prefs: NotificationPrefsRow): void {
   save(KEYS.notifications, prefs);
+}
+
+// ── Trips ──────────────────────────────────────────────────
+// Trips are stored whole (nested segments); the store owns the shape.
+
+export function getTrips<T = unknown>(): T[] {
+  return load<T[]>(KEYS.trips, []);
+}
+
+export function saveTrips<T = unknown>(rows: T[]): void {
+  save(KEYS.trips, rows);
 }
 
 // ── Full backup export / import ─────────────────────────────

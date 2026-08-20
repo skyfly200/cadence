@@ -103,6 +103,83 @@ export interface PlanningStreak {
   lastPlannedDate: string | null; // YYYY-MM-DD of the most recent planned day
 }
 
+// ── Trip planner ───────────────────────────────────────────
+
+export type TripSegmentMode =
+  | 'drive' | 'walk' | 'cycle' | 'transit' | 'flight'
+  | 'ev_charge' | 'hike' | 'bike' | 'transfer' | 'lodging' | 'custom';
+
+export type TripKind = 'general' | 'roadtrip' | 'flight' | 'backpacking' | 'bikepacking' | 'ev';
+
+export interface TripWaypoint {
+  label: string;
+  lat?: number | null;
+  lon?: number | null;
+}
+
+export interface TripSegment {
+  id: string;
+  mode: TripSegmentMode;
+  title?: string | null;
+  from: TripWaypoint;
+  to: TripWaypoint;
+  date?: string | null;        // YYYY-MM-DD assigned day (shufflable)
+  startTime?: string | null;   // HH:mm
+  durationMin?: number | null;
+  distanceKm?: number | null;
+  notes?: string | null;
+  evNetwork?: string | null;
+  chargeKwh?: number | null;
+  flightNumber?: string | null;
+  sortOrder: number;
+}
+
+export interface Trip {
+  id: string;
+  name: string;
+  kind: TripKind;
+  startDate?: string | null;   // YYYY-MM-DD
+  endDate?: string | null;
+  notes?: string | null;
+  segments: TripSegment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const TRIP_SEGMENT_META: Record<TripSegmentMode, { label: string; emoji: string; routable: boolean }> = {
+  drive: { label: 'Drive', emoji: '🚗', routable: true },
+  walk: { label: 'Walk', emoji: '🚶', routable: true },
+  cycle: { label: 'Cycle', emoji: '🚲', routable: true },
+  transit: { label: 'Transit', emoji: '🚆', routable: true },
+  flight: { label: 'Flight', emoji: '✈️', routable: false },
+  ev_charge: { label: 'EV charge', emoji: '🔌', routable: false },
+  hike: { label: 'Hike', emoji: '🥾', routable: true },
+  bike: { label: 'Bikepack', emoji: '🚵', routable: true },
+  transfer: { label: 'Transfer', emoji: '🔀', routable: true },
+  lodging: { label: 'Lodging', emoji: '🏕️', routable: false },
+  custom: { label: 'Custom', emoji: '📍', routable: false },
+};
+
+export const TRIP_KINDS: { value: TripKind; label: string; emoji: string }[] = [
+  { value: 'general', label: 'General', emoji: '🧭' },
+  { value: 'roadtrip', label: 'Road trip', emoji: '🚗' },
+  { value: 'ev', label: 'EV road trip', emoji: '🔌' },
+  { value: 'flight', label: 'Flights', emoji: '✈️' },
+  { value: 'backpacking', label: 'Backpacking', emoji: '🥾' },
+  { value: 'bikepacking', label: 'Bikepacking', emoji: '🚵' },
+];
+
+/** Map a trip segment mode to an OSRM/HERE routing mode, or null if not auto-routable. */
+export function segmentRoutingMode(m: TripSegmentMode): 'drive' | 'walk' | 'cycle' | 'transit' | null {
+  switch (m) {
+    case 'drive': case 'transfer': return 'drive';
+    case 'walk': case 'hike': return 'walk';
+    case 'cycle': case 'bike': return 'cycle';
+    case 'transit': return 'transit';
+    default: return null;
+  }
+}
+
 export type HabitCadence = 'daily' | 'weekly';
 
 export interface Habit {
