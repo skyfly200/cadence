@@ -86,6 +86,11 @@
           <MapIcon class="size-3.5" />
           <h4 class="text-[11px] font-semibold">Trip map</h4>
           <span class="text-[9px] text-muted-foreground">{{ mapPoints.length }} mapped point{{ mapPoints.length !== 1 ? 's' : '' }}</span>
+          <label class="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer select-none" title="Fetch real road/trail geometry for driving, cycling & walking legs">
+            <input type="checkbox" v-model="showRoads" class="size-3 accent-indigo-500" />
+            Road paths
+            <Loader2 v-if="loadingRoads" class="size-3 animate-spin" />
+          </label>
         </div>
         <ClientOnly>
           <div ref="mapEl" class="w-full" style="height: min(50vh, 420px)" />
@@ -102,6 +107,17 @@
             @click="scheduleDay(day.key)">
             <CalendarPlus class="size-3" /> To timeline
           </Button>
+        </div>
+        <!-- Day summary: distance/time moved + where you sleep -->
+        <div v-if="day.segs.length" class="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[10px] text-muted-foreground -mt-0.5">
+          <span v-if="day.summary.distanceKm > 0">{{ day.summary.distanceKm.toFixed(0) }} km</span>
+          <span v-if="day.summary.durationMin > 0">{{ formatDur(day.summary.durationMin) }} moving</span>
+          <span v-if="day.summary.lodging" class="flex items-center gap-1 text-violet-600 dark:text-violet-400">
+            <BedDouble class="size-3" /> {{ day.summary.lodging }}
+          </span>
+          <span v-else-if="day.summary.endsAt" class="flex items-center gap-1">
+            <Moon class="size-3" /> night in {{ day.summary.endsAt }}
+          </span>
         </div>
 
         <Card v-for="s in day.segs" :key="s.id" class="p-2 group">
@@ -211,8 +227,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue';
-import { Route as RouteIcon, Plus, Trash2, ChevronUp, ChevronDown, Gauge, Zap, CalendarPlus, Map as MapIcon } from 'lucide-vue-next';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { Route as RouteIcon, Plus, Trash2, ChevronUp, ChevronDown, Gauge, Zap, CalendarPlus, Map as MapIcon, BedDouble, Moon, Loader2 } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { cn } from '~/lib/utils';
@@ -221,7 +237,7 @@ import {
   type Trip, type TripSegment, type TripSegmentMode, type TripKind,
 } from '~/lib/types';
 import {
-  travelMatrix, transitDurationSec, haversineKm, isOsrmMode, findEvChargers,
+  travelMatrix, transitDurationSec, routeGeometry, haversineKm, isOsrmMode, findEvChargers,
   type Charger, type TravelMode,
 } from '~/lib/geo';
 import { format } from '~/lib/time-utils';
@@ -283,19 +299,33 @@ const dayKeys = computed(() => {
   return [...set].sort();
 });
 
+interface DaySummary { distanceKm: number; durationMin: number; lodging: string | null; endsAt: string | null; }
+function summarize(segs: TripSegment[]): DaySummary {
+  const distanceKm = segs.reduce((s, x) => s + (x.distanceKm ?? 0), 0);
+  const durationMin = segs.reduce((s, x) => s + (x.durationMin ?? 0), 0);
+  const lodgingSegs = segs.filter((s) => s.mode === 'lodging');
+  const lodging = lodgingSegs.length
+    ? lodgingSegs.map((s) => s.title || s.to.label || s.from.label).filter(Boolean).map((l) => l.split(',')[0]).join(', ')
+    : null;
+  // Where the day physically ends (last leg's destination), for night-stop context.
+  let endsAt: string | null = null;
+  for (let i = segs.length - 1; i >= 0; i--) {
+    const to = segs[i].to.label || segs[i].from.label;
+    if (to) { endsAt = to.split(',')[0]; break; }
+  }
+  return { distanceKm, durationMin, lodging, endsAt };
+}
+
 const daySections = computed(() => {
-  const sections: { key: string; label: string; segs: TripSegment[] }[] = [];
+  const sections: { key: string; label: string; segs: TripSegment[]; summary: DaySummary }[] = [];
   for (const key of dayKeys.value) {
-    sections.push({
-      key,
-      label: format(new Date(`${key}T00:00:00`), 'EEE, MMM d'),
-      segs: orderedSegs.value.filter((s) => s.date === key),
-    });
+    const segs = orderedSegs.value.filter((s) => s.date === key);
+    sections.push({ key, label: format(new Date(`${key}T00:00:00`), 'EEE, MMM d'), segs, summary: summarize(segs) });
   }
   const unscheduled = orderedSegs.value.filter((s) => !s.date);
-  if (unscheduled.length) sections.push({ key: 'unscheduled', label: 'Unscheduled', segs: unscheduled });
+  if (unscheduled.length) sections.push({ key: 'unscheduled', label: 'Unscheduled', segs: unscheduled, summary: summarize(unscheduled) });
   // Always show at least one bucket so the add-leg UI has context.
-  if (sections.length === 0) sections.push({ key: 'unscheduled', label: 'Unscheduled', segs: [] });
+  if (sections.length === 0) sections.push({ key: 'unscheduled', label: 'Unscheduled', segs: [], summary: summarize([]) });
   return sections;
 });
 
@@ -419,18 +449,37 @@ const SEG_COLOR: Record<string, string> = {
   ev_charge: '#22c55e', lodging: '#8b5cf6', custom: '#64748b',
 };
 
+const showRoads = ref(true);
+const loadingRoads = ref(false);
+// Cache OSRM geometry so toggling/redraws don't re-hit the routing server.
+const geomCache = new Map<string, [number, number][] | null>();
+let renderToken = 0;
+
 async function ensureMap() {
   if (typeof window === 'undefined' || !mapEl.value || mapPoints.value.length === 0) return;
   if (!L) L = (await import('leaflet')).default ?? (await import('leaflet'));
   if (!lmap) {
     lmap = L.map(mapEl.value, { zoomControl: true });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(lmap);
+    // The container may have been laid out after creation (tab switch) — fix sizing.
+    setTimeout(() => lmap && lmap.invalidateSize(), 60);
   }
-  renderMap();
+  await renderMap();
 }
 
-function renderMap() {
+async function geomFor(s: TripSegment): Promise<[number, number][] | null> {
+  const rmode = segmentRoutingMode(s.mode);
+  if (!rmode || !isOsrmMode(rmode as TravelMode) || s.from.lat == null || s.to.lat == null) return null;
+  const key = `${rmode}:${s.from.lat},${s.from.lon}->${s.to.lat},${s.to.lon}`;
+  if (geomCache.has(key)) return geomCache.get(key)!;
+  const g = await routeGeometry([{ lat: s.from.lat, lon: s.from.lon! }, { lat: s.to.lat, lon: s.to.lon! }], rmode as TravelMode);
+  geomCache.set(key, g);
+  return g;
+}
+
+async function renderMap() {
   if (!lmap || !L) return;
+  const token = ++renderToken;
   if (mlayer) { lmap.removeLayer(mlayer); mlayer = null; }
   const pts = mapPoints.value;
   if (pts.length === 0) return;
@@ -445,15 +494,34 @@ function renderMap() {
     L.marker([p.lat, p.lon], { icon }).addTo(mlayer).bindPopup(escapeHtml(p.label || `Stop ${i + 1}`));
     bounds.push([p.lat, p.lon]);
   });
-  // One colored straight line per leg (overview; road geometry omitted to limit calls).
-  for (const s of orderedSegs.value) {
-    if (s.from.lat != null && s.to.lat != null) {
-      L.polyline([[s.from.lat, s.from.lon!], [s.to.lat, s.to.lon!]], {
-        color: SEG_COLOR[s.mode] ?? '#6366f1', weight: 3, opacity: 0.6, dashArray: '5 5',
-      }).addTo(mlayer);
-    }
+
+  const legs = orderedSegs.value.filter((s) => s.from.lat != null && s.to.lat != null);
+  // Straight dashed line first — instant overview, replaced by road geometry below.
+  for (const s of legs) {
+    L.polyline([[s.from.lat!, s.from.lon!], [s.to.lat!, s.to.lon!]], {
+      color: SEG_COLOR[s.mode] ?? '#6366f1', weight: 3, opacity: 0.55, dashArray: '5 5',
+    }).addTo(mlayer);
   }
   if (bounds.length) lmap.fitBounds(L.latLngBounds(bounds).pad(0.25), { maxZoom: 13 });
+
+  // Real road/trail geometry for drive/cycle/walk/hike/bike/transfer legs.
+  if (showRoads.value) {
+    const routable = legs.filter((s) => segmentRoutingMode(s.mode) && isOsrmMode(segmentRoutingMode(s.mode) as TravelMode));
+    if (routable.length) {
+      loadingRoads.value = true;
+      try {
+        for (const s of routable) {
+          const g = await geomFor(s);
+          if (token !== renderToken || !mlayer) return; // superseded / unmounted
+          if (g && g.length > 1) {
+            L.polyline(g, { color: SEG_COLOR[s.mode] ?? '#6366f1', weight: 4, opacity: 0.85 }).addTo(mlayer);
+          }
+        }
+      } finally {
+        if (token === renderToken) loadingRoads.value = false;
+      }
+    }
+  }
 }
 
 function escapeHtml(s: string) {
@@ -462,5 +530,7 @@ function escapeHtml(s: string) {
 
 watch(mapPoints, () => { if (lmap) renderMap(); else nextTick(ensureMap); }, { deep: true });
 watch(trip, () => { nextTick(ensureMap); });
+watch(showRoads, () => { if (lmap) renderMap(); });
+onMounted(() => { nextTick(ensureMap); });
 onBeforeUnmount(() => { if (lmap) { lmap.remove(); lmap = null; mlayer = null; } });
 </script>
