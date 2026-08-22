@@ -84,6 +84,10 @@
               <span class="text-[10px] text-muted-foreground tabular-nums shrink-0 hidden xs:inline">{{ formatDuration(t.estimatedMinutes) }}</span>
               <div class="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button v-if="t.status !== 'completed'" size="icon" variant="ghost" class="size-6" aria-label="Start timer" title="Start timer" @click="store.startTimer(t.id, 'pomodoro')"><Play class="size-3" /></Button>
+                <label v-if="t.status !== 'completed'" class="relative inline-flex items-center justify-center size-6 rounded cursor-pointer text-muted-foreground hover:text-foreground hover:bg-muted" title="Mark done on a past day">
+                  <CalendarDays class="size-3" />
+                  <input type="date" :max="todayStr" class="absolute inset-0 opacity-0 cursor-pointer" @change="completeOnPast(t, $event)" />
+                </label>
                 <Button size="icon" variant="ghost" class="size-6" aria-label="Schedule" title="Schedule on timeline" @click="store.setActiveTab('timeline')"><CalendarClock class="size-3" /></Button>
                 <Button size="icon" variant="ghost" class="size-6" aria-label="Edit" @click="openEdit(t)"><Pencil class="size-3" /></Button>
                 <Button size="icon" variant="ghost" class="size-6 text-destructive hover:text-destructive" aria-label="Delete" @click="store.deleteTask(t.id)"><Trash2 class="size-3" /></Button>
@@ -129,15 +133,24 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
-import { Plus, Clock, Play, CalendarClock, CheckCircle2, AlertCircle, Pencil, Trash2, GripVertical, RefreshCw, Wand2, MapPin, Link2 } from 'lucide-vue-next';
+import { Plus, Clock, Play, CalendarClock, CalendarDays, CheckCircle2, AlertCircle, Pencil, Trash2, GripVertical, RefreshCw, Wand2, MapPin, Link2 } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { cn } from '~/lib/utils';
 import { CATEGORY_COLORS, type Task } from '~/lib/types';
-import { formatDuration } from '~/lib/time-utils';
+import { formatDuration, todayKey } from '~/lib/time-utils';
 
 const store = useAppStore();
 const { toast } = useToast();
+const todayStr = todayKey();
+async function completeOnPast(t: Task, e: Event) {
+  const val = (e.target as HTMLInputElement).value; // yyyy-mm-dd
+  if (!val) return;
+  const iso = new Date(`${val}T12:00:00`).toISOString();
+  await store.completeTask(t.id, undefined, iso);
+  (e.target as HTMLInputElement).value = '';
+  toast({ title: `${t.title} completed`, description: val === todayStr ? 'Marked done' : `Backdated to ${val}` });
+}
 const createOpen = ref(false);
 const editTask = ref<Task | null>(null);
 const syncing = ref(false);

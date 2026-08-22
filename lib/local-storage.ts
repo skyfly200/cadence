@@ -92,6 +92,7 @@ export interface GamificationRow {
   type: string;
   points: number;
   note?: string | null;
+  sourceId?: string | null;
 }
 
 export interface TimerSessionRow {

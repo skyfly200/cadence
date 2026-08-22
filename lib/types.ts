@@ -95,6 +95,7 @@ export interface GamificationLog {
   type: 'realism' | 'anchor_discipline' | 'triage_streak' | 'completion' | 'focus_session' | 'planning_streak' | 'habit';
   points: number;
   note?: string | null;
+  sourceId?: string | null;  // task/habit id that earned it, so it can be revoked
 }
 
 export interface PlanningStreak {

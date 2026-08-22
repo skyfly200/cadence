@@ -101,6 +101,9 @@ export default defineNuxtConfig({
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '',
       supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || 'https://wgdjwzlqvpvltedzasga.supabase.co',
       supabaseAnonKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_5mdrxPgP4XBxsbIh2t1jQg_eqvTSuKM',
+      // Where auth emails/OAuth send users back to (must be allow-listed in
+      // Supabase Auth → URL Configuration). Local dev keeps its own origin.
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://cadencetodo.netlify.app',
     },
   },
 

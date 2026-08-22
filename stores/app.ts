@@ -23,7 +23,7 @@ import {
   deleteExternalEventsForDate, pruneStaleDayBlocks,
   setCapacity as setCapacityRow, ensureCapacity,
   getSettings as getSettingsRow,
-  addGamificationEntry,
+  addGamificationEntry, getGamificationMap, saveGamificationMap,
   addTimerSession, updateTimerSession,
   getGoogleCalendar as getGoogleCalendarRow, disconnectGoogleCalendar as clearGoogleCalendar,
   saveGoogleCalendar as persistGoogleCalendar,
@@ -261,16 +261,18 @@ export const useAppStore = defineStore('app', () => {
       });
       if (row) {
         tasks.value = tasks.value.map((x) => (x.id === id ? (row as Task) : x));
+        // Never double-award: clear any points from a prior completion of this task.
+        revokePointsForSource(id);
         if (!backfill) fireConfetti();
-        await awardPoints('completion', 10, `Completed: ${row.title}`);
+        await awardPoints('completion', 10, `Completed: ${row.title}`, id);
         // Realism: reward accurate estimates, but only when the task was
         // actually timed (otherwise we have no real duration to compare).
         if (row.actualMinutes > 0 && row.estimatedMinutes > 0) {
           const dev = Math.abs(row.actualMinutes / row.estimatedMinutes - 1);
           if (dev <= 0.2) {
-            await awardPoints('realism', 8, `On-target estimate · ${row.actualMinutes}m vs ${row.estimatedMinutes}m est`);
+            await awardPoints('realism', 8, `On-target estimate · ${row.actualMinutes}m vs ${row.estimatedMinutes}m est`, id);
           } else if (dev <= 0.4) {
-            await awardPoints('realism', 3, `Close estimate · ${row.actualMinutes}m vs ${row.estimatedMinutes}m est`);
+            await awardPoints('realism', 3, `Close estimate · ${row.actualMinutes}m vs ${row.estimatedMinutes}m est`, id);
           }
         }
         await recalcScheduledFocus();
@@ -285,6 +287,7 @@ export const useAppStore = defineStore('app', () => {
       const row = updateTaskRow(id, { status: 'today', completedAt: null });
       if (row) {
         tasks.value = tasks.value.map((x) => (x.id === id ? (row as Task) : x));
+        revokePointsForSource(id); // take back the XP so re-completing can't inflate it
         await recalcScheduledFocus();
       }
     } catch (e) {
@@ -933,8 +936,18 @@ export const useAppStore = defineStore('app', () => {
   }
 
   // Auth methods ------------------------------------------------
-  function redirectTo() {
-    return typeof window !== 'undefined' ? window.location.origin : undefined;
+  /**
+   * Where Supabase should send the user back after an email link / OAuth.
+   * On localhost we keep the local origin for dev; everywhere else we use the
+   * configured production site URL so links never point at a stray origin.
+   * (This must also be allow-listed in Supabase Auth → URL Configuration.)
+   */
+  function redirectTo(): string | undefined {
+    const site = (useRuntimeConfig().public.siteUrl as string) || undefined;
+    if (typeof window === 'undefined') return site;
+    const origin = window.location.origin;
+    const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin);
+    return isLocal ? origin : (site || origin);
   }
   async function signInWithEmailLink(email: string): Promise<{ error: string | null }> {
     const sb = getSupabase();
@@ -1030,11 +1043,29 @@ export const useAppStore = defineStore('app', () => {
   }
 
   // ── Gamification ────────────────────────────────────────
-  async function awardPoints(type: GamificationLog['type'], points: number, note?: string) {
+  async function awardPoints(type: GamificationLog['type'], points: number, note?: string, sourceId?: string) {
     const date = todayKey();
-    const entry = addGamificationEntry({ date, type, points, note });
+    const entry = addGamificationEntry({ date, type, points, note, sourceId: sourceId ?? null });
     gamification.value = [...gamification.value, entry as GamificationLog];
     computeDailyScore();
+  }
+
+  /** Undo points earned by a task's completion (any day), so re-completing
+   *  can't inflate XP and undo/redo stays balanced. */
+  function revokePointsForSource(sourceId: string) {
+    const map = getGamificationMap();
+    let changed = false;
+    const revokable = new Set(['completion', 'realism']);
+    for (const date of Object.keys(map)) {
+      const before = map[date];
+      const kept = before.filter((g) => !(revokable.has(g.type) && g.sourceId === sourceId));
+      if (kept.length !== before.length) { map[date] = kept; changed = true; }
+    }
+    if (changed) {
+      saveGamificationMap(map);
+      gamification.value = (map[todayKey()] ?? []) as GamificationLog[];
+      computeDailyScore();
+    }
   }
 
   /**
