@@ -44,6 +44,12 @@
                 <Moon v-else class="size-4" />
               </Button>
             </ClientOnly>
+            <Button variant="ghost" size="icon" aria-label="Account" title="Account & sync" class="relative size-8 sm:size-9" @click="authOpen = true">
+              <UserRound class="size-4" />
+              <span v-if="store.signedIn"
+                :class="cn('absolute bottom-1 right-1 size-2 rounded-full border border-background',
+                  store.syncStatus === 'error' ? 'bg-destructive' : store.syncStatus === 'syncing' ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500')" />
+            </Button>
             <Button variant="ghost" size="icon" aria-label="Settings" title="Settings" class="size-8 sm:size-9" @click="settingsOpen = true">
               <SettingsIcon class="size-4" />
             </Button>
@@ -104,6 +110,11 @@
       <SettingsPanel />
     </Dialog>
 
+    <!-- Account & sync dialog -->
+    <Dialog :open="authOpen" content-class="sm:max-w-sm" @update:open="authOpen = $event">
+      <AuthDialog @done="authOpen = false" />
+    </Dialog>
+
     <!-- Footer -->
     <footer class="border-t bg-background mt-auto">
       <div class="mx-auto max-w-7xl px-2 sm:px-3 md:px-4 py-2">
@@ -130,7 +141,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import {
   LayoutDashboard, Calendar, Inbox, AlertTriangle, BarChart3, Settings as SettingsIcon,
-  Moon, Sun, Sparkles, Mic, Flame, NotebookPen, Undo2, Redo2, DownloadCloud, Map as MapIcon, Route as RouteIcon,
+  Moon, Sun, Sparkles, Mic, Flame, NotebookPen, Undo2, Redo2, DownloadCloud, Map as MapIcon, Route as RouteIcon, UserRound,
 } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { captureGoogleOAuthTokens } from '~/lib/local-storage';
@@ -144,6 +155,7 @@ const { toast } = useToast();
 const { canInstall, install: installApp } = useInstallPrompt();
 useReminders();
 const settingsOpen = ref(false);
+const authOpen = ref(false);
 const colorMode = useColorMode();
 const captureOpen = ref(false);
 
@@ -211,6 +223,7 @@ onMounted(() => {
   store.loadData();
   store.loadSettings();
   store.loadGoogleCalendarStatus();
+  void store.initAuth(); // restore any signed-in session and start syncing
   window.addEventListener('keydown', onKey);
 });
 onUnmounted(() => window.removeEventListener('keydown', onKey));

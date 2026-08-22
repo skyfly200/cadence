@@ -12,6 +12,8 @@ import { getMaxFocusForScore } from '~/lib/types';
 import { todayKey, yesterdayKey, isSameDay, blockDurationMinutes } from '~/lib/time-utils';
 import { fireConfetti } from '~/lib/confetti';
 import { travelMatrix, transitDurationSec, isOsrmMode, type TravelMode } from '~/lib/geo';
+import { getSupabase } from '~/lib/supabase';
+import { pullAll, pushAll, subscribeRealtime, resetBaseline } from '~/lib/sync';
 import {
   loadAll, saveSettings as persistSettings,
   getTasks as getTasksRaw,
@@ -74,6 +76,17 @@ export const useAppStore = defineStore('app', () => {
   const habits = ref<Habit[]>([]);
   const notificationPrefs = ref<NotificationPrefs>({ enabled: false, anchors: true, timer: true, habitsReminder: '' });
   const trips = ref<Trip[]>([]);
+
+  // ── Account / cross-device sync ──────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const session = ref<any | null>(null);
+  const syncStatus = ref<'off' | 'idle' | 'syncing' | 'error'>('off');
+  const syncError = ref<string | null>(null);
+  const authReady = ref(false);
+  const user = computed(() => session.value?.user ?? null);
+  const signedIn = computed(() => !!session.value);
+  let realtimeUnsub: (() => void) | null = null;
+  let pushTimer: ReturnType<typeof setTimeout> | null = null;
 
   function persistTimer(t: ActiveTimer | null) {
     activeTimer.value = t;
@@ -826,6 +839,164 @@ export const useAppStore = defineStore('app', () => {
     return count;
   }
 
+  // ── Account / cross-device sync ─────────────────────────
+  /** Read any persisted session and react to future auth changes. Client-only. */
+  async function initAuth() {
+    const sb = getSupabase();
+    if (!sb) { authReady.value = true; return; }
+    try {
+      const { data } = await sb.auth.getSession();
+      session.value = data.session ?? null;
+      sb.auth.onAuthStateChange((_event, sess) => {
+        const was = !!session.value;
+        session.value = sess ?? null;
+        if (sess && !was) void startSync();
+        if (!sess && was) stopSync();
+      });
+      if (session.value) void startSync();
+    } catch (e) {
+      console.error('initAuth failed', e);
+    } finally {
+      authReady.value = true;
+    }
+  }
+
+  async function startSync() {
+    const sb = getSupabase();
+    const uid = session.value?.user?.id;
+    if (!sb || !uid) return;
+    syncStatus.value = 'syncing';
+    syncError.value = null;
+    try {
+      await pullAll(sb, uid);   // cloud → local (merge)
+      hydrate();                // refresh reactive state
+      await pushAll(sb, uid);   // local-only rows → cloud
+      if (realtimeUnsub) realtimeUnsub();
+      realtimeUnsub = subscribeRealtime(sb, uid, onRemoteChange);
+      syncStatus.value = 'idle';
+    } catch (e) {
+      console.error('startSync failed', e);
+      syncError.value = e instanceof Error ? e.message : 'Sync failed';
+      syncStatus.value = 'error';
+    }
+  }
+
+  let remoteTimer: ReturnType<typeof setTimeout> | null = null;
+  function onRemoteChange() {
+    if (remoteTimer) clearTimeout(remoteTimer);
+    remoteTimer = setTimeout(async () => {
+      const sb = getSupabase();
+      const uid = session.value?.user?.id;
+      if (!sb || !uid) return;
+      syncStatus.value = 'syncing'; // also suppresses the echo push from hydrate
+      try {
+        await pullAll(sb, uid);
+        hydrate();
+        syncStatus.value = 'idle';
+      } catch (e) {
+        console.error('onRemoteChange failed', e);
+        syncStatus.value = 'error';
+      }
+    }, 400);
+  }
+
+  function queuePush() {
+    // Skip while offline/signed-out, and during an in-flight pull (avoids echoing
+    // freshly-pulled data straight back up).
+    if (!session.value || syncStatus.value === 'syncing') return;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(async () => {
+      const sb = getSupabase();
+      const uid = session.value?.user?.id;
+      if (!sb || !uid) return;
+      const prev = syncStatus.value;
+      syncStatus.value = 'syncing';
+      try {
+        await pushAll(sb, uid);
+        syncStatus.value = 'idle';
+      } catch (e) {
+        console.error('push failed', e);
+        syncError.value = e instanceof Error ? e.message : 'Sync failed';
+        syncStatus.value = prev === 'error' ? 'error' : 'error';
+      }
+    }, 800);
+  }
+
+  function stopSync() {
+    if (realtimeUnsub) { realtimeUnsub(); realtimeUnsub = null; }
+    resetBaseline();
+    syncStatus.value = 'off';
+  }
+
+  async function syncNow() {
+    if (session.value) await startSync();
+  }
+
+  // Auth methods ------------------------------------------------
+  function redirectTo() {
+    return typeof window !== 'undefined' ? window.location.origin : undefined;
+  }
+  async function signInWithEmailLink(email: string): Promise<{ error: string | null }> {
+    const sb = getSupabase();
+    if (!sb) return { error: 'Sync is not configured.' };
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo() } });
+    return { error: error?.message ?? null };
+  }
+  async function signUpWithPassword(email: string, password: string): Promise<{ error: string | null }> {
+    const sb = getSupabase();
+    if (!sb) return { error: 'Sync is not configured.' };
+    const { error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo() } });
+    return { error: error?.message ?? null };
+  }
+  async function signInWithPassword(email: string, password: string): Promise<{ error: string | null }> {
+    const sb = getSupabase();
+    if (!sb) return { error: 'Sync is not configured.' };
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    return { error: error?.message ?? null };
+  }
+  async function signInWithGoogle(): Promise<{ error: string | null }> {
+    const sb = getSupabase();
+    if (!sb) return { error: 'Sync is not configured.' };
+    const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectTo() } });
+    return { error: error?.message ?? null };
+  }
+  async function signOut() {
+    const sb = getSupabase();
+    stopSync();
+    session.value = null;
+    if (sb) { try { await sb.auth.signOut(); } catch { /* noop */ } }
+  }
+
+  // Passkeys (WebAuthn) — enroll after sign-in; challenge as a strong second
+  // factor on future logins. Best-effort: degrades with a clear message where
+  // the client/build doesn't expose WebAuthn factors.
+  async function enrollPasskey(): Promise<{ error: string | null }> {
+    const sb = getSupabase();
+    if (!sb || !session.value) return { error: 'Sign in first to add a passkey.' };
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mfa = sb.auth.mfa as any;
+      const { data, error } = await mfa.enroll({ factorType: 'webauthn', friendlyName: `passkey-${Date.now()}` });
+      if (error) return { error: error.message };
+      if (data?.id) {
+        const ch = await mfa.challenge({ factorId: data.id });
+        if (ch.error) return { error: ch.error.message };
+      }
+      return { error: null };
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : 'Passkeys aren’t available in this build yet.' };
+    }
+  }
+  async function listPasskeys(): Promise<number> {
+    const sb = getSupabase();
+    if (!sb || !session.value) return 0;
+    try {
+      const { data } = await sb.auth.mfa.listFactors();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return ((data as any)?.all ?? []).filter((f: any) => f.factor_type === 'webauthn').length;
+    } catch { return 0; }
+  }
+
   // ── Brain dump ──────────────────────────────────────────
   async function addBrainDump(content: string, context?: string | null): Promise<BrainDumpEntry | null> {
     const text = content.trim();
@@ -910,6 +1081,7 @@ export const useAppStore = defineStore('app', () => {
     if (trimmed.length > 60) trimmed.shift();
     historyStack.value = trimmed;
     historyIndex.value = trimmed.length - 1;
+    queuePush();
   }
   function scheduleCommit() {
     if (restoring) return;
@@ -1100,5 +1272,10 @@ export const useAppStore = defineStore('app', () => {
     awardPoints, computeDailyScore, recordPlanningActivity,
     loadGoogleCalendarStatus, connectGoogleCalendar, disconnectGoogleCalendar, syncGoogleCalendar, setGcalAutoSync,
     setNotificationPrefs, enableNotifications,
+    // account / sync
+    session, user, signedIn, authReady, syncStatus, syncError,
+    initAuth, syncNow, signOut,
+    signInWithEmailLink, signUpWithPassword, signInWithPassword, signInWithGoogle,
+    enrollPasskey, listPasskeys,
   };
 });
