@@ -19,6 +19,27 @@
           </select>
         </div>
 
+        <!-- Scheduled event: drop a timed block straight onto the timeline -->
+        <div class="rounded-md border border-border/60 bg-muted/20 p-2 space-y-1.5">
+          <label class="flex items-center gap-1.5 text-[11px] font-medium cursor-pointer select-none">
+            <CalendarClock class="size-3.5 text-muted-foreground" />
+            Scheduled event
+            <span class="text-[10px] font-normal text-muted-foreground">— place it on the timeline at a set time</span>
+            <input type="checkbox" v-model="scheduledEvent" class="ml-auto size-3.5 accent-primary" />
+          </label>
+          <div v-if="scheduledEvent" class="grid grid-cols-2 gap-2">
+            <div class="space-y-0.5">
+              <Label class="text-[10px] text-muted-foreground">Date</Label>
+              <Input type="date" v-model="eventDate" class="h-7 text-[11px]" />
+            </div>
+            <div class="space-y-0.5">
+              <Label class="text-[10px] text-muted-foreground">Start time</Label>
+              <Input type="time" v-model="eventTime" class="h-7 text-[11px]" />
+            </div>
+            <p class="col-span-2 text-[9px] text-muted-foreground">Creates a {{ formatDuration(estimatedMinutes) }} block at this time{{ isEventToday ? ' and moves the task to Today' : '' }}.</p>
+          </div>
+        </div>
+
         <div class="flex items-center gap-1.5">
           <FolderOpen class="size-3 text-muted-foreground shrink-0" />
           <select v-model="projectId" class="flex-1 h-8 text-xs rounded-md border bg-background px-2 outline-none" @change="onProjectChange">
@@ -165,9 +186,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { Sparkles, Clock, Loader2, ChevronDown, ChevronUp, FolderOpen, MapPin, X, Check } from 'lucide-vue-next';
+import { Sparkles, Clock, Loader2, ChevronDown, ChevronUp, FolderOpen, MapPin, X, Check, CalendarClock } from 'lucide-vue-next';
 import { cn } from '~/lib/utils';
 import { searchPlaces, type Place } from '~/lib/geo';
+import { useCurrentLocation } from '~/composables/useCurrentLocation';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { TASK_CATEGORIES, PRESET_DURATIONS, type Task, type EisenhowerCategory, type TaskStatus } from '~/lib/types';
@@ -201,6 +223,18 @@ const projectId = ref<string | null>(null);
 const estimating = ref(false);
 const showNotes = ref(false);
 
+// Scheduled event
+const scheduledEvent = ref(false);
+const eventDate = ref('');
+const eventTime = ref('09:00');
+function todayInput(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+const isEventToday = computed(() => eventDate.value === todayInput());
+watch(scheduledEvent, (on) => { if (on && !eventDate.value) eventDate.value = todayInput(); });
+
 // Planning constraints
 const showPlanning = ref(false);
 const location = ref('');
@@ -211,16 +245,19 @@ const searchingPlace = ref(false);
 let placeTimer: ReturnType<typeof setTimeout> | null = null;
 const deadline = ref('');       // datetime-local value
 
+const { coords: myLocation, request: requestLocation } = useCurrentLocation();
+
 function onLocationInput() {
   // Typing invalidates any previously picked coordinates.
   locationLat.value = null;
   locationLon.value = null;
+  void requestLocation(); // warm up geolocation to sort suggestions by distance
   if (placeTimer) clearTimeout(placeTimer);
   const q = location.value.trim();
   if (q.length < 3) { placeResults.value = []; searchingPlace.value = false; return; }
   searchingPlace.value = true;
   placeTimer = setTimeout(async () => {
-    placeResults.value = await searchPlaces(q);
+    placeResults.value = await searchPlaces(q, myLocation.value);
     searchingPlace.value = false;
   }, 450);
 }
@@ -284,6 +321,17 @@ watch(() => props.open, (isOpen) => {
     needsClean.value = !!t.needsClean;
     isHygiene.value = !!t.isHygiene;
     showPlanning.value = !!(t.location || t.deadline || t.windowStart || t.windowEnd || (t.dependsOn?.length) || t.dirty || t.needsClean || t.isHygiene);
+    // Prefill scheduled-event fields from an existing timeline block, if any.
+    const block = store.timeBlocks.find((b) => b.taskId === t.id && !b.isAnchor && !b.isExternalEvent);
+    if (block) {
+      const d = new Date(block.startTime);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      scheduledEvent.value = true;
+      eventDate.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      eventTime.value = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } else {
+      scheduledEvent.value = false; eventDate.value = ''; eventTime.value = '09:00';
+    }
   } else {
     title.value = ''; notes.value = ''; category.value = 'Admin';
     status.value = props.defaultStatus; eisenhower.value = 'schedule';
@@ -291,6 +339,7 @@ watch(() => props.open, (isOpen) => {
     location.value = ''; locationLat.value = null; locationLon.value = null; placeResults.value = [];
     deadline.value = ''; windowStart.value = ''; windowEnd.value = '';
     dependsOn.value = []; dirty.value = false; needsClean.value = false; isHygiene.value = false; showPlanning.value = false;
+    scheduledEvent.value = false; eventDate.value = ''; eventTime.value = '09:00';
   }
 });
 
@@ -341,13 +390,27 @@ async function save() {
     needsClean: needsClean.value,
     isHygiene: isHygiene.value,
   };
+  // A scheduled event lands on the timeline at the chosen date/time.
+  let sched: { start: string; end: string } | null = null;
+  if (scheduledEvent.value && eventDate.value && eventTime.value) {
+    const start = new Date(`${eventDate.value}T${eventTime.value}`);
+    if (!isNaN(start.getTime())) {
+      const end = new Date(start.getTime() + estimatedMinutes.value * 60000);
+      sched = { start: start.toISOString(), end: end.toISOString() };
+    }
+  }
+
+  let taskId: string | null = null;
   if (props.editTask) {
     await store.updateTask(props.editTask.id, payload);
+    taskId = props.editTask.id;
     toast({ title: 'Task updated' });
   } else {
     const t = await store.createTask(payload);
-    if (t) toast({ title: 'Task created', description: `"${t.title}"` });
+    taskId = t?.id ?? null;
+    if (t) toast({ title: sched ? 'Event scheduled' : 'Task created', description: `"${t.title}"` });
   }
+  if (sched && taskId) await store.moveTaskToTimeline(taskId, sched.start, sched.end);
   emit('update:open', false);
 }
 

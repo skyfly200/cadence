@@ -22,6 +22,7 @@ import { ref, computed, watch } from 'vue';
 import { MapPin, X } from 'lucide-vue-next';
 import { cn } from '~/lib/utils';
 import { searchPlaces, type Place } from '~/lib/geo';
+import { useCurrentLocation } from '~/composables/useCurrentLocation';
 import type { TripWaypoint } from '~/lib/types';
 
 const props = defineProps<{ label: string; waypoint: TripWaypoint }>();
@@ -37,13 +38,16 @@ const hasCoords = computed(() => props.waypoint.lat != null && props.waypoint.lo
 // Keep in sync when the parent swaps the waypoint (e.g. chaining legs).
 watch(() => props.waypoint.label, (v) => { if (v !== text.value) text.value = v ?? ''; });
 
+const { coords: myLocation, request: requestLocation } = useCurrentLocation();
+
 function onInput() {
+  void requestLocation();
   if (timer) clearTimeout(timer);
   const q = text.value.trim();
   if (q.length < 3) { results.value = []; searching.value = false; return; }
   searching.value = true;
   timer = setTimeout(async () => {
-    results.value = await searchPlaces(q);
+    results.value = await searchPlaces(q, myLocation.value);
     searching.value = false;
   }, 450);
 }

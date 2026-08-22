@@ -24,8 +24,16 @@ export const TRAVEL_MODES: { value: TravelMode; label: string; emoji: string }[]
 const OSRM_PROFILE: Record<string, string> = { drive: 'driving', walk: 'walking', cycle: 'cycling' };
 export const isOsrmMode = (m: TravelMode) => m === 'drive' || m === 'walk' || m === 'cycle';
 
-/** Search navigable places. Returns [] on any failure. */
-export async function searchPlaces(query: string, limit = 6): Promise<Place[]> {
+/**
+ * Search navigable places. Returns [] on any failure.
+ * When `near` is provided, results are sorted nearest-first (great-circle);
+ * a slightly larger result set is fetched so the distance sort has choices.
+ */
+export async function searchPlaces(
+  query: string,
+  near?: { lat: number; lon: number } | null,
+  limit = 8,
+): Promise<Place[]> {
   const q = query.trim();
   if (q.length < 3) return [];
   try {
@@ -33,13 +41,17 @@ export async function searchPlaces(query: string, limit = 6): Promise<Place[]> {
     const r = await fetch(url, { headers: { Accept: 'application/json' } });
     if (!r.ok) return [];
     const data = await r.json();
-    return (Array.isArray(data) ? data : [])
+    const places: Place[] = (Array.isArray(data) ? data : [])
       .filter((d: { lat?: string; lon?: string }) => d.lat && d.lon)
       .map((d: { display_name: string; lat: string; lon: string }) => ({
         label: d.display_name,
         lat: parseFloat(d.lat),
         lon: parseFloat(d.lon),
       }));
+    if (near) {
+      places.sort((a, b) => haversineKm(near, a) - haversineKm(near, b));
+    }
+    return places;
   } catch {
     return [];
   }
