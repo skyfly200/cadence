@@ -25,6 +25,8 @@ export function getSupabase(): SupabaseClient | null {
       // Keep the auth token under the app's namespace in localStorage.
       storageKey: 'cadence:supabase-auth',
       flowType: 'pkce',
+      // Opt in to the (experimental) native passkey / WebAuthn API.
+      experimental: { passkey: true },
     },
   });
   return client;

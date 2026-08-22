@@ -46,6 +46,11 @@
         Continue with Google
       </Button>
 
+      <!-- Passkey -->
+      <Button variant="outline" class="w-full h-9 text-xs gap-2" :disabled="busy" @click="passkeySignIn">
+        <KeyRound class="size-4" /> Sign in with a passkey
+      </Button>
+
       <div class="flex items-center gap-2 text-[10px] text-muted-foreground"><div class="h-px bg-border flex-1" /> or <div class="h-px bg-border flex-1" /></div>
 
       <!-- Email -->
@@ -140,6 +145,13 @@ async function google() {
   const { error } = await store.signInWithGoogle();
   if (error) { say(error, true); busy.value = false; }
   // On success the browser redirects to Google.
+}
+async function passkeySignIn() {
+  busy.value = true;
+  try {
+    const { error } = await store.signInWithPasskey();
+    if (error) say(error, true); else emit('done');
+  } finally { busy.value = false; }
 }
 async function doSync() { await store.syncNow(); }
 async function doSignOut() { await store.signOut(); say(''); emit('done'); }

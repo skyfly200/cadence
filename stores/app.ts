@@ -980,33 +980,43 @@ export const useAppStore = defineStore('app', () => {
     if (sb) { try { await sb.auth.signOut(); } catch { /* noop */ } }
   }
 
-  // Passkeys (WebAuthn) — enroll after sign-in; challenge as a strong second
-  // factor on future logins. Best-effort: degrades with a clear message where
-  // the client/build doesn't expose WebAuthn factors.
+  // Passkeys (WebAuthn) — true passwordless credentials via the native
+  // Supabase passkey API. Register while signed in; sign in with one later.
   async function enrollPasskey(): Promise<{ error: string | null }> {
     const sb = getSupabase();
     if (!sb || !session.value) return { error: 'Sign in first to add a passkey.' };
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mfa = sb.auth.mfa as any;
-      const { data, error } = await mfa.enroll({ factorType: 'webauthn', friendlyName: `passkey-${Date.now()}` });
-      if (error) return { error: error.message };
-      if (data?.id) {
-        const ch = await mfa.challenge({ factorId: data.id });
-        if (ch.error) return { error: ch.error.message };
-      }
-      return { error: null };
+      const auth = sb.auth as any;
+      if (typeof auth.registerPasskey !== 'function') return { error: 'Passkeys aren’t enabled for this project yet.' };
+      const { error } = await auth.registerPasskey();
+      return { error: error?.message ?? null };
     } catch (e) {
-      return { error: e instanceof Error ? e.message : 'Passkeys aren’t available in this build yet.' };
+      return { error: e instanceof Error ? e.message : 'Could not add passkey.' };
+    }
+  }
+  async function signInWithPasskey(): Promise<{ error: string | null }> {
+    const sb = getSupabase();
+    if (!sb) return { error: 'Sync is not configured.' };
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const auth = sb.auth as any;
+      if (typeof auth.signInWithPasskey !== 'function') return { error: 'Passkeys aren’t enabled for this project yet.' };
+      const { error } = await auth.signInWithPasskey();
+      return { error: error?.message ?? null };
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : 'Passkey sign-in failed.' };
     }
   }
   async function listPasskeys(): Promise<number> {
     const sb = getSupabase();
     if (!sb || !session.value) return 0;
     try {
-      const { data } = await sb.auth.mfa.listFactors();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return ((data as any)?.all ?? []).filter((f: any) => f.factor_type === 'webauthn').length;
+      const pk = (sb.auth as any).passkey;
+      if (!pk?.list) return 0;
+      const { data } = await pk.list();
+      return Array.isArray(data) ? data.length : 0;
     } catch { return 0; }
   }
 
@@ -1307,6 +1317,6 @@ export const useAppStore = defineStore('app', () => {
     session, user, signedIn, authReady, syncStatus, syncError,
     initAuth, syncNow, signOut,
     signInWithEmailLink, signUpWithPassword, signInWithPassword, signInWithGoogle,
-    enrollPasskey, listPasskeys,
+    enrollPasskey, signInWithPasskey, listPasskeys,
   };
 });
