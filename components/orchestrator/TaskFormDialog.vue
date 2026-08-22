@@ -158,11 +158,17 @@
           </div>
 
           <div class="space-y-0.5">
-            <Label class="text-[10px] text-muted-foreground">Depends on (must be done first)</Label>
-            <select v-model="dependsOn" multiple class="w-full min-h-[3.5rem] text-[11px] rounded-md border bg-background px-1.5 py-1 outline-none">
-              <option v-for="t in dependencyOptions" :key="t.id" :value="t.id">{{ t.title }}</option>
-            </select>
-            <p v-if="dependencyOptions.length === 0" class="text-[10px] text-muted-foreground">No other tasks yet.</p>
+            <Label class="text-[10px] text-muted-foreground">
+              Depends on <span class="font-normal">(optional — tick anything that must be done first)</span>
+            </Label>
+            <div v-if="dependencyOptions.length" class="max-h-28 overflow-y-auto rounded-md border bg-background divide-y divide-border/40">
+              <label v-for="t in dependencyOptions" :key="t.id" class="flex items-center gap-2 px-2 py-1 text-[11px] cursor-pointer hover:bg-muted/50">
+                <input type="checkbox" :value="t.id" v-model="dependsOn" class="size-3 accent-primary shrink-0" />
+                <span class="truncate">{{ t.title }}</span>
+              </label>
+            </div>
+            <p v-else class="text-[10px] text-muted-foreground">No other tasks yet.</p>
+            <p v-if="dependsOn.length" class="text-[9px] text-muted-foreground">{{ dependsOn.length }} prerequisite{{ dependsOn.length !== 1 ? 's' : '' }} selected</p>
           </div>
 
           <div class="flex flex-wrap gap-1.5">
