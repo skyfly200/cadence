@@ -107,7 +107,7 @@ import { Inbox, Lightbulb, Plus, Search, Grid2x2, List as ListIcon, Pencil, Tras
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { cn } from '~/lib/utils';
-import { CATEGORY_COLORS, PROJECT_COLORS, EISENHOWER_LABELS, type Task, type EisenhowerCategory } from '~/lib/types';
+import { PROJECT_COLORS, EISENHOWER_LABELS, type Task, type EisenhowerCategory } from '~/lib/types';
 import { formatDuration } from '~/lib/time-utils';
 import QuadrantCard from './QuadrantCard.vue';
 
@@ -124,7 +124,7 @@ const editTask = ref<Task | null>(null);
 
 const isBacklog = computed(() => props.variant === 'backlog');
 const title = computed(() => (isBacklog.value ? 'Backlog' : 'Idea Incubator'));
-const catColor = (c: string) => CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Admin;
+const catColor = (c: string) => store.categoryColor(c);
 const projectName = (id?: string | null) => store.projects.find((p) => p.id === id)?.name;
 const projectColor = (id?: string | null) => {
   const p = store.projects.find((x) => x.id === id);

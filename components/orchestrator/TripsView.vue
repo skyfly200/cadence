@@ -20,12 +20,12 @@
           </select>
         </div>
         <div>
-          <label class="text-[10px] text-muted-foreground">Start</label>
-          <Input v-model="newStart" type="date" class="h-7 text-[11px] w-[9rem]" />
+          <label class="text-[10px] text-muted-foreground block">Start</label>
+          <DatePicker v-model="newStart" placeholder="Start date" class="h-7 text-[11px] w-[9.5rem]" />
         </div>
         <div>
-          <label class="text-[10px] text-muted-foreground">End</label>
-          <Input v-model="newEnd" type="date" class="h-7 text-[11px] w-[9rem]" />
+          <label class="text-[10px] text-muted-foreground block">End</label>
+          <DatePicker v-model="newEnd" placeholder="End date" class="h-7 text-[11px] w-[9.5rem]" />
         </div>
         <Button size="sm" class="h-7 text-[11px]" :disabled="!newName.trim()" @click="createTrip">
           <Plus class="size-3" /> New trip
@@ -60,10 +60,10 @@
             @change="(e: Event) => store.updateTrip(trip!.id, { kind: (e.target as HTMLSelectElement).value as TripKind })">
             <option v-for="k in TRIP_KINDS" :key="k.value" :value="k.value">{{ k.emoji }} {{ k.label }}</option>
           </select>
-          <Input :model-value="trip.startDate ?? ''" type="date" class="h-7 text-[11px] w-[9rem]"
+          <DatePicker :model-value="trip.startDate ?? ''" placeholder="Start date" class="h-7 text-[11px] w-[9.5rem]"
             @update:model-value="(v: string) => store.updateTrip(trip!.id, { startDate: v || null })" />
           <span class="text-[10px] text-muted-foreground">→</span>
-          <Input :model-value="trip.endDate ?? ''" type="date" class="h-7 text-[11px] w-[9rem]"
+          <DatePicker :model-value="trip.endDate ?? ''" placeholder="End date" class="h-7 text-[11px] w-[9.5rem]"
             @update:model-value="(v: string) => store.updateTrip(trip!.id, { endDate: v || null })" />
           <Button size="sm" variant="ghost" class="h-7 text-[10px] px-2 text-destructive hover:text-destructive ml-auto"
             @click="removeTrip(trip.id)">
@@ -142,7 +142,7 @@
 
               <!-- Row 3: date / time / duration / distance -->
               <div class="flex flex-wrap items-center gap-1.5">
-                <Input :model-value="s.date ?? ''" type="date" class="h-6 text-[10px] w-[8.5rem]" title="Day"
+                <DatePicker :model-value="s.date ?? ''" placeholder="Day" class="h-6 text-[10px] w-[9rem]" title="Day"
                   @update:model-value="(v: string) => store.updateSegment(trip!.id, s.id, { date: v || null })" />
                 <Input :model-value="s.startTime ?? ''" type="time" class="h-6 text-[10px] w-[6.5rem]" title="Start time"
                   @update:model-value="(v: string) => store.updateSegment(trip!.id, s.id, { startTime: v || null })" />

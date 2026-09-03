@@ -54,7 +54,7 @@ import { computed } from 'vue';
 import { GripVertical, Pencil, Trash2, CalendarClock } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { cn } from '~/lib/utils';
-import { CATEGORY_COLORS, PROJECT_COLORS, EISENHOWER_LABELS, type Task, type EisenhowerCategory } from '~/lib/types';
+import { PROJECT_COLORS, EISENHOWER_LABELS, type Task, type EisenhowerCategory } from '~/lib/types';
 import { formatDuration } from '~/lib/time-utils';
 
 const props = defineProps<{ cat: EisenhowerCategory; tasks: Task[]; hovered: boolean; label?: string }>();
@@ -73,5 +73,5 @@ defineEmits<{
 
 const store = useAppStore();
 const meta = computed(() => EISENHOWER_LABELS[props.cat]);
-const catColor = (c: string) => CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Admin;
+const catColor = (c: string) => store.categoryColor(c);
 </script>

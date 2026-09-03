@@ -137,7 +137,7 @@ import { Plus, Clock, Play, CalendarClock, CalendarDays, CheckCircle2, AlertCirc
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { cn } from '~/lib/utils';
-import { CATEGORY_COLORS, type Task } from '~/lib/types';
+import { type Task } from '~/lib/types';
 import { formatDuration, todayKey } from '~/lib/time-utils';
 
 const store = useAppStore();
@@ -180,7 +180,7 @@ const triageTasks = computed(() => store.triageTasks);
 const gcal = computed(() => store.googleCalendar);
 const capacity = computed(() => store.capacity);
 
-const catColor = (c: string) => CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Admin;
+const catColor = (c: string) => store.categoryColor(c);
 const deadlineShort = (iso: string) => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 
 const totalEstimated = computed(() => todayTasks.value.reduce((s, t) => s + t.estimatedMinutes, 0));
