@@ -4,6 +4,8 @@
  * making the app fully client-renderable.
  */
 
+import { DEFAULT_CATEGORIES } from './types';
+
 export interface StoredData {
   tasks: TaskRow[];
   timeBlocks: TimeBlockRow[];
@@ -145,6 +147,12 @@ export interface PlanningStreakRow {
   lastPlannedDate: string | null;
 }
 
+export interface CategoryRow {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface BrainDumpRow {
   id: string;
   content: string;
@@ -174,6 +182,7 @@ const KEYS = {
   habits: `${STORAGE_PREFIX}habits`,
   notifications: `${STORAGE_PREFIX}notifications`,
   trips: `${STORAGE_PREFIX}trips`,
+  categories: `${STORAGE_PREFIX}categories`,
 } as const;
 
 // ── Safe JSON parse/stringify ───────────────────────────────
@@ -643,6 +652,26 @@ export function getNotificationPrefs(): NotificationPrefsRow {
 
 export function saveNotificationPrefs(prefs: NotificationPrefsRow): void {
   save(KEYS.notifications, prefs);
+}
+
+// ── Categories ─────────────────────────────────────────────
+// User-managed task categories. Seeded from DEFAULT_CATEGORIES on first read
+// so upgrading users keep their familiar set.
+
+function seededCategories(): CategoryRow[] {
+  return DEFAULT_CATEGORIES.map((c) => ({ id: uid(), name: c.name, color: c.color }));
+}
+
+export function getCategories(): CategoryRow[] {
+  const rows = load<CategoryRow[] | null>(KEYS.categories, null);
+  if (rows && rows.length) return rows;
+  const seeded = seededCategories();
+  save(KEYS.categories, seeded);
+  return seeded;
+}
+
+export function saveCategories(rows: CategoryRow[]): void {
+  save(KEYS.categories, rows);
 }
 
 // ── Trips ──────────────────────────────────────────────────

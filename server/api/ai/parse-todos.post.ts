@@ -4,7 +4,7 @@ interface ParsedTask {
   title: string;
   notes: string | null;
   estimatedMinutes: number;
-  category: 'Creative' | 'Admin' | 'Maintenance' | 'Health' | 'Learning' | 'Social';
+  category: string;
   eisenhowerCategory: 'do_first' | 'schedule' | 'delegate' | 'eliminate';
   priority: 1 | 2 | 3 | 4 | 5;
 }
@@ -90,7 +90,7 @@ function fallbackParse(text: string): ParsedTask[] {
 }
 
 export default defineEventHandler(async (event) => {
-  let body: { text?: string; defaultStatus?: string };
+  let body: { text?: string; defaultStatus?: string; categories?: unknown };
   try {
     body = await readBody(event);
   } catch {
@@ -99,6 +99,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const { text, defaultStatus } = body;
+  const DEFAULT_CATS = ['Creative', 'Admin', 'Maintenance', 'Health', 'Learning', 'Social'];
+  const allowedCats: string[] = Array.isArray(body.categories) && body.categories.length
+    ? body.categories.map(String)
+    : DEFAULT_CATS;
+  const fallbackCat = allowedCats.includes('Admin') ? 'Admin' : allowedCats[0];
 
   if (!text || typeof text !== 'string' || text.trim().length === 0) {
     setResponseStatus(event, 400);
@@ -124,7 +129,7 @@ Rules:
 4. If a line has sub-items or nested details (indented lines), attach those as the "notes" field of the parent task.
 5. Extract due dates, deadlines, or context tags and put them in "notes". Keep them out of the "title".
 6. Estimate "estimatedMinutes" realistically: most tasks are 10-120 minutes. Admin tasks are shorter; creative/learning tasks are longer.
-7. Assign "category" based on the nature of the task: Creative (design, writing, art), Admin (email, paperwork, scheduling), Maintenance (chores, errands, fixes), Health (exercise, doctor, sleep), Learning (study, courses, reading), Social (calls, meetings, hangouts).
+7. Assign "category" — choose exactly one from this list, copied verbatim: ${allowedCats.join(', ')}. Pick the closest fit based on the nature of the task.
 8. Assign "eisenhowerCategory": do_first (urgent+important), schedule (important+not urgent), delegate (urgent+not important), eliminate (not urgent+not important). Default to "schedule" when unclear.
 9. Assign "priority" 1-5 where 1 = highest urgency/importance and 5 = lowest. Default to 3.
 10. Ignore lines that are pure headers, dividers (---), or empty. Do NOT create tasks for non-actionable lines like "TODO List" or "Meeting Notes".
@@ -136,7 +141,7 @@ Each element must match this exact TypeScript interface:
   "title": string,
   "notes": string | null,
   "estimatedMinutes": number,
-  "category": "Creative" | "Admin" | "Maintenance" | "Health" | "Learning" | "Social",
+  "category": one of [${allowedCats.map((c) => `"${c}"`).join(', ')}],
   "eisenhowerCategory": "do_first" | "schedule" | "delegate" | "eliminate",
   "priority": 1 | 2 | 3 | 4 | 5
 }`;
@@ -159,7 +164,6 @@ Each element must match this exact TypeScript interface:
     if (arrayMatch) {
       const parsed: unknown = JSON.parse(arrayMatch[0]);
       if (Array.isArray(parsed)) {
-        const categories = ['Creative', 'Admin', 'Maintenance', 'Health', 'Learning', 'Social'] as const;
         const eisenhowerCategories = ['do_first', 'schedule', 'delegate', 'eliminate'] as const;
         const validPriorities = [1, 2, 3, 4, 5] as const;
 
@@ -167,8 +171,7 @@ Each element must match this exact TypeScript interface:
           title: String(item.title ?? '').slice(0, 200) || 'Untitled task',
           notes: item.notes ? String(item.notes).slice(0, 1000) : null,
           estimatedMinutes: Math.max(1, Math.min(1440, Math.round(Number(item.estimatedMinutes) || 30))),
-          category: categories.includes(item.category as (typeof categories)[number])
-            ? (item.category as (typeof categories)[number]) : 'Admin',
+          category: allowedCats.find((c) => c.toLowerCase() === String(item.category).toLowerCase()) ?? fallbackCat,
           eisenhowerCategory: eisenhowerCategories.includes(item.eisenhowerCategory as (typeof eisenhowerCategories)[number])
             ? (item.eisenhowerCategory as (typeof eisenhowerCategories)[number]) : 'schedule',
           priority: validPriorities.includes(item.priority as (typeof validPriorities)[number])

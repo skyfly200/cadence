@@ -53,7 +53,7 @@
                 <Input :model-value="item.title" class="h-6 text-xs px-1.5" @update:model-value="(v) => item.title = v" />
                 <div class="flex items-center gap-1.5 flex-wrap">
                   <select v-model="item.category" class="h-5 text-[10px] rounded border bg-background px-1 outline-none">
-                    <option v-for="c in CATEGORIES" :key="c" :value="c">{{ c }}</option>
+                    <option v-for="c in store.categoryNames" :key="c" :value="c">{{ c }}</option>
                   </select>
                   <select v-model="item.eisenhowerCategory" class="h-5 text-[10px] rounded border bg-background px-1 outline-none">
                     <option v-for="e in EISENHOWER" :key="e" :value="e">{{ EISENHOWER_LABELS[e].label }}</option>
@@ -94,12 +94,12 @@ import { FileText, Loader2, Sparkles, Plus, CheckCircle2, X } from 'lucide-vue-n
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { cn } from '~/lib/utils';
-import { CATEGORY_COLORS, EISENHOWER_LABELS, type TaskStatus, type EisenhowerCategory, type TaskCategory } from '~/lib/types';
+import { EISENHOWER_LABELS, type TaskStatus, type EisenhowerCategory } from '~/lib/types';
 import { formatDuration } from '~/lib/time-utils';
 
 interface ParsedTaskItem {
   title: string; notes: string | null; estimatedMinutes: number;
-  category: TaskCategory; eisenhowerCategory: EisenhowerCategory; priority: number;
+  category: string; eisenhowerCategory: EisenhowerCategory; priority: number;
   selected: boolean; isDuplicate?: boolean;
 }
 
@@ -109,7 +109,6 @@ const emit = defineEmits<{ (e: 'update:open', v: boolean): void }>();
 const store = useAppStore();
 const { toast } = useToast();
 
-const CATEGORIES: TaskCategory[] = ['Creative', 'Admin', 'Maintenance', 'Health', 'Learning', 'Social'];
 const EISENHOWER: EisenhowerCategory[] = ['do_first', 'schedule', 'delegate', 'eliminate'];
 
 const rawText = ref('');
@@ -118,7 +117,7 @@ const status = ref<'idle' | 'parsing' | 'importing' | 'done'>('idle');
 
 const placeholderText = 'Buy groceries\n☐ Call dentist for appointment\n- [ ] Review pull requests\n* Design new landing page\n3. Schedule team standup\nStudy chapter 5 for exam\nMeditate 15 minutes';
 
-const catColor = (c: string) => CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Admin;
+const catColor = (c: string) => store.categoryColor(c);
 const lineCount = computed(() => rawText.value.split(/\n/).filter((l) => l.trim()).length);
 const selectedCount = computed(() => parsed.value.filter((t) => t.selected).length);
 const duplicateCount = computed(() => parsed.value.filter((t) => t.isDuplicate).length);
@@ -131,14 +130,14 @@ async function handleParse() {
   try {
     const res = await fetch('/api/ai/parse-todos', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, defaultStatus: props.defaultStatus }),
+      body: JSON.stringify({ text, defaultStatus: props.defaultStatus, categories: store.categoryNames }),
     });
     const data = await res.json();
     const items: ParsedTaskItem[] = (Array.isArray(data) ? data : []).map((t: Record<string, unknown>) => ({
       title: String(t.title ?? '').slice(0, 200) || 'Untitled',
       notes: t.notes ? String(t.notes) : null,
       estimatedMinutes: Math.max(1, Math.round(Number(t.estimatedMinutes) || 30)),
-      category: (CATEGORIES as readonly string[]).includes(String(t.category)) ? String(t.category) as TaskCategory : 'Admin',
+      category: store.categoryNames.includes(String(t.category)) ? String(t.category) : (store.categoryNames.includes('Admin') ? 'Admin' : (store.categoryNames[0] ?? 'Admin')),
       eisenhowerCategory: (EISENHOWER as readonly string[]).includes(String(t.eisenhowerCategory)) ? String(t.eisenhowerCategory) as EisenhowerCategory : 'schedule',
       priority: Math.max(1, Math.min(5, Math.round(Number(t.priority) || 3))),
       selected: true,

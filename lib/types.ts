@@ -278,6 +278,49 @@ export const EISENHOWER_LABELS: Record<EisenhowerCategory, { label: string; shor
 
 export const TASK_CATEGORIES: TaskCategory[] = ['Creative', 'Admin', 'Maintenance', 'Health', 'Learning', 'Social'];
 
+// ── User-managed categories ────────────────────────────────
+// Categories are editable at runtime (Settings → Categories). Each carries a
+// color chosen from a fixed palette so the class strings stay Tailwind-safe
+// (no dynamically-constructed class names that the compiler would purge).
+export interface Category {
+  id: string;
+  name: string;
+  color: string; // key into CATEGORY_COLOR_PALETTE
+}
+
+export const CATEGORY_COLOR_PALETTE: Record<string, string> = {
+  purple: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30',
+  slate: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30',
+  orange: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30',
+  emerald: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+  teal: 'bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30',
+  pink: 'bg-pink-500/15 text-pink-700 dark:text-pink-300 border-pink-500/30',
+  amber: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+  sky: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30',
+  rose: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
+  cyan: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30',
+  violet: 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30',
+  lime: 'bg-lime-500/15 text-lime-700 dark:text-lime-300 border-lime-500/30',
+};
+export const CATEGORY_COLOR_KEYS = Object.keys(CATEGORY_COLOR_PALETTE);
+
+/** The default category set, mirroring the original hard-coded palette. */
+export const DEFAULT_CATEGORIES: { name: string; color: string }[] = [
+  { name: 'Creative', color: 'purple' },
+  { name: 'Admin', color: 'slate' },
+  { name: 'Maintenance', color: 'orange' },
+  { name: 'Health', color: 'emerald' },
+  { name: 'Learning', color: 'teal' },
+  { name: 'Social', color: 'pink' },
+];
+
+/** Resolve a category's Tailwind class string from a categories list, with fallback. */
+export function categoryColorClass(name: string, cats: Category[]): string {
+  const cat = cats.find((c) => c.name === name);
+  if (cat && CATEGORY_COLOR_PALETTE[cat.color]) return CATEGORY_COLOR_PALETTE[cat.color];
+  return CATEGORY_COLORS[name] ?? CATEGORY_COLORS.Admin;
+}
+
 export const PRESET_DURATIONS = [15, 30, 60, 90, 120, 180];
 
 // Google Calendar external event colors

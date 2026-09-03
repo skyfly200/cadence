@@ -76,7 +76,7 @@ import type { Task } from '~/lib/types';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { cn } from '~/lib/utils';
-import { CATEGORY_COLORS, EISENHOWER_LABELS } from '~/lib/types';
+import { EISENHOWER_LABELS } from '~/lib/types';
 import { formatDuration, todayKey } from '~/lib/time-utils';
 
 const store = useAppStore();
@@ -93,7 +93,7 @@ async function completeOn(task: Task, e: Event) {
   toast({ title: `${task.title} completed`, description: `Backdated to ${val}` });
 }
 const triageTasks = computed(() => store.triageTasks);
-const catColor = (c: string) => CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Admin;
+const catColor = (c: string) => store.categoryColor(c);
 
 type TriageAction = 'schedule_today' | 'incubator' | 'backlog' | 'complete' | 'delete';
 async function resolve(taskId: string, action: TriageAction, title: string) {

@@ -10,7 +10,7 @@
 
         <div class="flex gap-2">
           <select v-model="category" class="flex-1 h-8 text-xs rounded-md border bg-background px-2 outline-none">
-            <option v-for="c in TASK_CATEGORIES" :key="c" :value="c">{{ c }}</option>
+            <option v-for="c in store.categoryNames" :key="c" :value="c">{{ c }}</option>
           </select>
           <select v-model="status" class="flex-1 h-8 text-xs rounded-md border bg-background px-2 outline-none">
             <option value="backlog">Backlog</option>
@@ -30,7 +30,7 @@
           <div v-if="scheduledEvent" class="grid grid-cols-2 gap-2">
             <div class="space-y-0.5">
               <Label class="text-[10px] text-muted-foreground">Date</Label>
-              <Input type="date" v-model="eventDate" class="h-7 text-[11px]" />
+              <DatePicker v-model="eventDate" :clearable="false" placeholder="Pick a date" class="h-7 text-[11px] w-full" />
             </div>
             <div class="space-y-0.5">
               <Label class="text-[10px] text-muted-foreground">Start time</Label>
@@ -198,7 +198,7 @@ import { searchPlaces, type Place } from '~/lib/geo';
 import { useCurrentLocation } from '~/composables/useCurrentLocation';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
-import { TASK_CATEGORIES, PRESET_DURATIONS, type Task, type EisenhowerCategory, type TaskStatus } from '~/lib/types';
+import { PRESET_DURATIONS, type Task, type EisenhowerCategory, type TaskStatus } from '~/lib/types';
 import { formatDuration } from '~/lib/time-utils';
 
 const props = withDefaults(defineProps<{
@@ -339,7 +339,8 @@ watch(() => props.open, (isOpen) => {
       scheduledEvent.value = false; eventDate.value = ''; eventTime.value = '09:00';
     }
   } else {
-    title.value = ''; notes.value = ''; category.value = 'Admin';
+    title.value = ''; notes.value = '';
+    category.value = store.categoryNames.includes('Admin') ? 'Admin' : (store.categoryNames[0] ?? 'Admin');
     status.value = props.defaultStatus; eisenhower.value = 'schedule';
     estimatedMinutes.value = 30; priority.value = 2; projectId.value = null; showNotes.value = false;
     location.value = ''; locationLat.value = null; locationLon.value = null; placeResults.value = [];
@@ -361,14 +362,22 @@ async function runAiEstimate() {
   try {
     const r = await fetch('/api/ai/estimate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: title.value, notes: notes.value, category: category.value }),
+      body: JSON.stringify({
+        title: title.value, notes: notes.value, category: category.value,
+        categories: store.categoryNames,
+      }),
     });
     const data = await r.json();
     if (data.estimatedMinutes) {
       estimatedMinutes.value = data.estimatedMinutes;
+      // Apply the suggested category when it's a valid, known one.
+      const suggested = typeof data.category === 'string'
+        ? store.categoryNames.find((c) => c.toLowerCase() === data.category.toLowerCase())
+        : undefined;
+      if (suggested) category.value = suggested;
       toast({
         title: `Estimated ${formatDuration(data.estimatedMinutes)}`,
-        description: `Confidence ${Math.round((data.confidence ?? 0) * 100)}%${data.reasoning ? ` · ${data.reasoning}` : ''}`,
+        description: `${suggested ? `${suggested} · ` : ''}Confidence ${Math.round((data.confidence ?? 0) * 100)}%${data.reasoning ? ` · ${data.reasoning}` : ''}`,
       });
     }
   } catch {

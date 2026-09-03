@@ -4,8 +4,8 @@ import type {
   Task, TimeBlock, TimeLogSession, DailyCapacity, Settings, GamificationLog,
   TaskStatus, GoogleCalendarStatus,
 } from '~/lib/types';
-import type { PlanningStreak, BrainDumpEntry, Project, Habit, NotificationPrefs, Trip, TripSegment, TripSegmentMode, TripKind } from '~/lib/types';
-import { TRIP_SEGMENT_META } from '~/lib/types';
+import type { PlanningStreak, BrainDumpEntry, Project, Habit, NotificationPrefs, Trip, TripSegment, TripSegmentMode, TripKind, Category } from '~/lib/types';
+import { TRIP_SEGMENT_META, CATEGORY_COLOR_KEYS, categoryColorClass } from '~/lib/types';
 import { showNotification, requestNotificationPermission } from '~/lib/notifications';
 import { PROJECT_COLOR_KEYS } from '~/lib/types';
 import { getMaxFocusForScore } from '~/lib/types';
@@ -35,6 +35,7 @@ import {
   getHabits, addHabit as addHabitRow, updateHabit as updateHabitRow, deleteHabit as deleteHabitRow,
   getNotificationPrefs, saveNotificationPrefs,
   getTrips, saveTrips,
+  getCategories, saveCategories,
   exportAllData, importAllData,
   uid, nowISO,
   type SettingsRow, type CapacityRow, type GoogleCalendarRow, type ActiveTimerRow,
@@ -76,6 +77,7 @@ export const useAppStore = defineStore('app', () => {
   const habits = ref<Habit[]>([]);
   const notificationPrefs = ref<NotificationPrefs>({ enabled: false, anchors: true, timer: true, habitsReminder: '' });
   const trips = ref<Trip[]>([]);
+  const categories = ref<Category[]>([]);
 
   // ── Account / cross-device sync ──────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -184,6 +186,7 @@ export const useAppStore = defineStore('app', () => {
     habits.value = getHabits() as Habit[];
     notificationPrefs.value = getNotificationPrefs() as NotificationPrefs;
     trips.value = getTrips<Trip>();
+    categories.value = getCategories() as Category[];
 
     computeDailyScore();
   }
@@ -842,6 +845,57 @@ export const useAppStore = defineStore('app', () => {
     return count;
   }
 
+  // ── Categories ──────────────────────────────────────────
+  const categoryNames = computed(() => categories.value.map((c) => c.name));
+
+  /** Tailwind class string for a category name (reactive to edits). */
+  function categoryColor(name: string): string {
+    return categoryColorClass(name, categories.value);
+  }
+
+  function persistCategories() { saveCategories(categories.value); }
+
+  async function createCategory(name: string, color?: string): Promise<Category | null> {
+    const n = name.trim();
+    if (!n) return null;
+    // No duplicates (case-insensitive).
+    if (categories.value.some((c) => c.name.toLowerCase() === n.toLowerCase())) return null;
+    const col = color ?? CATEGORY_COLOR_KEYS[categories.value.length % CATEGORY_COLOR_KEYS.length];
+    const cat: Category = { id: uid(), name: n, color: col };
+    categories.value = [...categories.value, cat];
+    persistCategories();
+    return cat;
+  }
+
+  async function updateCategory(id: string, patch: Partial<Category>) {
+    const existing = categories.value.find((c) => c.id === id);
+    if (!existing) return;
+    const nextName = patch.name?.trim();
+    // Block renaming onto another category's name.
+    if (nextName && categories.value.some((c) => c.id !== id && c.name.toLowerCase() === nextName.toLowerCase())) return;
+    const updated: Category = { ...existing, ...patch, name: nextName ?? existing.name };
+    categories.value = categories.value.map((c) => (c.id === id ? updated : c));
+    persistCategories();
+    // Rename cascades to tasks that used the old name.
+    if (nextName && nextName !== existing.name) {
+      const affected = tasks.value.filter((t) => t.category === existing.name);
+      for (const t of affected) await updateTask(t.id, { category: nextName });
+    }
+  }
+
+  async function deleteCategory(id: string) {
+    const target = categories.value.find((c) => c.id === id);
+    if (!target) return;
+    if (categories.value.length <= 1) return; // always keep at least one
+    const remaining = categories.value.filter((c) => c.id !== id);
+    const fallback = remaining[0].name;
+    categories.value = remaining;
+    persistCategories();
+    // Reassign any tasks that used the deleted category.
+    const affected = tasks.value.filter((t) => t.category === target.name);
+    for (const t of affected) await updateTask(t.id, { category: fallback });
+  }
+
   // ── Account / cross-device sync ─────────────────────────
   /** Read any persisted session and react to future auth changes. Client-only. */
   async function initAuth() {
@@ -1151,7 +1205,7 @@ export const useAppStore = defineStore('app', () => {
     void restoreSnapshot(historyStack.value[historyIndex.value]);
   }
   watch(
-    [tasks, timeBlocks, capacity, gamification, settings, brainDump, projects, habits, planningStreak],
+    [tasks, timeBlocks, capacity, gamification, settings, brainDump, projects, habits, planningStreak, categories],
     scheduleCommit,
     { deep: true },
   );
@@ -1293,7 +1347,7 @@ export const useAppStore = defineStore('app', () => {
   return {
     // state
     tasks, timeBlocks, timerSessions, capacity, settings, gamification,
-    todayScore, loading, activeTab, activeTimer, googleCalendar, planningStreak, brainDump, projects, habits, notificationPrefs, trips,
+    todayScore, loading, activeTab, activeTimer, googleCalendar, planningStreak, brainDump, projects, habits, notificationPrefs, trips, categories,
     // selectors
     todayTasks, backlogTasks, incubatorTasks, triageTasks, completedToday, todayBlocks,
     committedMinutes, scheduledFocusMinutes, availableFocusMinutes,
@@ -1310,6 +1364,7 @@ export const useAppStore = defineStore('app', () => {
     createHabit, updateHabit, deleteHabit, toggleHabitDone,
     addBrainDump, updateBrainDump, deleteBrainDump,
     createTrip, updateTrip, deleteTrip, addSegment, updateSegment, deleteSegment, moveSegment, segLabel, scheduleTripDay,
+    categoryNames, categoryColor, createCategory, updateCategory, deleteCategory,
     awardPoints, computeDailyScore, recordPlanningActivity,
     loadGoogleCalendarStatus, connectGoogleCalendar, disconnectGoogleCalendar, syncGoogleCalendar, setGcalAutoSync,
     setNotificationPrefs, enableNotifications,

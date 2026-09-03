@@ -87,6 +87,46 @@
       </div>
     </Card>
 
+    <!-- Categories -->
+    <Card class="p-3 sm:p-4 max-w-2xl">
+      <div class="flex items-center gap-2 mb-2">
+        <Tag class="size-4" />
+        <h3 class="text-sm font-semibold">Categories</h3>
+      </div>
+      <p class="text-[11px] text-muted-foreground mb-3">
+        Rename, recolor, add or remove task categories. Renaming updates existing tasks; deleting one reassigns its tasks to the first remaining category.
+      </p>
+
+      <div class="space-y-1.5">
+        <div v-for="c in store.categories" :key="c.id" class="flex items-center gap-1.5">
+          <!-- Color picker -->
+          <div class="relative">
+            <button type="button" :class="cn('size-6 rounded-md border', paletteClass(c.color))"
+              :aria-label="`Color for ${c.name}`" @click="colorMenuFor = colorMenuFor === c.id ? null : c.id" />
+            <div v-if="colorMenuFor === c.id" class="absolute z-30 mt-1 left-0 grid grid-cols-6 gap-1 rounded-md border bg-background p-1.5 shadow-lg">
+              <button v-for="key in CATEGORY_COLOR_KEYS" :key="key" type="button"
+                :class="cn('size-5 rounded border', paletteClass(key), c.color === key && 'ring-2 ring-primary')"
+                :aria-label="key" @click="setColor(c.id, key)" />
+            </div>
+          </div>
+          <Input :model-value="c.name" class="h-7 text-xs flex-1"
+            @update:model-value="(v: string) => renameCategory(c.id, v)" />
+          <Badge variant="outline" :class="cn('text-[9px] px-1 py-0', paletteClass(c.color))">{{ c.name || '—' }}</Badge>
+          <Button size="icon" variant="ghost" class="size-7 text-destructive hover:text-destructive"
+            :disabled="store.categories.length <= 1" aria-label="Delete category" @click="removeCategory(c)">
+            <Trash2 class="size-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 mt-3 pt-3 border-t">
+        <Input v-model="newCategory" placeholder="New category name" class="h-7 text-xs flex-1" @keydown.enter="addCategory" />
+        <Button size="sm" class="h-7 text-xs" :disabled="!newCategory.trim()" @click="addCategory">
+          <Plus class="size-3.5" /> Add
+        </Button>
+      </div>
+    </Card>
+
     <!-- Install app -->
     <Card class="p-3 sm:p-4 max-w-2xl">
       <div class="flex items-center gap-2 mb-2">
@@ -170,11 +210,12 @@
 
 <script setup lang="ts">
 import { reactive, ref, computed, watch } from 'vue';
-import { Settings as SettingsIcon, Save, RefreshCw, Database, Download, Upload, Bell, DownloadCloud, Check } from 'lucide-vue-next';
+import { Settings as SettingsIcon, Save, RefreshCw, Database, Download, Upload, Bell, DownloadCloud, Check, Tag, Trash2, Plus } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
 import { useToast } from '~/composables/useToast';
 import { useInstallPrompt } from '~/composables/useInstallPrompt';
 import { formatDuration } from '~/lib/time-utils';
+import { CATEGORY_COLOR_PALETTE, CATEGORY_COLOR_KEYS } from '~/lib/types';
 import { exportAllData, importAllData } from '~/lib/local-storage';
 import { notificationsSupported, showNotification } from '~/lib/notifications';
 import { cn } from '~/lib/utils';
@@ -237,6 +278,31 @@ async function enableNotifs() {
   if (!ok) toast({ title: 'Permission denied', description: 'Allow notifications for this site in your browser settings.', variant: 'destructive' });
 }
 function testNotif() { void showNotification('Test reminder', { body: 'This is how Cadence reminders look.', tag: 'test' }); }
+
+// ── Categories ───────────────────────────────────────────
+const newCategory = ref('');
+const colorMenuFor = ref<string | null>(null);
+const paletteClass = (key: string) => CATEGORY_COLOR_PALETTE[key] ?? CATEGORY_COLOR_PALETTE.slate;
+
+async function addCategory() {
+  const name = newCategory.value.trim();
+  if (!name) return;
+  const created = await store.createCategory(name);
+  if (!created) { toast({ title: 'That category already exists', variant: 'destructive' }); return; }
+  newCategory.value = '';
+}
+function renameCategory(id: string, name: string) {
+  void store.updateCategory(id, { name });
+}
+function setColor(id: string, color: string) {
+  void store.updateCategory(id, { color });
+  colorMenuFor.value = null;
+}
+async function removeCategory(c: { id: string; name: string }) {
+  if (!window.confirm(`Delete "${c.name}"? Tasks using it will be reassigned.`)) return;
+  await store.deleteCategory(c.id);
+  toast({ title: 'Category deleted' });
+}
 
 // ── Data backup ──────────────────────────────────────────
 const fileInput = ref<HTMLInputElement | null>(null);

@@ -126,7 +126,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Trash2, Lock, Calendar, GripVertical, Check, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
-import { ANCHOR_COLORS, CATEGORY_COLORS, EXTERNAL_EVENT_COLORS, type TimeBlock } from '~/lib/types';
+import { ANCHOR_COLORS, EXTERNAL_EVENT_COLORS, type TimeBlock } from '~/lib/types';
 import { formatTime, formatRange, formatDuration, blockDurationMinutes, isSameDay, format } from '~/lib/time-utils';
 import { cn } from '~/lib/utils';
 import { useToast } from '~/composables/useToast';
@@ -206,7 +206,7 @@ function goToday() {
 }
 
 // ── Blocks & tasks for the viewed day ────────────────────
-const catColor = (c: string) => CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Admin;
+const catColor = (c: string) => store.categoryColor(c);
 const viewedBlocks = computed(() =>
   store.timeBlocks.filter((b) => isSameDay(new Date(b.startTime), selectedDate.value)));
 const scheduledTaskIds = computed(() => new Set(viewedBlocks.value.filter((b) => b.taskId).map((b) => b.taskId)));
@@ -224,7 +224,8 @@ function blockColor(b: TimeBlock): string {
   if (b.colorTag === 'trip') return 'bg-indigo-500/15 border-indigo-500/40 text-indigo-700 dark:text-indigo-300';
   if (b.isExternalEvent) return EXTERNAL_EVENT_COLORS[b.colorTag ?? 'external'] ?? EXTERNAL_EVENT_COLORS.external;
   if (b.isAnchor && b.anchorType) return ANCHOR_COLORS[b.anchorType] ?? 'bg-muted border-border text-foreground';
-  return CATEGORY_COLORS[b.colorTag ?? ''] ?? 'bg-primary/10 border-primary/30 text-foreground';
+  if (b.colorTag && store.categoryNames.includes(b.colorTag)) return store.categoryColor(b.colorTag);
+  return 'bg-primary/10 border-primary/30 text-foreground';
 }
 
 const totalHeight = computed(() => SLOTS * rowHeight.value);
