@@ -17,16 +17,44 @@ The place a Capture goes when it is not to be acted on now. One tap, acknowledge
 _Avoid_: Backlog, inbox, incubator
 
 **Node**:
-Any thing Cadence knows about in the user's life: a commitment, idea, place, object, person, routine or micro-task.
-_Avoid_: Task, item
+Anything Cadence knows about in the user's life. There are five kinds: Goal, Habit, Commitment, Idea and Thing.
+_Avoid_: Task, item, entry
+
+**Goal**:
+An outcome the user wants, which may contain other Goals (sub-goals and milestones), Habits and Commitments. A Project is a Goal with a finish line; a milestone is a Goal marked as a checkpoint.
+_Avoid_: Project, milestone (as separate kinds)
+
+**Habit**:
+A recurring behaviour the user is building or keeping; it receives reinforcement.
+_Avoid_: Routine, recurring task
+
+**Commitment**:
+Something to do or attend, with or without a time. A todo and an event are both Commitments; a fixed-time repeat obligation is a recurring Commitment.
+_Avoid_: Task, event, appointment, errand
+
+**Idea**:
+A Capture not yet classified into another kind; it waits until reconciled in a Planning session.
+_Avoid_: Note, brain-dump entry
+
+**Thing**:
+A person, place or object that Commitments need, happen at, or involve (a projector, the car, a venue, a friend).
+_Avoid_: Resource, contact, location
+
+**Link**:
+A typed relationship between Nodes (requires, needs, part-of, at, with) that records its origin (stated, proposed and accepted, or inferred) and, if inferred, a confidence and evidence.
+_Avoid_: Dependency, edge, relation
+
+**Occurrence**:
+One immutable record that something was done, skipped, parked or moved; the log of Occurrences is the memory patterns are computed from. Skipped and moved are never failures.
+_Avoid_: History entry, check-in, completion
 
 **Life graph**:
-The web of Nodes and their dependencies that Cadence builds and updates from the user's behaviour, not from manual setup.
+The web of Nodes and Links that Cadence builds and updates from the user's behaviour and conversation, not from manual setup.
 _Avoid_: Knowledge graph, database, task list
 
-**Background node**:
-A Node Cadence tracks silently (eat, shower, brush teeth, trash) and only surfaces when it is at risk of slipping.
-_Avoid_: Recurring task, habit
+**Background**:
+A visibility setting on any Habit or Commitment (eat, shower, brush teeth, trash): it appears in no Lens and surfaces only when it is at risk of slipping.
+_Avoid_: Background node, recurring task
 
 **Nudge**:
 A calm, well-timed prompt (usually spoken) that arrives like a thought rather than an alarm.
