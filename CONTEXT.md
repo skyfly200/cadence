@@ -47,3 +47,15 @@ _Avoid_: Weekly review, triage
 **Recede**:
 Cadence's behaviour when the user goes quiet: it shrinks to a notepad and never guilts them.
 _Avoid_: Streak loss, overdue
+
+**Now card**:
+The single next thing Cadence shows by default, with a way to start it, put it off, or park it.
+_Avoid_: Dashboard, today list, task card
+
+**Lens**:
+One of the few views (Now, Today, Habits, Goals) reachable through a single fixed switcher; only one is visible at a time.
+_Avoid_: Tab, page, panel
+
+**Capture surface**:
+The always-in-the-same-place spot where a Capture is typed or spoken, and where the user lands when returning after being away.
+_Avoid_: Quick add, input box
