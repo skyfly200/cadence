@@ -21,3 +21,5 @@ Findings: branch `research/claude-chatgpt-integration`, copied to `research/clau
 - **As LLM providers:** close on structured output (both reject recursive schemas, so the flat nodes+edges approach suits both) and price (gpt-6.1-sol matches Sonnet 5.5 at $2/$10; OpenAI's small tiers are about 10x cheaper than Haiku 4.5 on input). Data handling: OpenAI keeps API data 30 days by default (set `store:false`); Claude's API MCP connector is not eligible for zero data retention. OpenAI's Realtime API can call remote MCP tools; no Claude speech API found.
 - **Vercel note:** Vercel's `mcp-handler` package handles bearer verification and protected-resource metadata but does not issue tokens. Whether Supabase Auth can be the OAuth authorization server for MCP is unverified.
 - **By-hand checks for the author's own accounts:** voice with a custom connector on both assistants, and whether ChatGPT prompts on an additive capture tool (the file lists 7).
+
+Author decision after this research: skip ChatGPT (and Siri) as integration targets. Only the Claude findings and the LLM-provider comparison feed later tickets.

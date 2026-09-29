@@ -19,7 +19,7 @@ A build-ready **product spec** for Cadence as one calm app for basic todo, plann
   - Coaching (life + career) is in scope; it is a persona/safety question as much as a feature (not therapy, never shame).
 - Author's firsthand input (Fabulous): the original tone and its low-pressure gamification genuinely helped form habits; the audio and the clutter did not. Scope is broader than tasks: todo, planning, habits and goals in one app, without the clutter.
 - Author's design premise: gamification works for ADHD because it raises dopamine around planning and tasks that are draining or boring, so reinforcement should reach the boring parts (planning, starting, small steps), not only completion. Build it in and test it; the evidence research found no direct efficacy data for gamification in adult ADHD apps.
-- Assistant targets and LLM providers: Claude and ChatGPT join Gemini, Grok and Siri as capture/voice targets and as swappable LLM providers. Grok's custom MCP connector support is confirmed by the author (in-car use unconfirmed). Cadence's own app should also offer a hands-free voice experience.
+- Assistant targets and LLM providers: capture/voice targets are Claude, Gemini and Grok (custom MCP connectors) plus Cadence's own app with a hands-free voice experience. ChatGPT and Siri integrations are skipped (author decision). Claude and OpenAI both stay possible swappable LLM providers behind Cadence's own AI layer. Grok's custom MCP connector support is confirmed by the author (in-car use unconfirmed).
 - Research findings live in `research/` next to this map (copied from the throwaway `research/*` branches).
 - Ticket files: `tickets/*.md`. Frontmatter: `type`, `status` (open|closed), `assignee`, `blocked-by`. Claim a ticket by setting `assignee` first. Frontier = open, unassigned, all `blocked-by` closed.
 
@@ -50,3 +50,4 @@ A build-ready **product spec** for Cadence as one calm app for basic todo, plann
 - Deep ingestion of Gmail, texts, Drive, Docs/Sheets and Maps timeline: opt-in integration modules for a later effort; this spec only leaves seams.
 - Notion / Trello / Google Keep sync: same, later modules.
 - Multi-user hosting and public release: later effort.
+- ChatGPT and Siri (Shortcuts, App Intents) as capture/voice integrations: author chose to skip them; the research stays on file for reference, and the capture endpoint stays generic enough to add them later without a redesign.
