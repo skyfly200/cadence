@@ -59,3 +59,7 @@ _Avoid_: Tab, page, panel
 **Capture surface**:
 The always-in-the-same-place spot where a Capture is typed or spoken, and where the user lands when returning after being away.
 _Avoid_: Quick add, input box
+
+**Tone setting**:
+The user's chosen way for the coach voice to speak: a gentle, plain or direct dial, a literal-only switch, and an opt-in playful switch.
+_Avoid_: Personality, persona, mode
