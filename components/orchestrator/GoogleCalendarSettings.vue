@@ -14,7 +14,11 @@
     </div>
 
     <div class="space-y-3 sm:space-y-4">
-      <div v-if="gcal.connected">
+      <div v-if="!store.signedIn" class="rounded-md border bg-muted/30 p-2.5">
+        <p class="text-[11px] text-muted-foreground">Sign in to connect Google Calendar. The connection is kept safely on the server, not in this browser, so it needs your account.</p>
+      </div>
+
+      <div v-else-if="gcal.connected">
         <div class="flex items-center gap-2 text-[11px] mb-2">
           <CheckCircle2 class="size-3.5 text-sky-500 shrink-0" />
           <span class="text-muted-foreground">Linked as <span class="font-medium text-foreground">{{ gcal.calendarEmail }}</span></span>
@@ -34,7 +38,7 @@
           <Button size="sm" class="h-7 text-[11px]" :disabled="syncing" @click="handleSync">
             <Loader2 v-if="syncing" class="size-3 animate-spin" /><RefreshCw v-else class="size-3" /> Sync now
           </Button>
-          <Button size="sm" variant="outline" class="h-7 text-[11px] text-destructive hover:text-destructive" @click="store.disconnectGoogleCalendar()">
+          <Button size="sm" variant="outline" class="h-7 text-[11px] text-destructive hover:text-destructive" @click="handleUnlink">
             <Unlink class="size-3" /> Unlink
           </Button>
         </div>
@@ -42,7 +46,7 @@
 
       <div v-else-if="gcal.hasCredentials" class="space-y-2">
         <p class="text-[11px] text-muted-foreground">Google Calendar API is configured. Click below to authorize access.</p>
-        <Button size="sm" class="h-7 text-[11px]" @click="store.connectGoogleCalendar()">
+        <Button size="sm" class="h-7 text-[11px]" @click="handleConnect">
           <Calendar class="size-3" /> Connect Google Calendar
         </Button>
       </div>
@@ -64,7 +68,9 @@
               <li>Set environment variables:
                 <code class="block bg-muted px-1.5 py-1 rounded mt-1 text-[10px] font-mono">
                   GOOGLE_CLIENT_ID=your-client-id<br />
-                  GOOGLE_CLIENT_SECRET=your-secret
+                  GOOGLE_CLIENT_SECRET=your-secret<br />
+                  CADENCE_TOKEN_KEY=32-byte-base64-key<br />
+                  SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
                 </code>
               </li>
               <li>Restart the app, then click Connect</li>
@@ -94,7 +100,7 @@
               <Button size="sm" variant="ghost" class="h-6 text-[10px] px-1.5 shrink-0" @click="copyRedirect"><Copy class="size-3" /></Button>
             </div>
           </div>
-          <p>Server needs <code class="font-mono">GOOGLE_CLIENT_ID</code> + <code class="font-mono">GOOGLE_CLIENT_SECRET</code>. If Google says the app isn’t verified, add your account under the consent screen’s Test users.</p>
+          <p>Server needs <code class="font-mono">GOOGLE_CLIENT_ID</code>, <code class="font-mono">GOOGLE_CLIENT_SECRET</code>, <code class="font-mono">CADENCE_TOKEN_KEY</code> and <code class="font-mono">SUPABASE_SERVICE_ROLE_KEY</code>. If Google says the app isn’t verified, add your account under the consent screen’s Test users.</p>
         </div>
       </details>
     </div>
@@ -121,9 +127,20 @@ function copyRedirect() {
   );
 }
 
+async function handleConnect() {
+  const ok = await store.connectGoogleCalendar();
+  if (!ok) toast({ title: 'Couldn\u2019t start the connection', description: 'Check that you\u2019re signed in and the server settings are in place, then try again.', variant: 'destructive' });
+}
+
+async function handleUnlink() {
+  const ok = await store.disconnectGoogleCalendar();
+  if (!ok) toast({ title: 'Couldn\u2019t unlink just now', description: 'Nothing was changed. Try again in a moment.', variant: 'destructive' });
+}
+
 onMounted(() => {
   redirectUri.value = `${window.location.origin}/api/google-calendar/callback`;
   store.loadGoogleCalendarStatus();
+  void store.refreshGoogleCalendarStatus();
   // Token capture happens on page load (pages/index.vue); if we just connected
   // and this panel is open, greet + sync.
   if (gcal.value.connected && !gcal.value.lastSyncAt) {

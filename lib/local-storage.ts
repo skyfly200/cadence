@@ -5,6 +5,7 @@
  */
 
 import { DEFAULT_CATEGORIES } from './types';
+import { DEFAULT_GCAL, sanitizeGoogleCalendar } from './gcal-status';
 
 export interface StoredData {
   tasks: TaskRow[];
@@ -122,11 +123,12 @@ export interface SettingsRow {
   transitApiKey?: string;
 }
 
+/**
+ * A local cache of the server's calendar connection status. It holds NO secrets:
+ * Google tokens live only on the server (encrypted) and never reach the browser.
+ */
 export interface GoogleCalendarRow {
   connected: boolean;
-  accessToken?: string | null;
-  refreshToken?: string | null;
-  tokenExpiresAt?: string | null;
   calendarEmail?: string | null;
   lastSyncAt?: string | null;
   autoSync?: boolean;
@@ -555,47 +557,18 @@ export function deleteProject(id: string): void {
 
 // ── Google Calendar operations ───────────────────────────────
 
-const DEFAULT_GCAL: GoogleCalendarRow = {
-  connected: false,
-  accessToken: null,
-  refreshToken: null,
-  tokenExpiresAt: null,
-  calendarEmail: null,
-  lastSyncAt: null,
-  autoSync: true,
-};
-
-/** Parse the OAuth `#gcal_tokens=` fragment (base64url JSON) and persist it. */
-export function captureGoogleOAuthTokens(hash: string): boolean {
-  const marker = '#gcal_tokens=';
-  if (typeof window === 'undefined' || !hash.startsWith(marker)) return false;
-  try {
-    let b64 = hash.slice(marker.length).replace(/-/g, '+').replace(/_/g, '/');
-    while (b64.length % 4) b64 += '=';
-    const t = JSON.parse(decodeURIComponent(escape(atob(b64))));
-    const existing = getGoogleCalendar();
-    saveGoogleCalendar({
-      ...existing,
-      connected: true,
-      accessToken: t.access_token,
-      refreshToken: t.refresh_token,
-      tokenExpiresAt: new Date(Date.now() + (t.expires_in ?? 3600) * 1000).toISOString(),
-      calendarEmail: t.calendar_email || existing.calendarEmail || null,
-      lastSyncAt: null,
-    });
-    return true;
-  } catch (e) {
-    console.error('Failed to capture Google OAuth tokens', e);
-    return false;
-  }
-}
-
+// Tokens are server-side only; this row is just a cache of the server's status
+// (connected, email) plus two local preferences. Any token left in localStorage
+// by an older version is scrubbed the first time the row is read.
 export function getGoogleCalendar(): GoogleCalendarRow {
-  return load<GoogleCalendarRow>(KEYS.googleCalendar, DEFAULT_GCAL);
+  const raw = load<unknown>(KEYS.googleCalendar, null);
+  const { row, hadTokens } = sanitizeGoogleCalendar(raw);
+  if (hadTokens) save(KEYS.googleCalendar, row);
+  return row;
 }
 
 export function saveGoogleCalendar(data: GoogleCalendarRow): void {
-  save(KEYS.googleCalendar, data);
+  save(KEYS.googleCalendar, sanitizeGoogleCalendar(data).row);
 }
 
 export function disconnectGoogleCalendar(): void {
@@ -695,6 +668,7 @@ export function exportAllData(): Record<string, unknown> {
     if (key && key.startsWith(STORAGE_PREFIX)) {
       const raw = localStorage.getItem(key);
       try { out[key] = raw ? JSON.parse(raw) : null; } catch { out[key] = raw; }
+      if (key === KEYS.googleCalendar) out[key] = sanitizeGoogleCalendar(out[key]).row;
     }
   }
   return out;
@@ -704,7 +678,8 @@ export function importAllData(data: Record<string, unknown>): void {
   if (typeof window === 'undefined') return;
   for (const [key, value] of Object.entries(data)) {
     if (!key.startsWith(STORAGE_PREFIX)) continue;
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota */ }
+    const v = key === KEYS.googleCalendar ? sanitizeGoogleCalendar(value).row : value;
+    try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* quota */ }
   }
 }
 

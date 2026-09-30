@@ -38,7 +38,7 @@ import {
   getCategories, saveCategories,
   exportAllData, importAllData,
   uid, nowISO,
-  type SettingsRow, type CapacityRow, type GoogleCalendarRow, type ActiveTimerRow,
+  type SettingsRow, type CapacityRow, type ActiveTimerRow,
 } from '~/lib/local-storage';
 
 async function fetchJSON<T>(url: string, init?: RequestInit): Promise<T> {
@@ -158,7 +158,7 @@ export const useAppStore = defineStore('app', () => {
       // Auto-refresh calendar so connecting actually surfaces events without
       // a manual Sync click (unless the user turned auto-sync off).
       const gc = getGoogleCalendarRow();
-      if (gc.accessToken && gc.autoSync !== false) void syncGoogleCalendar();
+      if (gc.connected && gc.autoSync !== false) void syncGoogleCalendar();
     } catch (e) {
       console.error('loadData failed', e);
     } finally {
@@ -907,10 +907,10 @@ export const useAppStore = defineStore('app', () => {
       sb.auth.onAuthStateChange((_event, sess) => {
         const was = !!session.value;
         session.value = sess ?? null;
-        if (sess && !was) void startSync();
-        if (!sess && was) stopSync();
+        if (sess && !was) { void startSync(); void calendarAfterSignIn(); }
+        if (!sess && was) { stopSync(); clearGoogleCalendar(); loadGoogleCalendarStatus(); }
       });
-      if (session.value) void startSync();
+      if (session.value) { void startSync(); void calendarAfterSignIn(); }
     } catch (e) {
       console.error('initAuth failed', e);
     } finally {
@@ -1246,82 +1246,86 @@ export const useAppStore = defineStore('app', () => {
     loadGoogleCalendarStatus();
   }
 
-  function connectGoogleCalendar() {
-    const cfg = useRuntimeConfig();
-    const clientId = cfg.public.googleClientId as string;
-    if (!clientId) {
-      console.error('Google Client ID not configured');
-      return;
-    }
-    const redirectUri = `${window.location.origin}/api/google-calendar/callback`;
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.email',
-      access_type: 'offline',
-      prompt: 'consent',
-    });
-    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+  // Google tokens live only on the server (encrypted). The browser sends its
+  // Supabase session as a Bearer token and only ever learns "connected" and the
+  // account email; calendar events come back through our own routes.
+  function gcalAuthHeaders(): Record<string, string> | null {
+    const token = session.value?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : null;
   }
 
-  function disconnectGoogleCalendar() {
+  /** Ask the server whether Calendar is connected and cache the answer locally. */
+  async function refreshGoogleCalendarStatus(): Promise<void> {
+    const headers = gcalAuthHeaders();
+    if (!headers) return;
+    try {
+      const s = await fetchJSON<{ configured: boolean; connected: boolean; email: string | null }>('/api/google-calendar/status', { headers });
+      persistGoogleCalendar({ ...getGoogleCalendarRow(), connected: s.connected, calendarEmail: s.email });
+    } catch (e) {
+      console.error('Google Calendar status check failed', e);
+    }
+    loadGoogleCalendarStatus();
+  }
+
+  /** After a session appears: learn the connection status, then auto-sync if the user wants it. */
+  async function calendarAfterSignIn() {
+    await refreshGoogleCalendarStatus();
+    const gc = getGoogleCalendarRow();
+    if (gc.connected && gc.autoSync !== false) await syncGoogleCalendar();
+  }
+
+  /** Start the Google consent flow. Needs a signed-in session; returns false if it could not start. */
+  async function connectGoogleCalendar(): Promise<boolean> {
+    const headers = gcalAuthHeaders();
+    if (!headers) return false;
+    try {
+      const { url } = await fetchJSON<{ url: string }>('/api/google-calendar/start', { method: 'POST', headers });
+      window.location.href = url;
+      return true;
+    } catch (e) {
+      console.error('Could not start the Google Calendar connection', e);
+      return false;
+    }
+  }
+
+  /** Delete the server's copy of the tokens (and revoke at Google), then clear the local cache. */
+  async function disconnectGoogleCalendar(): Promise<boolean> {
+    const headers = gcalAuthHeaders();
+    if (headers) {
+      try {
+        await fetchJSON('/api/google-calendar/disconnect', { method: 'POST', headers });
+      } catch (e) {
+        console.error('Could not disconnect Google Calendar', e);
+        return false;
+      }
+    }
     clearGoogleCalendar();
     loadGoogleCalendarStatus();
+    return true;
   }
 
   async function syncGoogleCalendar(date?: string): Promise<{ synced: number; total: number; filtered: number } | undefined> {
     const gc = getGoogleCalendarRow();
-    if (!gc.accessToken) return undefined;
-
-    let accessToken = gc.accessToken;
-    if (gc.tokenExpiresAt && gc.refreshToken) {
-      const expiresAt = new Date(gc.tokenExpiresAt).getTime();
-      if (Date.now() > expiresAt - 60_000) {
-        try {
-          const refreshed = await fetchJSON<{ access_token: string; expires_in: number }>(
-            '/api/google-calendar/refresh',
-            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: gc.refreshToken }) },
-          );
-          accessToken = refreshed.access_token;
-          const newGc: GoogleCalendarRow = {
-            ...gc,
-            accessToken: refreshed.access_token,
-            tokenExpiresAt: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
-          };
-          persistGoogleCalendar(newGc);
-        } catch (e) {
-          console.error('Token refresh failed', e);
-          return undefined;
-        }
-      }
-    }
+    const headers = gcalAuthHeaders();
+    if (!gc.connected || !headers) return undefined;
 
     const dateParam = date ?? todayKey();
     const startOfDay = new Date(`${dateParam}T00:00:00`);
     const endOfDay = new Date(`${dateParam}T23:59:59`);
     try {
-      const params = new URLSearchParams({
-        timeMin: startOfDay.toISOString(),
-        timeMax: endOfDay.toISOString(),
-        singleEvents: 'true',
-        orderBy: 'startTime',
-        maxResults: '50',
-      });
-      const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!r.ok) throw new Error(`Calendar API: ${r.status}`);
-      const data = await r.json();
-      const events = data.items ?? [];
+      const params = new URLSearchParams({ timeMin: startOfDay.toISOString(), timeMax: endOfDay.toISOString() });
+      const { items } = await fetchJSON<{ items: { summary: string; start: string | null; end: string | null; colorId: string | null }[] }>(
+        `/api/google-calendar/events?${params}`,
+        { headers },
+      );
 
       deleteExternalEventsForDate(dateParam);
 
       let synced = 0;
-      for (const event of events) {
-        if (!event.start?.dateTime || !event.end?.dateTime) continue;
-        const startTime = new Date(event.start.dateTime);
-        const endTime = new Date(event.end.dateTime);
+      for (const event of items) {
+        if (!event.start || !event.end) continue;
+        const startTime = new Date(event.start);
+        const endTime = new Date(event.end);
         if (startTime < startOfDay || endTime > endOfDay) continue;
         addTimeBlock({
           title: event.summary || '(No title)',
@@ -1337,9 +1341,11 @@ export const useAppStore = defineStore('app', () => {
       persistGoogleCalendar({ ...getGoogleCalendarRow(), lastSyncAt: nowISO() });
       timeBlocks.value = loadAll().timeBlocks as TimeBlock[];
       loadGoogleCalendarStatus();
-      return { synced, total: events.length, filtered: events.length - synced };
+      return { synced, total: items.length, filtered: items.length - synced };
     } catch (e) {
       console.error('syncGoogleCalendar failed', e);
+      // 409 means the server has no usable tokens (never connected, or Google revoked them).
+      if (e instanceof Error && e.message.endsWith(': 409')) void refreshGoogleCalendarStatus();
       return undefined;
     }
   }
@@ -1366,7 +1372,7 @@ export const useAppStore = defineStore('app', () => {
     createTrip, updateTrip, deleteTrip, addSegment, updateSegment, deleteSegment, moveSegment, segLabel, scheduleTripDay,
     categoryNames, categoryColor, createCategory, updateCategory, deleteCategory,
     awardPoints, computeDailyScore, recordPlanningActivity,
-    loadGoogleCalendarStatus, connectGoogleCalendar, disconnectGoogleCalendar, syncGoogleCalendar, setGcalAutoSync,
+    loadGoogleCalendarStatus, refreshGoogleCalendarStatus, connectGoogleCalendar, disconnectGoogleCalendar, syncGoogleCalendar, setGcalAutoSync,
     setNotificationPrefs, enableNotifications,
     // account / sync
     session, user, signedIn, authReady, syncStatus, syncError,
