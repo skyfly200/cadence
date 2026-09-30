@@ -107,7 +107,7 @@ export default defineNuxtConfig({
       supabaseAnonKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_5mdrxPgP4XBxsbIh2t1jQg_eqvTSuKM',
       // Where auth emails/OAuth send users back to (must be allow-listed in
       // Supabase Auth → URL Configuration). Local dev keeps its own origin.
-      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://cadencetodo.netlify.app',
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://cadence.skylerfly.com',
     },
   },
 
