@@ -103,3 +103,23 @@ _Avoid_: Dashboard, landing page
 **Density setting**:
 The user's choice of how much detail screens show: Simple, Balanced (default) or Rich.
 _Avoid_: Theme, view mode, compact mode
+
+**Kept**:
+A logged Occurrence that counts as honoured: a habit logged, a Commitment finished, a Start pressed. Progress, tallies and the Garden are built from what was kept, never from what was missed.
+_Avoid_: Points, score, XP, streak
+
+**Slog**:
+A user tag on something draining or boring, which earns a bigger reward and a two-minute "just start" ritual.
+_Avoid_: Hard task, difficulty level
+
+**Garden**:
+The small illustrated collection that grows as things are kept: habits become plants, kept periods become blooms, goals become trees. It never wilts, shrinks or shows neglect, and its flowers glow softly in dark mode.
+_Avoid_: Score, level, badge collection
+
+**Season**:
+A calendar quarter. At the turn of each Season the Garden rests on the calendar alone, never because of activity: most growth fades into soil and a few plants are pressed into the Pressed book, while perennials (goals and longer-period Habits) persist.
+_Avoid_: Reset, wipe, cycle
+
+**Pressed book**:
+The archive of plants pressed at each Season turn, so nothing the user did is lost.
+_Avoid_: History, archive, trophy case
