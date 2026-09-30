@@ -45,3 +45,17 @@ Round 1 decisions above stand. Round 2 (all recommendations accepted):
 Standing tensions to carry forward (the author's choices, not evidence-led): motion defaults to the current, busier level with a toggle, and sound defaults on at a gentle volume; the design-evidence research supports sensory controls, so the toggle and mute must be easy to find. What plays and when is decided by the Nudge and audio system ticket.
 
 Consequences for the current Nuxt app (`pages/index.vue`): the nine-tab bar, count badges, 9-11px text, pulsing footer dot, blurred full-screen loading overlay and confirm/destructive-styled dialogs all conflict with these principles; the Keep/cut audit judges the rest against them.
+
+## Amendment (author: "the calm and quiet is a bit too extreme; simple yet not overly minimal")
+
+All recommendations accepted. These supersede the matching decisions above; everything not listed still stands (fixed anatomy, no red-for-late, none of the shame words, undo instead of confirm dialogs, 16px text and 44px targets, four lenses behind one fixed frame, one capture control that opens a conversation sheet, silent rollover to the Parking lot).
+
+- **Home (replaces "a single Now card only"):** the Now card plus a light strip of what is coming next (about three items) and a small row of today's habits. It reads as a day, not one item. The Now card remains the primary thing.
+- **Numbers (replaces "no counts anywhere"):** progress that celebrates is allowed: "3 of 5 done today", a filling ring, weekly totals, a goal moving forward. Counts of what is left over, late or piling up stay banned (overdue, backlog size, unread badges). Rationale: the reward loop needs visible progress, and only "behind" numbers cause guilt.
+- **Colour and personality (replaces "one calm accent colour"):** a richer but soft palette: a distinct hue per Lens or kind of thing, warm neutrals, friendly icons and light illustration, moderate saturation, no alarm reds. The line to hold is no clutter, not no colour.
+- **Navigation (clarifies the fixed switcher):** a visible bottom bar with the four Lenses labelled and the capture button in the middle, always in the same place.
+- **Items per Lens (replaces 3 to 5):** 5 to 7 by default with a quiet "more", still no auto-reordering.
+- **Coming back after a break (replaces the empty capture surface):** the normal home screen with a warm one-line greeting on top and the parked things a tap away. Nothing is marked missed, but the day is visible.
+- **Density setting (new):** Simple, Balanced (default) and Rich, on the settings page. Balanced is what is described above; Simple is the original stricter ticket 01 version; Rich adds more detail.
+
+Consequences: the prototypes ticket must show all three densities side by side; the habit-reinforcement ticket now has visible progress to work with; the two stretch points in the audio ticket (briefing opened to read, habit list) now fit inside the 5 to 7 item rule and are easier to accept, but should still be tested.

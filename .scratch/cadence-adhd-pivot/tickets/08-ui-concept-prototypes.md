@@ -11,3 +11,5 @@ parent: map.md
 What should Cadence look and feel like? Produce 2-3 radically different rough UI concepts (now-view, capture, parking lot, conversation, receded state) to react to, and pick a direction.
 
 Input (from the closed Nudge and audio system ticket): the prototypes should show a nudge (with "Not now" and "Stop these"), the morning briefing opened as a Today lens, the habit summary list, and the mute control, so the two choices that stretch the one-calm-thing rule can be reacted to.
+
+Input (from the amendment to Sensory and interaction principles): the author found the original rules too extreme ("simple yet not overly minimal"). Prototype the Home (Now card, a strip of what is coming, a habit row), the visible bottom bar, the richer soft palette with light illustration, celebratory progress numbers, and show all three densities (Simple, Balanced, Rich) side by side so the author can react to real screens.

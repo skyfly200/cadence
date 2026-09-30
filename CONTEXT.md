@@ -73,21 +73,29 @@ A conversational review where Cadence shows what it organized since last time an
 _Avoid_: Weekly review, triage
 
 **Recede**:
-Cadence's behaviour when the user goes quiet: it shrinks to a notepad and never guilts them.
+Cadence's behaviour when the user goes quiet: it stops nudging, silently moves unfinished items to the Parking lot, and never guilts them; on return the normal Home shows under a warm greeting.
 _Avoid_: Streak loss, overdue
 
 **Now card**:
-The single next thing Cadence shows by default, with a way to start it, put it off, or park it.
+The primary thing on Home: the single next thing Cadence suggests, with a way to start it, put it off, or park it.
 _Avoid_: Dashboard, today list, task card
 
 **Lens**:
-One of the few views (Now, Today, Habits, Goals) reachable through a single fixed switcher; only one is visible at a time.
+One of four views (Now, Today, Habits, Goals) reachable through a fixed, visible bottom bar; only one is shown at a time.
 _Avoid_: Tab, page, panel
 
 **Capture surface**:
-The always-in-the-same-place spot where a Capture is typed or spoken, and where the user lands when returning after being away.
+The always-in-the-same-place control, in the middle of the bottom bar, where a Capture is typed or spoken.
 _Avoid_: Quick add, input box
 
 **Tone setting**:
 The user's chosen way for the coach voice to speak: a gentle, plain or direct dial, a literal-only switch, and an opt-in playful switch.
 _Avoid_: Personality, persona, mode
+
+**Home**:
+The default screen: the Now card, a light strip of what is coming next, and a small row of today's habits. It is also where the user lands after being away, under a warm one-line greeting.
+_Avoid_: Dashboard, landing page
+
+**Density setting**:
+The user's choice of how much detail screens show: Simple, Balanced (default) or Rich.
+_Avoid_: Theme, view mode, compact mode
