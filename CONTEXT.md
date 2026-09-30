@@ -93,7 +93,7 @@ The user's chosen way for the coach voice to speak: a gentle, plain or direct di
 _Avoid_: Personality, persona, mode
 
 **Home**:
-The default screen: the Now card, a light strip of what is coming next, and a small row of today's habits. It is also where the user lands after being away, under a warm one-line greeting.
+The default screen: the Now card, a light strip of what is coming next, and a small habits summary that opens the Habits lens. It is also where the user lands after being away, under a warm one-line greeting.
 _Avoid_: Dashboard, landing page
 
 **Density setting**:

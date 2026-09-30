@@ -33,3 +33,10 @@ Left open: how a long or half-formed Capture turns into a conversation (variant 
 Not verified: the browser extension could not drive the localhost page, so the layouts and the dark scheme were checked only by rendering each variant at each density without errors, not by screenshot. The author reviewed the running prototype themselves.
 
 Build note (out of scope for this map): folding variant D into the real Home page and rewriting it properly (the prototype was written without tests or error handling) is implementation work for the roadmap.
+
+## Addendum (author reviewed the Blend)
+
+- Balanced is confirmed as the default density.
+- Habits display is simplified: a small piece on Now ("Habits · 3 of 5 today", opening the Habits lens) and the full list only on the Habits lens.
+- The morning briefing is too much: the briefing note is removed from the Today lens and the nudge is dropped from the defaults (opt-in only). The habit list is fine and stays.
+- Prototype commit: "PROTOTYPE: compact habits piece on Home, drop morning briefing note" on prototype/ui-concepts.

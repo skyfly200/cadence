@@ -19,3 +19,5 @@ Input (from the closed Sensory and interaction principles ticket): celebration a
 Input (from the closed Nudge and audio system ticket): audio defaults are a short soft tone with text at low volume plus spoken voice from the browser while the app is open; any celebration sound or speech follows the same mute, quiet hours and first-run disclosure; a daily habit summary already exists as a list of open habit names with no count.
 
 Input (from the amendment to Sensory and interaction principles): visible progress is now allowed ("3 of 5 done", rings, weekly totals, goal progress; never leftover, late or backlog counts), the palette is richer with light illustration, and Lenses show 5 to 7 items. Design reinforcement moments with those materials.
+
+Input (from the amendments after the prototype review): Home shows habits only as a small "Habits · 3 of 5 today" line; the full list, week dots and detail live on the Habits lens; the daily habit summary nudge stays a default (a list of open habit names, no count).

@@ -44,3 +44,9 @@ Summary of the whole ticket: five nudge kinds (Leave-by, At-risk Background, Tra
 Tensions to remember (author's choices): voice and two extra nudges are on by default while the evidence supports sensory control, not a startle case, so the mute, per-type "Stop these" and quiet hours must be easy to find; Q10 and Q11 stretch the one-calm-thing and no-lists rules from ticket 01 and need to be tested for how they feel.
 
 Note (from the amendment to Sensory and interaction principles): Lenses now show 5 to 7 items and celebratory progress numbers are allowed, so the opened briefing and the habit list fit inside the rules; still test how they feel.
+
+## Amendment (author reviewed the prototype)
+
+- **Morning briefing removed from the defaults:** the author found it too much. It is now an opt-in nudge that is off by default (say so if it should be deleted outright). The Today lens no longer opens with a briefing note.
+- **Habit list kept:** the daily habit summary (a list of open habit names, no count) stays a default nudge.
+- **Default nudge kinds:** four: Leave-by / start-by, At-risk Background, Transition, and the daily habit summary. The cap of five a day covers the first three; the habit summary sits outside it, once a day, so the worst case is six interruptions a day.

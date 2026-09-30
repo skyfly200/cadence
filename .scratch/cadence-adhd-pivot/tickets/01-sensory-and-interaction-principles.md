@@ -59,3 +59,8 @@ All recommendations accepted. These supersede the matching decisions above; ever
 - **Density setting (new):** Simple, Balanced (default) and Rich, on the settings page. Balanced is what is described above; Simple is the original stricter ticket 01 version; Rich adds more detail.
 
 Consequences: the prototypes ticket must show all three densities side by side; the habit-reinforcement ticket now has visible progress to work with; the two stretch points in the audio ticket (briefing opened to read, habit list) now fit inside the 5 to 7 item rule and are easier to accept, but should still be tested.
+
+## Amendment 2 (author reviewed the prototype)
+
+- **Habits on Home:** only a small piece: a compact "Habits · 3 of 5 today" line that opens the Habits lens. The full habit list, the seven-dot week and the tiles live on the Habits lens only. This replaces the earlier "small row of today's habits" on Home.
+- **Density:** Balanced is confirmed as the default.
