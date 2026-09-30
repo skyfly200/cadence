@@ -18,14 +18,16 @@ export interface GcalContext {
 export function gcalContext(event: H3Event): { ok: true; ctx: GcalContext } | { ok: false; missing: string[] } {
   const cfg = useRuntimeConfig(event);
   const missing: string[] = [];
-  const clientId = String(cfg.googleClientId || '');
-  const clientSecret = String(cfg.googleClientSecret || '');
-  const serviceRoleKey = String(cfg.supabaseServiceRoleKey || '');
+  // Env vars are also read at runtime: Nuxt bakes process.env into runtimeConfig at build time, so a variable
+  // added in Vercel after the last build would otherwise be missed until a rebuild.
+  const clientId = String(cfg.googleClientId || process.env.GOOGLE_CLIENT_ID || '');
+  const clientSecret = String(cfg.googleClientSecret || process.env.GOOGLE_CLIENT_SECRET || '');
+  const serviceRoleKey = String(cfg.supabaseServiceRoleKey || process.env.SUPABASE_SERVICE_ROLE_KEY || '');
   const supabaseUrl = String(cfg.public.supabaseUrl || '');
   if (!clientId || !clientSecret) missing.push('GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET');
   if (!serviceRoleKey) missing.push('SUPABASE_SERVICE_ROLE_KEY');
   let key: Buffer | null = null;
-  try { key = parseKey(String(cfg.cadenceTokenKey || '')); } catch { missing.push('CADENCE_TOKEN_KEY'); }
+  try { key = parseKey(String(cfg.cadenceTokenKey || process.env.CADENCE_TOKEN_KEY || '')); } catch { missing.push('CADENCE_TOKEN_KEY'); }
   if (missing.length || !key) return { ok: false, missing };
   return { ok: true, ctx: { clientId, clientSecret, key, vault: createTokenVault(createSupabaseTokenStore(supabaseUrl, serviceRoleKey), key) } };
 }

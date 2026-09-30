@@ -1275,16 +1275,19 @@ export const useAppStore = defineStore('app', () => {
   }
 
   /** Start the Google consent flow. Needs a signed-in session; returns false if it could not start. */
-  async function connectGoogleCalendar(): Promise<boolean> {
+  async function connectGoogleCalendar(): Promise<{ ok: true } | { ok: false; reason: 'signed_out' | 'unauthorized' | 'not_configured' | 'failed' }> {
     const headers = gcalAuthHeaders();
-    if (!headers) return false;
+    if (!headers) return { ok: false, reason: 'signed_out' };
     try {
       const { url } = await fetchJSON<{ url: string }>('/api/google-calendar/start', { method: 'POST', headers });
       window.location.href = url;
-      return true;
+      return { ok: true };
     } catch (e) {
       console.error('Could not start the Google Calendar connection', e);
-      return false;
+      const status = /: (\d{3})$/.exec(String((e as Error)?.message ?? ''))?.[1];
+      if (status === '401') return { ok: false, reason: 'unauthorized' };
+      if (status === '503') return { ok: false, reason: 'not_configured' };
+      return { ok: false, reason: 'failed' };
     }
   }
 

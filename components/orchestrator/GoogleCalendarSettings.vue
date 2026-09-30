@@ -128,8 +128,15 @@ function copyRedirect() {
 }
 
 async function handleConnect() {
-  const ok = await store.connectGoogleCalendar();
-  if (!ok) toast({ title: 'Couldn\u2019t start the connection', description: 'Check that you\u2019re signed in and the server settings are in place, then try again.', variant: 'destructive' });
+  const r = await store.connectGoogleCalendar();
+  if (r.ok) return;
+  const why: Record<string, string> = {
+    signed_out: 'Sign in first, then connect Calendar.',
+    unauthorized: 'The server could not confirm your sign-in. Sign out and back in, then try again.',
+    not_configured: 'The server settings for Calendar are not all in place yet.',
+    failed: 'Something went wrong starting the connection. Try again in a moment.',
+  };
+  toast({ title: 'Couldn\u2019t start the connection', description: why[r.reason], variant: 'destructive' });
 }
 
 async function handleUnlink() {
