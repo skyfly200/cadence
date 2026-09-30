@@ -50,7 +50,7 @@ A build-ready **product spec** for Cadence as one calm app for basic todo, plann
 - **Spec assembly**: pulling the decisions into the single build-ready spec document.
 - **Conditions on Things**: states such as "the car has room" or "phone charged", which the v1 model deliberately leaves out (dependencies are expressed as *requires* Links between Commitments); revisit if real use shows the need.
 - **Now card selection logic**: how Cadence chooses the one next thing (deadlines, energy, dependencies) and explains it in one line; depends on the Life graph model and the coach persona.
-- **Conversation sheet behaviour**: the entry point is settled (a "Talk it through" chip on the capture sheet turns the sheet into a conversation in place). What the conversation does (extracting Nodes and Links, when it offers to add to a checklist or park, how it ends) is still open; depends on the capture channels and the coach persona.
+- **Conversation sheet behaviour**: the entry point is settled (a "Discuss" button on the capture sheet turns the sheet into a conversation in place). What the conversation does (extracting Nodes and Links, when it offers to add to a checklist or park, how it ends) is still open; depends on the capture channels and the coach persona.
 - **Crisis-language handling details**: how crisis or self-harm language is detected, and which resources it points to by region; the principle is settled (drop the coach voice, respond simply, point to real help); depends on the architecture and trust model.
 - **Planning session flow**: the conversational weekly decompression; depends on graph model and coach persona.
 - **Body-double presence beyond audio**: ambient/visual presence; depends on sensory principles and audio system.

@@ -52,3 +52,7 @@ The Blend's Habits lens now shows habits grouped by recurrence period (Every day
 ## Completed
 
 The prototype is finished and captured: final commit "PROTOTYPE: add every-4-months and every-6-months habit periods" on the throwaway branch `prototype/ui-concepts` (the primary source; not for main). The dev server was stopped. Folding variant D into the real Home page (and rewriting it properly, since the prototype has no tests or error handling) is implementation work for the roadmap.
+
+## Label update (author)
+
+The capture sheet's two buttons use the text **Add** (replaces "Park it") and **Discuss** (replaces "Talk it through"; the author wrote "discus", read as "Discuss"). The Now card's **Park** button is a different action and keeps its name. Prototype commit: "PROTOTYPE: capture sheet buttons are now Add and Discuss" on prototype/ui-concepts.

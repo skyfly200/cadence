@@ -2,7 +2,7 @@
 title: Habit formation and reinforcement
 type: grilling
 status: open
-assignee:
+assignee: skyler
 blocked-by: [01-sensory-and-interaction-principles, 02-coach-role-and-persona]
 parent: map.md
 ---
