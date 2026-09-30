@@ -69,3 +69,5 @@ Consequences: the prototypes ticket must show all three densities side by side; 
 
 - **Home habits piece (clarifies Amendment 2):** "Habits · 1 of 3 today" counts only day-period habits; longer-period habits appear on the Habits lens only, grouped by period.
 - **Capture sheet button labels (author):** the sheet's two buttons read **Add** and **Discuss**. The Now card keeps Start, Not now and Park.
+
+- **Depth on demand (from the keep/cut audit, author):** Cadence handles the obvious automatically, and the user can go deeper by choice. A "Go deeper" entry in the Today lens (assumed) opens optional planning views (a simplified timeline, an Eisenhower matrix, and Trips and Map when that module is on); none of them is required, none is a fifth Lens, and none appears on Home by default.
