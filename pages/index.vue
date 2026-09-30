@@ -144,7 +144,6 @@ import {
   Moon, Sun, Sparkles, Mic, Flame, NotebookPen, Undo2, Redo2, DownloadCloud, Map as MapIcon, Route as RouteIcon, UserRound,
 } from 'lucide-vue-next';
 import { useAppStore } from '~/stores/app';
-import { captureGoogleOAuthTokens } from '~/lib/local-storage';
 import { useReminders } from '~/composables/useReminders';
 import { useInstallPrompt } from '~/composables/useInstallPrompt';
 import { useToast } from '~/composables/useToast';
@@ -202,20 +201,22 @@ function onKey(e: KeyboardEvent) {
 }
 
 onMounted(() => {
-  // Handle the Google OAuth redirect here (not in the collapsed Settings
-  // panel) so returning from Google always registers — or reports failure.
-  if (captureGoogleOAuthTokens(window.location.hash)) {
-    window.history.replaceState({}, '', '/');
-    toast({ title: 'Google Calendar connected', description: 'Syncing your events…' });
-  }
-  const gcalError = new URLSearchParams(window.location.search).get('gcal_error');
+  // Google sends the user back here with ?gcal_connected=1 or ?gcal_error=...
+  // (never with tokens: those stay on the server). Handled here, not in the
+  // collapsed Settings panel, so returning from Google always registers.
+  const query = new URLSearchParams(window.location.search);
+  const gcalConnected = query.get('gcal_connected') === '1';
+  if (gcalConnected) window.history.replaceState({}, '', '/');
+  const gcalError = query.get('gcal_error');
   if (gcalError) {
     const map: Record<string, string> = {
-      redirect_uri_mismatch: 'Redirect URI doesn’t match the one registered in Google Cloud.',
-      invalid_grant: 'The sign-in code expired or was already used — try connecting again.',
+      redirect_uri_mismatch: 'Redirect URI doesn\u2019t match the one registered in Google Cloud.',
+      invalid_grant: 'The sign-in code expired or was already used \u2014 try connecting again.',
       access_denied: 'You declined access on Google.',
-      no_credentials: 'Server is missing GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.',
-      no_code: 'Google didn’t return an authorization code.',
+      no_credentials: 'The server is missing its Google or token-encryption settings (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, CADENCE_TOKEN_KEY, SUPABASE_SERVICE_ROLE_KEY).',
+      no_code: 'Google didn\u2019t return an authorization code.',
+      bad_state: 'That connection attempt expired or didn\u2019t start here \u2014 try connecting again.',
+      no_refresh_token: 'Google didn\u2019t grant offline access \u2014 try again and accept every permission.',
     };
     toast({ title: 'Calendar connection failed', description: map[gcalError] ?? gcalError.replace(/_/g, ' '), variant: 'destructive' });
     window.history.replaceState({}, '', '/');
@@ -223,7 +224,11 @@ onMounted(() => {
   store.loadData();
   store.loadSettings();
   store.loadGoogleCalendarStatus();
-  void store.initAuth(); // restore any signed-in session and start syncing
+  // Restores any signed-in session and starts syncing; that also refreshes the
+  // calendar connection status and auto-syncs events for a signed-in user.
+  void store.initAuth().then(() => {
+    if (gcalConnected) toast({ title: 'Google Calendar connected', description: 'Syncing your events\u2026' });
+  });
   window.addEventListener('keydown', onKey);
 });
 onUnmounted(() => window.removeEventListener('keydown', onKey));

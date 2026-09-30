@@ -97,6 +97,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     googleClientId: process.env.GOOGLE_CLIENT_ID || '',
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    // Server-only (never in `public`): encrypts Google tokens at rest and lets the
+    // server write the token table that clients cannot access.
+    cadenceTokenKey: process.env.CADENCE_TOKEN_KEY || '',
+    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     public: {
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '',
       supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || 'https://wgdjwzlqvpvltedzasga.supabase.co',
