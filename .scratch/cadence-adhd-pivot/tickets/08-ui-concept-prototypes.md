@@ -48,3 +48,7 @@ Build note (out of scope for this map): folding variant D into the real Home pag
 ## Addendum 3
 
 The Blend's Habits lens now shows habits grouped by recurrence period (Every day, Each week, Each month, Each quarter, Each year), each tile with one dot per target count and a "2 of 3 this week" label; tapping logs one occurrence, and tapping past the target undoes back to zero. Home's small piece counts only day-period habits. Prototype commit: "PROTOTYPE: habit recurrence periods on the Habits lens" on prototype/ui-concepts.
+
+## Completed
+
+The prototype is finished and captured: final commit "PROTOTYPE: add every-4-months and every-6-months habit periods" on the throwaway branch `prototype/ui-concepts` (the primary source; not for main). The dev server was stopped. Folding variant D into the real Home page (and rewriting it properly, since the prototype has no tests or error handling) is implementation work for the roadmap.

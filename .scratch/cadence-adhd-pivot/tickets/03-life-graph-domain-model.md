@@ -51,3 +51,7 @@ The author wants habits to recur at these frequencies: multiple times a day, onc
 - **Longer-period habits stay off Home.** Only day-period habits (and anything pinned to today) count in Home's small "Habits · 1 of 3 today" line and in the daily habit summary. Weekly, monthly, quarterly and annual habits live on the Habits lens, grouped by period with their period progress ("1 of 3 this week", "0 of 1 this quarter"). A longer-period habit surfaces gently just once in the final stretch of its period if it is still open (the At-risk rule applied to habits), and is dropped without comment after the period closes.
 - **Existing habits** (daily or weekly with a days list) are not migrated (start fresh); the days list becomes optional pinning.
 - **Left for the habit-reinforcement ticket:** what a met week, month, quarter or year feels like, and how progress is celebrated across periods.
+
+### Amendment 2: two more periods (author request)
+
+Habit periods are now: day, week, month, quarter, **every 4 months**, **every 6 months**, and year. The new presets are every 4 months x1 and every 6 months x1 (a count of two or more is allowed on either). Both are calendar-based like the others: every 4 months means the thirds of the year (January to April, May to August, September to December) and every 6 months means the halves (January to June, July to December). Everything else in the recurrence amendment applies unchanged: flexible by default, optional pinning, quiet close of each period, and only day-period habits on Home.

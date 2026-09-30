@@ -29,7 +29,7 @@ A recurring behaviour the user is building or keeping, defined by a Period and a
 _Avoid_: Routine, recurring task
 
 **Period**:
-The calendar window a Habit is counted within: a day, week, month, quarter or year. A new Period starts fresh and the previous one closes quietly, never as a failure.
+The calendar window a Habit is counted within: a day, week, month, quarter, four-month span, half-year or year. A new Period starts fresh and the previous one closes quietly, never as a failure.
 _Avoid_: Cadence, frequency, streak window
 
 **Commitment**:

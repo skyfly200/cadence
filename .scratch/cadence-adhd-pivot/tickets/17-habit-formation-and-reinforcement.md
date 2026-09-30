@@ -23,3 +23,5 @@ Input (from the amendment to Sensory and interaction principles): visible progre
 Input (from the amendments after the prototype review): Home shows habits only as a small "Habits · 3 of 5 today" line; the full list, week dots and detail live on the Habits lens; the daily habit summary nudge stays a default (a list of open habit names, no count).
 
 Input (from the Habit recurrence amendment on the Life graph ticket): habits have a period (day, week, month, quarter, year) and a target count, calendar-based, flexible by default with optional pinning; only day-period habits show on Home and in the daily summary; longer periods live on the Habits lens grouped by period. This ticket decides what a met period feels like, how progress is celebrated across periods (streaks that can die stay ruled out), and how a closed period is handled (quietly, no failure mark).
+
+Note: habit periods are day, week, month, quarter, every 4 months, every 6 months and year (calendar-based); reinforcement has to make sense across all seven.
