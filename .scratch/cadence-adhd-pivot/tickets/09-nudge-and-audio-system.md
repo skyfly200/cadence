@@ -50,3 +50,5 @@ Note (from the amendment to Sensory and interaction principles): Lenses now show
 - **Morning briefing removed from the defaults:** the author found it too much. It is now an opt-in nudge that is off by default (say so if it should be deleted outright). The Today lens no longer opens with a briefing note.
 - **Habit list kept:** the daily habit summary (a list of open habit names, no count) stays a default nudge.
 - **Default nudge kinds:** four: Leave-by / start-by, At-risk Background, Transition, and the daily habit summary. The cap of five a day covers the first three; the habit summary sits outside it, once a day, so the worst case is six interruptions a day.
+
+Note (from the Habit recurrence amendment): the daily habit summary lists only day-period habits (and anything pinned to today). A weekly, monthly, quarterly or annual habit that is still open gets at most one gentle mention in the final stretch of its period, and none after the period closes. These count toward the habit summary's once-a-day limit rather than adding new nudges.

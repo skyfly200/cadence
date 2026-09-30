@@ -40,3 +40,14 @@ Worked example (House of Fire): a Commitment ("House of Fire", Saturday 8pm) is 
 Left for other tickets: where the data lives and the store (Architecture and storage), how Now card selection uses the graph (fog), what may be read and stored (Trust and transparency model).
 
 Migration consequences for the existing Nuxt app (input to the Keep/cut audit): `Task` becomes Commitment (its `location`, coordinates, `deadline`, `windowStart` and `windowEnd` become Commitment properties; `dependsOn` becomes *requires* Links; `dirty`, `needsClean` and `isHygiene` become *requires* Links); `Project` becomes Goal; `Habit` stays Habit (completions become Occurrences); anchors (meals, water, sleep) become Background Habits; `BrainDumpEntry` becomes Idea; `Trip` and its segments need a decision.
+
+## Amendment: Habit recurrence (author requirement, all recommendations accepted)
+
+The author wants habits to recur at these frequencies: multiple times a day, once a day, multiple times a week, weekly, multiple times a month, monthly, quarterly, annually.
+
+- **One uniform model: a period plus a target count.** The periods are day, week, month, quarter and year; the target count is one or more per period. The author's eight options are presets (day x2 or more, day x1, week x2 or more, week x1, month x2 or more, month x1, quarter x1, year x1). Quarterly and annual habits may also take a count of two or more. Each completion is one logged Occurrence with a time, so "stretch three times a day" logs three events; late logging is allowed; logging past the target undoes back to zero.
+- **Flexible by default, optional pinning.** A habit can happen on any day in its period. It can optionally be pinned to certain weekdays or to times of day (for a multi-daily habit, for example morning and evening).
+- **Calendar periods.** The calendar week, month, quarter and year; the week's first day comes from settings (default Monday). A new period starts fresh and the old one is closed quietly with no failure mark.
+- **Longer-period habits stay off Home.** Only day-period habits (and anything pinned to today) count in Home's small "Habits · 1 of 3 today" line and in the daily habit summary. Weekly, monthly, quarterly and annual habits live on the Habits lens, grouped by period with their period progress ("1 of 3 this week", "0 of 1 this quarter"). A longer-period habit surfaces gently just once in the final stretch of its period if it is still open (the At-risk rule applied to habits), and is dropped without comment after the period closes.
+- **Existing habits** (daily or weekly with a days list) are not migrated (start fresh); the days list becomes optional pinning.
+- **Left for the habit-reinforcement ticket:** what a met week, month, quarter or year feels like, and how progress is celebrated across periods.

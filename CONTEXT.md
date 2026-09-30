@@ -25,8 +25,12 @@ An outcome the user wants, which may contain other Goals (sub-goals and mileston
 _Avoid_: Project, milestone (as separate kinds)
 
 **Habit**:
-A recurring behaviour the user is building or keeping; it receives reinforcement.
+A recurring behaviour the user is building or keeping, defined by a Period and a target count per Period (for example three times a week, or once a quarter); it receives reinforcement.
 _Avoid_: Routine, recurring task
+
+**Period**:
+The calendar window a Habit is counted within: a day, week, month, quarter or year. A new Period starts fresh and the previous one closes quietly, never as a failure.
+_Avoid_: Cadence, frequency, streak window
 
 **Commitment**:
 Something to do or attend, with or without a time. A todo and an event are both Commitments; a fixed-time repeat obligation is a recurring Commitment.

@@ -44,3 +44,7 @@ Build note (out of scope for this map): folding variant D into the real Home pag
 ## Addendum 2
 
 - **"Talk it through" chip added to the capture sheet (author request).** The sheet keeps the mic and "Park it", and gains a "💬 Talk it through" chip. Tapping it turns the sheet into a short conversation in place: the coach asks what part is nagging at the user most, then offers to add it to a related checklist or park it, with "Add to checklist" and "Park it" quick replies. Any text already typed is carried into the conversation as the first message. Prototype replies are canned. The entry point is settled; the behaviour of the real conversation stays in the fog item "Conversation sheet behaviour". Prototype commit: "PROTOTYPE: add Talk it through chip to the Blend capture sheet" on prototype/ui-concepts.
+
+## Addendum 3
+
+The Blend's Habits lens now shows habits grouped by recurrence period (Every day, Each week, Each month, Each quarter, Each year), each tile with one dot per target count and a "2 of 3 this week" label; tapping logs one occurrence, and tapping past the target undoes back to zero. Home's small piece counts only day-period habits. Prototype commit: "PROTOTYPE: habit recurrence periods on the Habits lens" on prototype/ui-concepts.

@@ -66,3 +66,5 @@ Consequences: the prototypes ticket must show all three densities side by side; 
 - **Density:** Balanced is confirmed as the default.
 
 - **Capture sheet (clarifies the capture rule above):** the sheet offers "Park it" for a quick capture and a "Talk it through" chip that turns the same sheet into a conversation; a long or half-formed capture is offered the chip rather than forced into it.
+
+- **Home habits piece (clarifies Amendment 2):** "Habits · 1 of 3 today" counts only day-period habits; longer-period habits appear on the Habits lens only, grouped by period.
