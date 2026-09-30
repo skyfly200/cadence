@@ -1,5 +1,5 @@
 -- ============================================================================
--- DRAFT. NOT APPLIED. Needs review before running against any database.
+-- APPLIED 2026-09-30 to the cadence project as migration "cadence_google_tokens" (via the Supabase MCP).
 --
 -- Encrypted Google Calendar tokens, stored server-side only.
 -- See .scratch/cadence-adhd-pivot/tickets/12-trust-and-transparency-model.md

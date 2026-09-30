@@ -81,7 +81,7 @@ Default nudge kinds: **Leave-by / start-by** (time-critical Commitments with der
 
 - **Stack:** Nuxt 3, Vue 3, Pinia, Tailwind, PWA, hosted on Vercel (new project connected to this repo), Supabase for accounts, passkeys and Postgres. Live at `cadence.skylerfly.com` (Netlify until re-pointed).
 - **Truth:** Supabase is the source of truth once signed in; the browser keeps an offline-first cache; signed-out use works locally. The existing last-writer-wins sync is extended; the occurrence log merges by union.
-- **Storage:** nodes as JSON rows in one table with a `kind` column; links and occurrences in their own tables; Postgres recursive queries (with `CYCLE`) for nesting and dependency chains; no graph database; no vector database in v1. Draft schema: `supabase/drafts/0001_graph_core.sql` (not applied).
+- **Storage:** nodes as JSON rows in one table with a `kind` column; links and occurrences in their own tables; Postgres recursive queries (with `CYCLE`) for nesting and dependency chains; no graph database; no vector database in v1. Schema: `supabase/drafts/0001_graph_core.sql` (applied 2026-09-30 as migration `cadence_graph_core`).
 - **AI layer:** a thin provider-agnostic interface on the Vercel AI SDK with two adapters (Anthropic default, OpenAI-compatible, which also reaches local models) replacing `z-ai-web-dev-sdk`; small fast models for wording, stronger ones for extraction and coaching; keys server-only; per-user usage cap. The graph is the memory: each call gets the relevant slice.
 - **What the AI decides:** a deterministic on-device core picks the Now card and works offline; the AI handles language and extraction only and never has the last word on urgency.
 - **Scheduling:** a `nudge_queue` table and a Supabase scheduler (every minute) calling one Nuxt route that sends Web Push (`web-push`, Android); jobs idempotent; the route must acknowledge within the scheduler's 2 second timeout.
@@ -99,7 +99,7 @@ Own app only in v1 (typed input and tap-to-talk using the browser's speech recog
 - One plain-language screen, **"What Cadence knows and does"**: what is connected, what is stored where (device, account, sent to the AI), what each feature sends, and the control for each.
 - Each AI feature discloses what it sends; only the relevant slice goes; an **AI off** switch runs the app on the deterministic core (captures stay Ideas). Paid API tiers only, retention off where possible.
 - **Export everything** (one tap; opt-in monthly reminder); **Delete everything** has a 7-day undo window.
-- Row-level security on every table; **Google tokens server-side and encrypted** (built in branch `feature/google-tokens-server`, draft `0002_google_tokens.sql`, needs `CADENCE_TOKEN_KEY` and `SUPABASE_SERVICE_ROLE_KEY`); an activity list of sensitive actions.
+- Row-level security on every table; **Google tokens server-side and encrypted** (built in branch `feature/google-tokens-server`, `0002_google_tokens.sql` (applied 2026-09-30), needs `CADENCE_TOKEN_KEY` and `SUPABASE_SERVICE_ROLE_KEY`); an activity list of sensitive actions.
 - **Private** flag; activity-log retention with delete-by-range and "forget older than a year"; any suggestion shows its origin and evidence and can be forgotten; **no analytics** by default.
 
 ## 11. Success signals [13]
@@ -144,7 +144,7 @@ Deep ingestion of Gmail, texts, Drive and Maps timeline; Notion, Trello and Keep
 
 ## 17. Code and reference branches
 
-- `feature/domain-core`: types, period math, habit progress, runs, tally (41 tests), draft SQL `0001`.
-- `feature/google-tokens-server`: server-side encrypted Google tokens (93 tests total), draft SQL `0002`.
+- `feature/domain-core`: types, period math, habit progress, runs, tally (41 tests), SQL `0001` (applied).
+- `feature/google-tokens-server`: server-side encrypted Google tokens (93 tests total), SQL `0002` (applied).
 - `prototype/ui-concepts`: the UI prototype (variant D is the agreed direction); throwaway, never merged.
 - `adhd-pivot-map-nuxt`: the map, tickets, glossary, research and this spec.

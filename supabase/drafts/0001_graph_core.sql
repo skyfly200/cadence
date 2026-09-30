@@ -1,5 +1,5 @@
 -- =====================================================================
--- DRAFT — NOT APPLIED. Review before running anywhere.
+-- APPLIED 2026-09-30 to the cadence project as migration "cadence_graph_core" (via the Supabase MCP).
 --
 -- Life graph core tables for Cadence: nodes, links, occurrences.
 -- Source: .scratch/cadence-adhd-pivot/tickets/03 (model), 10 (architecture),
@@ -121,7 +121,8 @@ create policy "cadence_occurrences_delete_own" on public.cadence_occurrences
 create or replace function public.cadence_occurrences_block_update()
 returns trigger
 language plpgsql
-as $$
+set search_path = ''
+as $
 begin
   raise exception 'cadence_occurrences is append-only: append an "undone" row instead of updating';
 end;
