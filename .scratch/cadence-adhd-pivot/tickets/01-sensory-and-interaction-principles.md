@@ -64,3 +64,5 @@ Consequences: the prototypes ticket must show all three densities side by side; 
 
 - **Habits on Home:** only a small piece: a compact "Habits · 3 of 5 today" line that opens the Habits lens. The full habit list, the seven-dot week and the tiles live on the Habits lens only. This replaces the earlier "small row of today's habits" on Home.
 - **Density:** Balanced is confirmed as the default.
+
+- **Capture sheet (clarifies the capture rule above):** the sheet offers "Park it" for a quick capture and a "Talk it through" chip that turns the same sheet into a conversation; a long or half-formed capture is offered the chip rather than forced into it.

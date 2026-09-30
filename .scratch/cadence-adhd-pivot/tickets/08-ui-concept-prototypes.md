@@ -40,3 +40,7 @@ Build note (out of scope for this map): folding variant D into the real Home pag
 - Habits display is simplified: a small piece on Now ("Habits · 3 of 5 today", opening the Habits lens) and the full list only on the Habits lens.
 - The morning briefing is too much: the briefing note is removed from the Today lens and the nudge is dropped from the defaults (opt-in only). The habit list is fine and stays.
 - Prototype commit: "PROTOTYPE: compact habits piece on Home, drop morning briefing note" on prototype/ui-concepts.
+
+## Addendum 2
+
+- **"Talk it through" chip added to the capture sheet (author request).** The sheet keeps the mic and "Park it", and gains a "💬 Talk it through" chip. Tapping it turns the sheet into a short conversation in place: the coach asks what part is nagging at the user most, then offers to add it to a related checklist or park it, with "Add to checklist" and "Park it" quick replies. Any text already typed is carried into the conversation as the first message. Prototype replies are canned. The entry point is settled; the behaviour of the real conversation stays in the fog item "Conversation sheet behaviour". Prototype commit: "PROTOTYPE: add Talk it through chip to the Blend capture sheet" on prototype/ui-concepts.
