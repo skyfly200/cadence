@@ -23,3 +23,5 @@ Update (from the closed Architecture and storage ticket): the author chose to st
 Input (from the closed Trust and transparency model ticket): the Google Calendar OAuth flow must change so tokens live server-side and encrypted, not in localStorage or the URL fragment; `exportAllData` and `importAllData` are a starting point for "Export everything"; sync tables need row-level security confirmed; there is no analytics to remove. Also needed: a "What Cadence knows and does" screen, an "AI off" switch, a Private flag on Nodes, and a 7-day delete-everything window.
 
 Input (from the closed Success signals ticket): the audit should note that a Signals screen (off by default, on-device), a weekly one-tap feeling check, an Experiment button, checkpoint cards at weeks 3, 6, 9 and 12, per-nudge-type counters (shown, acted on, "Not now", "Stop these") and a settings-change history are new work; nothing in the current code provides them.
+
+Update (from the amended Success signals ticket): checkpoint cards appear at weeks 2, 4, 6, 8 and 12 (not 3, 6, 9, 12). Each shows the stats and asks what does and doesn't work, and why, with the free-text answer saved into Ideas.

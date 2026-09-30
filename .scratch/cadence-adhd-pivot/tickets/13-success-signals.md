@@ -34,3 +34,12 @@ What the signals are computed from: the occurrence log and the settings history,
 What the mechanisms under test are (from the earlier tickets): default-on spoken nudges, the transition ritual, "Stay with me" body doubling, coach lines, the weekly tally, the garden, the slog tag and the opt-in recaps.
 
 Left for the build: the Signals screen, the weekly feeling check, the Experiment button, the checkpoint cards and the nudge-health counters are build items for the roadmap.
+
+## Amendment (author): checkpoints move to weeks 2, 4, 6, 8 and 12
+
+Supersedes the checkpoint schedule above (weeks 3, 6, 9, 12, and the assumption that weeks 3 and 9 are lighter).
+
+- **Five checkpoints: weeks 2, 4, 6, 8 and 12** of the author's own use. **All five are decision and review points**, not lighter check-ins.
+- **At each checkpoint Cadence does two things:** it **shows the stats** (the signals and the per-mechanism numbers against the keep-or-cut rules of thumb), and it **asks what does and doesn't work, and why**. The answers are short free text (spoken or typed) and go into the author's Ideas so they are not lost, and each can be tied to a specific mechanism (voice, transition ritual, Stay with me, coach lines, tally, garden, slog tag, recaps).
+- The rules of thumb are unchanged: keep a mechanism if it was used in at least half the weeks and "Stop these" did not rise; cut or rework it if the user switched it off within two weeks. The reflection ("what works, what doesn't, and why") is what turns the numbers into a decision.
+- Week 2 is now the first decision point, earlier than the week-3 novelty test, so the first review lands before novelty would have worn off.
