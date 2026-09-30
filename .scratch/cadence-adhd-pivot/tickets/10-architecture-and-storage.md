@@ -46,3 +46,5 @@ The author has set up a new Vercel project connected to this repo. Notes from ch
 Input (from the closed Habit formation and reinforcement ticket): a Commitment carries an optional "slog" flag; garden growth and the weekly tally are derived from the Occurrence log; each calendar-season turn writes a small "pressed plants" record so the book survives; reward lines are templates rendered on the device.
 
 Input (from the closed Capture channels and MCP contract ticket): v1 ships the own app only, so the MCP sign-in server is deferred, but the capture endpoint is built now as the single path (source-tagged, idempotent, acknowledging in under a second, extraction asynchronous); four assistant tools are planned for later (capture, whats_next, log_kept, complete).
+
+Input (from the closed Trust and transparency model ticket): Google tokens are stored server-side encrypted; every table has row-level security; each AI call sends only a slice and never a Private Node; an "AI off" mode must run on the deterministic core alone; a 7-day soft delete for "Delete everything"; a readable export; an activity list for sensitive actions.

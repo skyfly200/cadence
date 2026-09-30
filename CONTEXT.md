@@ -123,3 +123,7 @@ _Avoid_: Reset, wipe, cycle
 **Pressed book**:
 The archive of plants pressed at each Season turn, so nothing the user did is lost.
 _Avoid_: History, archive, trophy case
+
+**Private**:
+A flag on any Node that keeps it out of every AI call and out of anything an assistant can read, while it still works normally inside the app.
+_Avoid_: Hidden, secret, sensitive
