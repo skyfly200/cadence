@@ -12,9 +12,13 @@ _Avoid_: Add task, create task, input
 An unstructured Capture of many half-formed thoughts at once.
 _Avoid_: Import, bulk add
 
-**Parking lot**:
-The place a Capture goes when it is not to be acted on now. One tap, acknowledged with "Got it, parked".
-_Avoid_: Backlog, inbox, incubator
+**Heap**:
+The unsorted pile: where a Capture goes when it is not to be acted on now, and where shelved items rest. It lives inside the Plan lens, and sorting it means giving items a day. Acknowledged with "Got it, in the heap". (Formerly the Parking lot.)
+_Avoid_: Parking lot, backlog, inbox, incubator
+
+**Stack**:
+The planned entries: open Commitments laid out day by day in the Plan lens, in contrast to the Heap.
+_Avoid_: Schedule, queue
 
 **Node**:
 Anything Cadence knows about in the user's life. There are five kinds: Goal, Habit, Commitment, Idea and Thing.
@@ -77,7 +81,7 @@ A conversational review where Cadence shows what it organized since last time an
 _Avoid_: Weekly review, triage
 
 **Recede**:
-Cadence's behaviour when the user goes quiet: it stops nudging, silently moves unfinished items to the Parking lot, and never guilts them; on return the normal Home shows under a warm greeting.
+Cadence's behaviour when the user goes quiet: it stops nudging, silently moves unfinished items to the Heap, and never guilts them; on return the normal Home shows under a warm greeting.
 _Avoid_: Streak loss, overdue
 
 **Now card**:

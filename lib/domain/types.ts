@@ -66,6 +66,8 @@ export interface Commitment extends NodeBase {
   windowStart?: string | null;    // 'HH:mm' earliest it can be done
   windowEnd?: string | null;      // 'HH:mm' latest it can be done
   durationMinutes?: number | null;
+  /** Local day 'YYYY-MM-DD' the user placed it on in the Stack. A fixed time or deadline still rules. */
+  plannedFor?: string | null;
   /** A fixed-time repeat obligation (a recurring Commitment). */
   repeat?: Recurrence | null;
   /** The user tagged this as a slog: a bigger reward and a "just start" ritual. */

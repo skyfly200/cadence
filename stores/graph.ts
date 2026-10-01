@@ -14,7 +14,7 @@ import { habitProgress, habitTap, homeHabitsPiece, parseCapture, rankNow, weekly
 import type { ParsedCapture } from '~/lib/domain';
 import { postCapture } from '~/lib/capture-client';
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/lib/domain';
-import { keptToday, nodeState, parkedItems } from '~/lib/home/derive';
+import { heapItems, keptToday, nodeState, stackDays } from '~/lib/home/derive';
 import type { Density } from '~/lib/home/prefs';
 import { useAppStore } from './app';
 
@@ -60,8 +60,10 @@ export const useGraphStore = defineStore('graph', () => {
   /** The Now card and strip (ticket 23). */
   const rank = computed(() => rankNow(rankInput(density.value)));
   /** The Today lens list: always the fullest strip. */
-  const rankToday = computed(() => rankNow(rankInput(2)));
-  const parked = computed(() => parkedItems(nodes.value, occurrences.value));
+  /** The Heap: unsorted Ideas and parked Commitments. */
+  const heap = computed(() => heapItems(nodes.value, occurrences.value));
+  /** The Stack: this week's open Commitments by day. */
+  const stack = computed(() => stackDays(nodes.value, occurrences.value, asOf.value));
   const kept = computed(() => keptToday(nodes.value, occurrences.value, asOf.value));
   const habits = computed(() => nodes.value.filter((n): n is Habit => n.kind === 'habit'));
   const habitsPiece = computed(() => homeHabitsPiece(habits.value, occurrences.value, asOf.value));
@@ -106,7 +108,7 @@ export const useGraphStore = defineStore('graph', () => {
 
     const reply = parsed.kind === 'commitment'
       ? `Got it. ${parsed.fixedAt ? when(parsed.fixedAt) : parsed.deadline ? `by ${when(parsed.deadline)}` : 'Added'}.${parsed.ambiguous ? ' I guessed the time.' : ''}`
-      : 'Got it, parked.';
+      : 'Got it, in the heap.';
 
     if (nodes.value.some((n) => n.id === id)) return { ok: true, reply }; // a replayed or duplicate capture
 
@@ -145,8 +147,24 @@ export const useGraphStore = defineStore('graph', () => {
   }
   const start = (id: string) => act(id, 'started', 'Started');
   const complete = (id: string) => act(id, 'done', 'Done');
-  const park = (id: string) => act(id, 'parked', 'Parked');
+  const park = (id: string) => act(id, 'parked', 'Sent to the heap');
   const notNow = (id: string) => act(id, 'moved', 'Moved to later');
+
+  /**
+   * Put a Heap item on the Stack on a local day ('YYYY-MM-DD'), or take its planned day off with null.
+   * An Idea becomes a Commitment; a parked Commitment is brought back first.
+   */
+  function plan(id: string, day: string | null) {
+    const node = nodes.value.find((n) => n.id === id);
+    if (!node || (node.kind !== 'idea' && node.kind !== 'commitment')) return;
+    if (node.kind === 'idea') promote(id);
+    else bringBack(id);
+    const now = new Date();
+    nodes.value = nodes.value.map((n) => (n.id === id && n.kind === 'commitment' ? { ...n, plannedFor: day, updatedAt: now.toISOString() } : n));
+    persistNodes();
+    lastAction.value = null;
+    asOf.value = now;
+  }
 
   /** Bring a parked Commitment back (cancels the parked record) or promote a parked Idea. */
   function bringBack(id: string) {
@@ -204,7 +222,7 @@ export const useGraphStore = defineStore('graph', () => {
 
   return {
     nodes, links, occurrences, asOf, loaded, lastAction, density,
-    rank, rankToday, parked, kept, habits, habitsPiece, weeklyTally, habitRows, currentState,
+    rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState,
     load, refresh, capture, promote, start, complete, park, notNow, bringBack, undoLast, createHabit, tapHabit,
   };
 });

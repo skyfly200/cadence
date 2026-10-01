@@ -62,6 +62,12 @@ export function localParts(at: Date, timeZone: string): LocalParts {
   return { y: out.year, m: out.month, d: out.day, h: out.hour, mi: out.minute, s: out.second };
 }
 
+/** The local calendar day of an instant as 'YYYY-MM-DD'. */
+export function dayKey(at: Date, timeZone: string): string {
+  const p = localParts(at, timeZone);
+  return `${p.y}-${String(p.m).padStart(2, '0')}-${String(p.d).padStart(2, '0')}`;
+}
+
 /** Zone offset at an instant, in ms (local wall clock read as UTC, minus the instant). */
 function offsetMs(at: Date, timeZone: string): number {
   const p = localParts(at, timeZone);
