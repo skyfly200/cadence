@@ -223,6 +223,6 @@ export const useGraphStore = defineStore('graph', () => {
   return {
     nodes, links, occurrences, asOf, loaded, lastAction, density,
     rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState,
-    load, refresh, capture, promote, start, complete, park, notNow, bringBack, undoLast, createHabit, tapHabit,
+    load, refresh, capture, promote, plan, start, complete, park, notNow, bringBack, undoLast, createHabit, tapHabit,
   };
 });
