@@ -30,3 +30,7 @@ Decided in grilling (all recommendations accepted).
 - **Order:** nudges and voice (Phase 2) before AI understanding (Phase 3): nudges run on the deterministic core, need no API spend and do not wait on the spike. Until Phase 3, captures stay Ideas.
 - **Design tickets created now** (the rest are settled in context): Now card selection logic (needed by Phase 1), Crisis-language handling (a safety item before Phase 3) and Planning session and Discuss flow (before Phase 3). The remaining fog items (garden art, Go deeper, body-double presence beyond audio, Google Calendar approach, onboarding for others, conditions on Things, later audio modules, assistant-connectors rollout) are resolved when their phase nears.
 - **How it is built:** each slice is one branch built by a background agent, tests run by the assistant, a pull request reviewed by the author before merge, with a Vercel preview per pull request. Independent slices (the schema, the capture endpoint, the Home shell) run in parallel. Nothing merges to `main` without the author's review and nothing is pushed without the author saying so.
+
+## Status
+
+Phase 0 is complete (2026-09-30); see docs/SPEC.md section 13. Next: Phase 1, starting with the Now card selection logic ticket (23) and the first independent slices (sync for the new tables, the capture endpoint, the Home shell).

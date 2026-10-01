@@ -120,7 +120,7 @@ Replace the Nuxt app slice by slice; tag `pre-pivot` (created locally at `ba0ed1
 
 ## 13. Roadmap [22]
 
-- **Phase 0 Groundwork:** review and merge `feature/domain-core` and `feature/google-tokens-server`; review and apply the draft SQL; Vercel environment variables and domain; remove Netlify; test Calendar end to end.
+- **Phase 0 Groundwork: DONE (2026-09-30).** The two code branches are reviewed and merged to `main`; both SQL migrations are applied to the cadence Supabase project; the Vercel project builds and serves `cadence.skylerfly.com` with its environment variables set; `netlify.toml` is removed; the `pre-pivot` tag is pushed; Google Calendar connects end to end. Found and fixed on the way: the Google token endpoint the app had always used returned 404 (now `oauth2.googleapis.com/token`, pinned by a test).
 - **Phase 1 Capture-first core (start living in it here):** new tables and sync; the capture endpoint; Home with simple Now-card ordering; bottom bar and capture sheet (Add); Today and the Parking lot; Habits with periods; dark toggle, density, basic settings; the weekly tally. A "Classic view" switch keeps the old app until after Phase 3.
 - **Phase 2 Nudges and voice.**
 - **Phase 3 Understanding:** AI layer, extraction (after the spike), Goals, Discuss, Planning session, "why this one", AI-off, Private, transparency, export and delete.
