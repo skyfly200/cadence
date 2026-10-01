@@ -41,8 +41,16 @@
 
     <HomeCaptureSheet :open="captureOpen" @close="captureOpen = false" @said="say" />
     <HomeSettingsSheet
-      :open="settingsOpen" :density="density" :signed-in="app.signedIn"
+      :open="settingsOpen" :density="density" :signed-in="app.signedIn" :nudge-state="nudges.state.value" :muted="nudges.state.value.muted"
       @close="settingsOpen = false" @update:density="setDensityValue" @account="settingsOpen = false; authOpen = true"
+      @toggle-kind="onToggleNudgeKind" @toggle-mute="onToggleNudgeMute" @restore-node="nudges.onRestoreNode" @restore-kind="nudges.onRestoreKind"
+    />
+    <NudgeToast
+      :nudge="nudges.currentNudge.value" :disclosed="nudges.state.value.disclosed" :muted="nudges.state.value.muted"
+      @not-now="nudges.onNotNow(nudges.currentNudge.value!); nudges.currentNudge.value = null"
+      @stop-node="nudges.onStopNode(nudges.currentNudge.value!.nodeId!); nudges.currentNudge.value = null"
+      @stop-kind="nudges.onStopKind(nudges.currentNudge.value!.kind); nudges.currentNudge.value = null"
+      @toggle-mute="nudges.onToggleMute(!nudges.state.value.muted)"
     />
     <Dialog :open="authOpen" content-class="sm:max-w-sm" @update:open="authOpen = $event">
       <AuthDialog @done="authOpen = false" />
@@ -52,14 +60,17 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import type { NudgeKind } from '~/lib/domain';
 import { useAppStore } from '~/stores/app';
 import { useGraphStore } from '~/stores/graph';
 import { getDensity, markOpened, setDensity, wasAway, type Density } from '~/lib/home/prefs';
+import { useNudges } from '~/composables/useNudges';
 
 type Lens = 'now' | 'plan' | 'habits' | 'goals';
 
 const app = useAppStore();
 const graph = useGraphStore();
+const nudges = useNudges();
 const lens = ref<Lens>('now');
 const density = ref<Density>(1);
 const away = ref(false);
@@ -90,6 +101,14 @@ function undo() {
   say(label ? `${label} undone.` : 'Nothing to undo.');
 }
 function setDensityValue(d: Density) { density.value = d; graph.density = d; setDensity(d); }
+
+function onToggleNudgeKind(kind: NudgeKind, enabled: boolean): void {
+  if (enabled) {
+    nudges.onRestoreKind(kind);
+  } else {
+    nudges.onStopKind(kind);
+  }
+}
 
 const onHydrated = () => graph.load();
 

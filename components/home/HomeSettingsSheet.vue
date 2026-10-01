@@ -23,6 +23,36 @@
         </div>
       </ClientOnly>
 
+      <p class="mt-5 font-serif text-xl">Nudges</p>
+
+      <div class="mt-3 space-y-2">
+        <label v-for="kind in NUDGE_KINDS" :key="kind" class="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-white/10">
+          <input
+            type="checkbox"
+            :checked="!nudgeState.disabledKinds.has(kind)"
+            class="h-5 w-5 rounded"
+            @change="(e) => onToggleKind(kind, (e.target as HTMLInputElement).checked)"
+          />
+          <span class="text-sm">{{ kindLabel(kind) }}</span>
+        </label>
+      </div>
+
+      <p class="mt-3 text-sm font-medium">Sound</p>
+      <label class="mt-1.5 flex items-center gap-3">
+        <input type="checkbox" :checked="!nudgeState.muted" class="h-5 w-5 rounded" @change="(e) => onToggleMute(!(e.target as HTMLInputElement).checked)" />
+        <span class="text-sm">Play tone and speech</span>
+      </label>
+
+      <div v-if="stoppedOrSilenced.length > 0" class="mt-3">
+        <p class="text-sm font-medium">Muted items</p>
+        <div class="mt-1.5 space-y-1">
+          <div v-for="item in stoppedOrSilenced" :key="item.id" class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 dark:border-white/10">
+            <span class="text-sm">{{ item.title }}</span>
+            <button class="text-xs text-blue-600 dark:text-blue-400" @click="onRestore(item)">Turn back on</button>
+          </div>
+        </div>
+      </div>
+
       <div class="mt-5 grid gap-2">
         <button class="min-h-[44px] rounded-xl border border-slate-200 text-sm dark:border-white/10" @click="$emit('account')">
           Account and sync <span class="text-slate-400">· {{ signedIn ? 'signed in' : 'signed out' }}</span>
@@ -36,15 +66,78 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { Density } from '~/lib/home/prefs';
+import type { NudgeKind } from '~/lib/domain';
+import { useGraphStore } from '~/stores/graph';
 
-defineProps<{ open: boolean; density: Density; signedIn: boolean }>();
-defineEmits<{ (e: 'close'): void; (e: 'update:density', d: Density): void; (e: 'account'): void }>();
+interface StoppedItem {
+  id: string;
+  title: string;
+  type: 'node' | 'kind';
+  kind?: NudgeKind;
+}
+
+const props = defineProps<{ open: boolean; density: Density; signedIn: boolean; nudgeState: any; muted: boolean }>();
+const emit = defineEmits<{
+  (e: 'close'): void;
+  (e: 'update:density', d: Density): void;
+  (e: 'account'): void;
+  (e: 'toggle-kind', kind: NudgeKind, enabled: boolean): void;
+  (e: 'toggle-mute', muted: boolean): void;
+  (e: 'restore-node', nodeId: string): void;
+  (e: 'restore-kind', kind: NudgeKind): void;
+}>();
 
 const colorMode = useColorMode();
+const graph = useGraphStore();
 const MODES = [
   { value: 'system', label: 'Auto' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
 ];
+
+const NUDGE_KINDS: NudgeKind[] = ['leave_by', 'at_risk', 'transition', 'habit_summary'];
+
+function kindLabel(kind: NudgeKind): string {
+  if (kind === 'leave_by') return 'Time reminders';
+  if (kind === 'at_risk') return 'At-risk alerts';
+  if (kind === 'transition') return 'Transition cues';
+  if (kind === 'habit_summary') return 'Habit summary';
+  return kind;
+}
+
+const stoppedOrSilenced = computed(() => {
+  const items: StoppedItem[] = [];
+  // Add stopped nodes
+  for (const nodeId of props.nudgeState.feedback.stoppedNodes) {
+    const node = graph.nodes.find((n) => n.id === nodeId);
+    if (node) {
+      items.push({ id: nodeId, title: node.title, type: 'node' });
+    }
+  }
+  // Add stopped kinds (show once per kind)
+  for (const kind of props.nudgeState.feedback.stoppedKinds) {
+    if (!items.find((i) => i.type === 'kind' && i.kind === kind)) {
+      items.push({ id: kind, title: kindLabel(kind), type: 'kind', kind });
+    }
+  }
+  return items;
+});
+
+function onToggleKind(kind: NudgeKind, enabled: boolean): void {
+  emit('toggle-kind', kind, enabled);
+}
+
+function onToggleMute(muted: boolean): void {
+  emit('toggle-mute', muted);
+}
+
+function onRestore(item: StoppedItem): void {
+  if (item.type === 'node') {
+    emit('restore-node', item.id);
+  } else {
+    emit('restore-kind', item.kind!);
+  }
+}
 </script>
