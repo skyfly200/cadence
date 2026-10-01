@@ -40,6 +40,24 @@ export const useGraphStore = defineStore('graph', () => {
     occurrences.value = getGraphOccurrences();
     asOf.value = new Date();
     loaded.value = true;
+    adoptDated();
+  }
+
+  /**
+   * An Idea whose text carries a date or time (for example one saved by the server, which does not parse)
+   * is really a Commitment: it goes on the Stack, not into the Heap.
+   */
+  function adoptDated() {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    let changed = false;
+    nodes.value = nodes.value.map((n) => {
+      if (n.kind !== 'idea') return n;
+      const p = parseCapture(n.title, { now: new Date(n.createdAt), timeZone: tz });
+      if (p.kind !== 'commitment') return n;
+      changed = true;
+      return { ...nodeFromCapture(n.id, p, new Date(n.createdAt)), createdAt: n.createdAt, updatedAt: new Date().toISOString() };
+    });
+    if (changed) persistNodes();
   }
 
   function persistNodes() {
@@ -223,6 +241,6 @@ export const useGraphStore = defineStore('graph', () => {
   return {
     nodes, links, occurrences, asOf, loaded, lastAction, density,
     rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState,
-    load, refresh, capture, promote, start, complete, park, notNow, bringBack, undoLast, createHabit, tapHabit,
+    load, refresh, capture, promote, plan, start, complete, park, notNow, bringBack, undoLast, createHabit, tapHabit,
   };
 });
