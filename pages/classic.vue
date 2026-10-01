@@ -1,0 +1,235 @@
+<template>
+  <div class="min-h-dvh flex flex-col bg-muted/30">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div class="mx-auto max-w-7xl px-3 sm:px-4 py-2 sm:py-3">
+        <div class="flex items-center justify-between gap-2 sm:gap-3">
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="flex size-8 sm:size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-sm">
+              <Sparkles class="size-4 sm:size-5" />
+            </div>
+            <div class="min-w-0">
+              <h1 class="text-sm font-bold tracking-tight truncate">Cadence</h1>
+              <p class="text-[10px] sm:text-[11px] text-muted-foreground hidden sm:block">
+                Capacity-aware planning · resilient timers · process-based scoring
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 sm:gap-2">
+            <div v-if="streak > 0"
+              class="flex items-center gap-1 rounded-full border border-orange-500/30 bg-orange-500/10 px-2 sm:px-2.5 py-1"
+              :title="`${streak}-day planning streak${plannedToday ? '' : ' — plan today to keep it'}`">
+              <Flame :class="['size-3.5', plannedToday ? 'text-orange-500' : 'text-orange-400/70']" />
+              <span class="text-xs sm:text-sm font-bold tabular-nums">{{ streak }}</span>
+            </div>
+            <div class="hidden xs:flex items-center gap-1.5 rounded-full border bg-muted/50 px-2.5 sm:px-3 py-1">
+              <span class="text-[9px] sm:text-[10px] font-medium text-muted-foreground">SCORE</span>
+              <span class="text-xs sm:text-sm font-bold tabular-nums">{{ todayScore }}</span>
+            </div>
+            <Button v-if="canInstall" variant="outline" size="sm" class="h-8 text-[11px] px-2 gap-1" aria-label="Install app" title="Install Cadence" @click="installApp">
+              <DownloadCloud class="size-4" /> <span class="hidden xs:inline">Install</span>
+            </Button>
+            <Button v-if="store.canUndo" variant="ghost" size="icon" aria-label="Undo" title="Undo (⌘Z)" class="size-8 sm:size-9 hidden sm:inline-flex" @click="store.undo()">
+              <Undo2 class="size-4" />
+            </Button>
+            <Button v-if="store.canRedo" variant="ghost" size="icon" aria-label="Redo" title="Redo (⇧⌘Z)" class="size-8 sm:size-9 hidden sm:inline-flex" @click="store.redo()">
+              <Redo2 class="size-4" />
+            </Button>
+            <Button variant="ghost" size="icon" aria-label="Quick capture" class="size-8 sm:size-9" @click="captureOpen = true">
+              <Mic class="size-4" />
+            </Button>
+            <ClientOnly>
+              <Button variant="ghost" size="icon" aria-label="Toggle theme" class="size-8 sm:size-9" @click="toggleTheme">
+                <Sun v-if="colorMode.value === 'dark'" class="size-4" />
+                <Moon v-else class="size-4" />
+              </Button>
+            </ClientOnly>
+            <Button variant="ghost" size="icon" aria-label="Account" title="Account & sync" class="relative size-8 sm:size-9" @click="authOpen = true">
+              <UserRound class="size-4" />
+              <span v-if="store.signedIn"
+                :class="cn('absolute bottom-1 right-1 size-2 rounded-full border border-background',
+                  store.syncStatus === 'error' ? 'bg-destructive' : store.syncStatus === 'syncing' ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500')" />
+            </Button>
+            <Button variant="ghost" size="icon" aria-label="Settings" title="Settings" class="size-8 sm:size-9" @click="settingsOpen = true">
+              <SettingsIcon class="size-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Quick Capture Dialog -->
+    <Dialog :open="captureOpen" content-class="sm:max-w-md" @update:open="captureOpen = $event">
+      <div class="space-y-3">
+        <div>
+          <h2 class="flex items-center gap-2 text-sm font-semibold"><Mic class="size-4" /> Quick Capture</h2>
+          <p class="text-[11px] text-muted-foreground mt-0.5">Speak or type a task — e.g. “Add design new poster to Incubator list”</p>
+        </div>
+        <VoiceInput :auto-start="captureOpen" />
+      </div>
+    </Dialog>
+
+    <!-- Main -->
+    <main class="flex-1 mx-auto w-full max-w-7xl px-2 sm:px-3 md:px-4 py-2">
+      <div class="space-y-2">
+        <!-- Tab bar -->
+        <div class="grid w-full grid-cols-4 xs:grid-cols-9 h-auto rounded-md bg-muted p-1 gap-1">
+          <button v-for="tab in tabs" :key="tab.value"
+            :class="cn(
+              'relative flex flex-col xs:flex-row items-center justify-center gap-0.5 py-1.5 rounded-md text-[10px] xs:text-xs transition-colors',
+              tab.hiddenMobile && 'hidden xs:flex',
+              activeTab === tab.value ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground hover:text-foreground',
+            )"
+            @click="store.setActiveTab(tab.value)">
+            <component :is="tab.icon" class="size-3.5" />
+            <span class="truncate">{{ tab.label }}</span>
+            <span v-if="tab.badge && tab.badge > 0"
+              :class="cn('absolute -top-0.5 -right-0.5 size-4 rounded-full text-white text-[9px] flex items-center justify-center font-bold', tab.value === 'triage' ? 'bg-amber-500' : 'bg-primary')">
+              {{ tab.badge }}
+            </span>
+          </button>
+        </div>
+
+        <div class="mt-0">
+          <Dashboard v-if="activeTab === 'dashboard'" />
+          <TimelineView v-else-if="activeTab === 'timeline'" />
+          <BacklogIncubator v-else-if="activeTab === 'backlog'" variant="backlog" />
+          <BrainDump v-else-if="activeTab === 'braindump'" />
+          <MapView v-else-if="activeTab === 'map'" />
+          <TripsView v-else-if="activeTab === 'trips'" />
+          <BacklogIncubator v-else-if="activeTab === 'incubator'" variant="incubator" />
+          <TriagePanel v-else-if="activeTab === 'triage'" />
+          <StatsView v-else-if="activeTab === 'stats'" />
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Settings dialog -->
+    <Dialog :open="settingsOpen" content-class="sm:max-w-2xl max-h-[88vh] overflow-y-auto" @update:open="settingsOpen = $event">
+      <SettingsPanel />
+    </Dialog>
+
+    <!-- Account & sync dialog -->
+    <Dialog :open="authOpen" content-class="sm:max-w-sm" @update:open="authOpen = $event">
+      <AuthDialog @done="authOpen = false" />
+    </Dialog>
+
+    <!-- Footer -->
+    <footer class="border-t bg-background mt-auto">
+      <div class="mx-auto max-w-7xl px-2 sm:px-3 md:px-4 py-2">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] text-muted-foreground">
+          <p>Classic view · <NuxtLink to="/" class="underline">Back to the new Home</NuxtLink></p>
+          <p class="flex items-center gap-1">
+            <span class="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            All data persists locally in your browser
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <div v-if="loading" class="fixed inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <Card class="p-4 sm:p-6 flex items-center gap-3">
+        <div class="size-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <span class="text-sm">Loading your day…</span>
+      </Card>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import {
+  LayoutDashboard, Calendar, Inbox, AlertTriangle, BarChart3, Settings as SettingsIcon,
+  Moon, Sun, Sparkles, Mic, Flame, NotebookPen, Undo2, Redo2, DownloadCloud, Map as MapIcon, Route as RouteIcon, UserRound,
+} from 'lucide-vue-next';
+import { useAppStore } from '~/stores/app';
+import { useReminders } from '~/composables/useReminders';
+import { useInstallPrompt } from '~/composables/useInstallPrompt';
+import { useToast } from '~/composables/useToast';
+import { cn } from '~/lib/utils';
+
+const store = useAppStore();
+const { toast } = useToast();
+const { canInstall, install: installApp } = useInstallPrompt();
+useReminders();
+const settingsOpen = ref(false);
+const authOpen = ref(false);
+const colorMode = useColorMode();
+const captureOpen = ref(false);
+
+const activeTab = computed(() => store.activeTab);
+const todayScore = computed(() => store.todayScore);
+const loading = computed(() => store.loading);
+const streak = computed(() => store.planningStreakDisplay);
+const plannedToday = computed(() => store.plannedToday);
+
+const triageCount = computed(() => store.triageTasks.length);
+const backlogCount = computed(() => store.backlogTasks.length);
+const incubatorCount = computed(() => store.incubatorTasks.length);
+
+const tabs = computed(() => [
+  { value: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, hiddenMobile: false, badge: 0 },
+  { value: 'timeline', label: 'Timeline', icon: Calendar, hiddenMobile: false, badge: 0 },
+  { value: 'backlog', label: 'Backlog', icon: Inbox, hiddenMobile: false, badge: backlogCount.value },
+  { value: 'braindump', label: 'Brain Dump', icon: NotebookPen, hiddenMobile: false, badge: 0 },
+  { value: 'map', label: 'Map', icon: MapIcon, hiddenMobile: true, badge: 0 },
+  { value: 'trips', label: 'Trips', icon: RouteIcon, hiddenMobile: true, badge: 0 },
+  { value: 'incubator', label: 'Incubator', icon: Sparkles, hiddenMobile: true, badge: incubatorCount.value },
+  { value: 'triage', label: 'Triage', icon: AlertTriangle, hiddenMobile: true, badge: triageCount.value },
+  { value: 'stats', label: 'Stats', icon: BarChart3, hiddenMobile: true, badge: 0 },
+]);
+
+function toggleTheme() {
+  colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
+}
+
+function onKey(e: KeyboardEvent) {
+  const mod = e.metaKey || e.ctrlKey;
+  if (!mod) return;
+  const el = document.activeElement as HTMLElement | null;
+  const editable = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+  if (editable) return; // let native text undo/redo work inside fields
+  const key = e.key.toLowerCase();
+  if (key === 'z') {
+    e.preventDefault();
+    if (e.shiftKey) store.redo(); else store.undo();
+  } else if (key === 'y') {
+    e.preventDefault();
+    store.redo();
+  }
+}
+
+onMounted(() => {
+  // Google sends the user back here with ?gcal_connected=1 or ?gcal_error=...
+  // (never with tokens: those stay on the server). Handled here, not in the
+  // collapsed Settings panel, so returning from Google always registers.
+  const query = new URLSearchParams(window.location.search);
+  const gcalConnected = query.get('gcal_connected') === '1';
+  if (gcalConnected) window.history.replaceState({}, '', '/classic');
+  const gcalError = query.get('gcal_error');
+  if (gcalError) {
+    const map: Record<string, string> = {
+      redirect_uri_mismatch: 'Redirect URI doesn\u2019t match the one registered in Google Cloud.',
+      invalid_grant: 'The sign-in code expired or was already used \u2014 try connecting again.',
+      access_denied: 'You declined access on Google.',
+      no_credentials: 'The server is missing its Google or token-encryption settings (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, CADENCE_TOKEN_KEY, SUPABASE_SERVICE_ROLE_KEY).',
+      no_code: 'Google didn\u2019t return an authorization code.',
+      bad_state: 'That connection attempt expired or didn\u2019t start here \u2014 try connecting again.',
+      no_refresh_token: 'Google didn\u2019t grant offline access \u2014 try again and accept every permission.',
+    };
+    toast({ title: 'Calendar connection failed', description: map[gcalError] ?? gcalError.replace(/_/g, ' '), variant: 'destructive' });
+    window.history.replaceState({}, '', '/classic');
+  }
+  store.loadData();
+  store.loadSettings();
+  store.loadGoogleCalendarStatus();
+  // Restores any signed-in session and starts syncing; that also refreshes the
+  // calendar connection status and auto-syncs events for a signed-in user.
+  void store.initAuth().then(() => {
+    if (gcalConnected) toast({ title: 'Google Calendar connected', description: 'Syncing your events\u2026' });
+  });
+  window.addEventListener('keydown', onKey);
+});
+onUnmounted(() => window.removeEventListener('keydown', onKey));
+</script>

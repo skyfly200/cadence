@@ -189,6 +189,8 @@ export const useAppStore = defineStore('app', () => {
     categories.value = getCategories() as Category[];
 
     computeDailyScore();
+    // Let other stores (the Home graph store) re-read local data after a sync refresh.
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('cadence:hydrated'));
   }
 
   function loadSettings() {
@@ -1384,7 +1386,7 @@ export const useAppStore = defineStore('app', () => {
     setNotificationPrefs, enableNotifications,
     // account / sync
     session, user, signedIn, authReady, syncStatus, syncError,
-    initAuth, syncNow, signOut,
+    initAuth, syncNow, signOut, queuePush,
     signInWithEmailLink, signUpWithPassword, signInWithPassword, signInWithGoogle,
     enrollPasskey, signInWithPasskey, listPasskeys,
   };

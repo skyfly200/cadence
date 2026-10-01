@@ -17,6 +17,7 @@
     "@supabase/supabase-js": "^2.112.3",
     "@vueuse/core": "^12.5.0",
     "@vueuse/nuxt": "^12.5.0",
+    "chrono-node": "^2.10.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "leaflet": "^1.9.4",

@@ -3,3 +3,7 @@ export * from './periods';
 export * from './habits';
 export * from './runs';
 export * from './tally';
+export * from './estimates';
+export * from './shelf';
+export * from './ranking';
+export * from './parse-capture';
