@@ -32,6 +32,7 @@ export default defineNuxtConfig({
     workbox: {
       navigateFallback: '/',
       globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,json}'],
+      importScripts: ['/push-sw.js'],
       // Cache-first for same-origin assets; app data is localStorage so it's
       // already offline. AI/Calendar API calls simply fail gracefully offline.
       runtimeCaching: [
@@ -101,6 +102,10 @@ export default defineNuxtConfig({
     // server write the token table that clients cannot access.
     cadenceTokenKey: process.env.CADENCE_TOKEN_KEY || '',
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    // Web push delivery: server-only VAPID keys and the cron secret.
+    vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
+    vapidSubject: process.env.VAPID_SUBJECT || '',
+    nudgeCronSecret: process.env.NUDGE_CRON_SECRET || '',
     public: {
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '',
       supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || 'https://wgdjwzlqvpvltedzasga.supabase.co',
@@ -108,6 +113,8 @@ export default defineNuxtConfig({
       // Where auth emails/OAuth send users back to (must be allow-listed in
       // Supabase Auth → URL Configuration). Local dev keeps its own origin.
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://cadence.skylerfly.com',
+      // Web push: public VAPID key (shared with service worker).
+      vapidPublicKey: process.env.NUXT_PUBLIC_VAPID_PUBLIC_KEY || '',
     },
   },
 
