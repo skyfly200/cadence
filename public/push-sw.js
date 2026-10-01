@@ -15,6 +15,10 @@ self.addEventListener('push', (event) => {
         tag,
         badge: '/pwa-192x192.png',
         data,
+        actions: [
+          { action: 'notnow', title: 'Not now' },
+          { action: 'stop', title: 'Stop these' },
+        ],
       }),
     );
   } catch {

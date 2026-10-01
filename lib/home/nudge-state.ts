@@ -205,3 +205,76 @@ export function setMuted(state: NudgeState, muted: boolean): NudgeState {
 export function setDisclosed(state: NudgeState, disclosed: boolean): NudgeState {
   return { ...state, disclosed };
 }
+
+// ── URL action handling ────────────────────────────────────────────────
+
+/**
+ * Parse a nudge id and extract the node kind and nodeId from its format:
+ * `kind|nodeId|day[|suffix]` or `kind|-|day[|suffix]` for nodeId-less nudges.
+ * For habit_summary: `habit_summary|-|day|...`.
+ */
+export function parseNudgeId(id: string): {
+  kind: NudgeKind | null;
+  nodeId: string | null;
+  day: string | null;
+} {
+  const parts = id.split('|');
+  if (parts.length < 3) return { kind: null, nodeId: null, day: null };
+
+  const kind = parts[0] as NudgeKind;
+  const nodeId = parts[1] === '-' ? null : parts[1];
+  const day = parts[2];
+
+  if (!['leave_by', 'at_risk', 'transition', 'habit_summary'].includes(kind)) {
+    return { kind: null, nodeId: null, day: null };
+  }
+
+  return { kind: kind as NudgeKind, nodeId, day };
+}
+
+/**
+ * Apply a notification action (from a query param on the URL) to the nudge state.
+ * Actions: 'notnow' (reschedule once), 'stop' (silence the kind or node).
+ * Ignores unknown actions.
+ */
+export function applyNotificationAction(
+  state: NudgeState,
+  nudgeId: string,
+  action: string
+): NudgeState {
+  if (!action || action !== 'notnow' && action !== 'stop') {
+    return state;
+  }
+
+  const parsed = parseNudgeId(nudgeId);
+  if (!parsed.kind) return state;
+
+  if (action === 'notnow') {
+    // Only applies to nudges with a node
+    if (!parsed.nodeId) return state;
+    // Simulate applying "Not now" feedback (reschedule once)
+    const fb = state.feedback;
+    const nn = fb.notNow[parsed.nodeId] ?? { count: 0, lastAt: '' };
+    return {
+      ...state,
+      feedback: {
+        ...fb,
+        notNow: {
+          ...fb.notNow,
+          [parsed.nodeId]: { count: nn.count + 1, lastAt: new Date().toISOString() },
+        },
+      },
+    };
+  }
+
+  if (action === 'stop') {
+    // Stop the kind or node
+    if (parsed.nodeId) {
+      return applyStopNode(state, parsed.nodeId);
+    } else {
+      return applyStopKind(state, parsed.kind);
+    }
+  }
+
+  return state;
+}

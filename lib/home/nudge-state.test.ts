@@ -12,6 +12,8 @@ import {
   markIssued,
   setMuted,
   setDisclosed,
+  parseNudgeId,
+  applyNotificationAction,
   type NudgeState,
 } from './nudge-state';
 import type { Nudge, IssuedNudge } from '~/lib/domain';
@@ -238,6 +240,77 @@ describe('nudge state', () => {
       const loaded = loadState();
       expect(loaded.feedback).toEqual({ stoppedKinds: [], stoppedNodes: [], notNow: {} });
       expect(loaded.issued).toEqual([]);
+    });
+  });
+
+  describe('parseNudgeId', () => {
+    it('parses leave_by nudges with a node', () => {
+      const parsed = parseNudgeId('leave_by|node1|2026-03-08');
+      expect(parsed).toEqual({ kind: 'leave_by', nodeId: 'node1', day: '2026-03-08' });
+    });
+
+    it('parses nudges with a suffix', () => {
+      const parsed = parseNudgeId('transition|node1|2026-03-08|heads_up');
+      expect(parsed).toEqual({ kind: 'transition', nodeId: 'node1', day: '2026-03-08' });
+    });
+
+    it('parses habit_summary (no node)', () => {
+      const parsed = parseNudgeId('habit_summary|-|2026-03-08');
+      expect(parsed).toEqual({ kind: 'habit_summary', nodeId: null, day: '2026-03-08' });
+    });
+
+    it('returns nulls on invalid format', () => {
+      expect(parseNudgeId('invalid')).toEqual({ kind: null, nodeId: null, day: null });
+      expect(parseNudgeId('')).toEqual({ kind: null, nodeId: null, day: null });
+    });
+
+    it('returns nulls on invalid kind', () => {
+      const parsed = parseNudgeId('unknown|node1|2026-03-08');
+      expect(parsed).toEqual({ kind: null, nodeId: null, day: null });
+    });
+  });
+
+  describe('applyNotificationAction', () => {
+    it('applies "notnow" action to a nudge with a node', () => {
+      const id = 'leave_by|node1|2026-03-08';
+      const next = applyNotificationAction(state, id, 'notnow');
+      expect(next.feedback.notNow['node1']).toBeDefined();
+      expect(next.feedback.notNow['node1'].count).toBe(1);
+    });
+
+    it('ignores "notnow" on habit_summary (no node)', () => {
+      const id = 'habit_summary|-|2026-03-08';
+      const next = applyNotificationAction(state, id, 'notnow');
+      expect(next.feedback.notNow).toEqual({});
+    });
+
+    it('applies "stop" to a node', () => {
+      const id = 'leave_by|node1|2026-03-08';
+      const next = applyNotificationAction(state, id, 'stop');
+      expect(next.feedback.stoppedNodes).toContain('node1');
+    });
+
+    it('applies "stop" to a kind when nodeId is absent', () => {
+      const id = 'habit_summary|-|2026-03-08';
+      const next = applyNotificationAction(state, id, 'stop');
+      expect(next.feedback.stoppedKinds).toContain('habit_summary');
+    });
+
+    it('ignores unknown actions', () => {
+      const id = 'leave_by|node1|2026-03-08';
+      const next = applyNotificationAction(state, id, 'unknown');
+      expect(next).toEqual(state);
+    });
+
+    it('ignores empty action', () => {
+      const id = 'leave_by|node1|2026-03-08';
+      const next = applyNotificationAction(state, id, '');
+      expect(next).toEqual(state);
+    });
+
+    it('ignores invalid nudge id', () => {
+      const next = applyNotificationAction(state, 'invalid', 'stop');
+      expect(next).toEqual(state);
     });
   });
 });
