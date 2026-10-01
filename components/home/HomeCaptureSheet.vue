@@ -34,6 +34,7 @@
 import { nextTick, ref, watch, onMounted, onUnmounted } from 'vue';
 import { Mic, Square } from 'lucide-vue-next';
 import { useGraphStore } from '~/stores/graph';
+import { loadState } from '~/lib/home/nudge-state';
 import { getRecognitionCtor, joinTranscript, messageFor, initialState, setListening, setMessage } from '~/lib/home/speech-input';
 
 const props = defineProps<{ open: boolean }>();
@@ -119,6 +120,11 @@ function toggleSpeech() {
     if (speechState.value.listening) {
       recognition.stop();
     } else {
+      // The one mute silences the mic too (SPEC section 6).
+      if (loadState().muted) {
+        speechState.value = setMessage(speechState.value, 'Sound is muted. Unmute it in Settings to use the mic.');
+        return;
+      }
       baseSpeech = draft.value;
       recognition.start();
     }
