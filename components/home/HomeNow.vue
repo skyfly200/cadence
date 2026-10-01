@@ -35,12 +35,46 @@
               </div>
             </div>
 
-            <div v-if="!started" class="mt-5 grid grid-cols-3 gap-2">
+            <div v-if="!started && !stayWithMeActive" class="mt-5 grid grid-cols-3 gap-2">
               <button class="col-span-3 min-h-[44px] rounded-2xl bg-[#E07A45] py-3.5 text-base font-semibold text-white shadow-sm active:scale-[.99]" @click="onStart">Start</button>
               <button class="col-span-2 min-h-[44px] rounded-2xl bg-stone-100 py-3 text-sm font-medium dark:bg-white/10" @click="onNotNow">Not now</button>
               <button class="min-h-[44px] rounded-2xl bg-stone-100 py-3 text-sm font-medium dark:bg-white/10" @click="onPark">To the heap</button>
             </div>
-            <button v-else class="mt-5 min-h-[44px] w-full rounded-2xl bg-emerald-500 py-3.5 text-base font-semibold text-white" @click="onDone">Done ✓</button>
+
+            <div v-if="!started && !stayWithMeActive" class="mt-3 flex justify-center">
+              <button class="text-sm font-medium text-slate-500 underline dark:text-slate-400" @click="showStayOptions = !showStayOptions">
+                Stay with me
+              </button>
+            </div>
+
+            <div v-if="!started && showStayOptions" class="mt-4 rounded-2xl bg-stone-50 p-4 dark:bg-white/10">
+              <p class="text-sm font-medium text-slate-700 dark:text-slate-200">How long?</p>
+              <div class="mt-2 grid grid-cols-3 gap-2">
+                <button
+                  v-for="dur in [15, 25, 45]"
+                  :key="dur"
+                  class="min-h-[44px] rounded-xl bg-white py-2 text-sm font-medium dark:bg-[#1D1A2F]"
+                  @click="startStayWithMe(dur)"
+                >
+                  {{ dur }}m
+                </button>
+              </div>
+              <div class="mt-3 flex items-center gap-2">
+                <input type="checkbox" id="ambient-toggle" v-model="stayWithMeAmbient" class="size-4 rounded">
+                <label for="ambient-toggle" class="text-sm text-slate-600 dark:text-slate-300">Ambient sound</label>
+              </div>
+            </div>
+
+            <div v-if="stayWithMeActive && stayWithMeState" class="mt-4 rounded-2xl bg-stone-50 p-4 dark:bg-white/10">
+              <p class="text-center text-sm text-slate-700 dark:text-slate-200">{{ stayWithMeStatus }}</p>
+              <div class="mt-3 flex justify-center">
+                <button class="min-h-[44px] rounded-xl bg-white px-4 text-sm font-medium dark:bg-[#1D1A2F]" @click="endStayWithMe">
+                  End
+                </button>
+              </div>
+            </div>
+
+            <button v-if="started && !stayWithMeActive" class="mt-5 min-h-[44px] w-full rounded-2xl bg-emerald-500 py-3.5 text-base font-semibold text-white" @click="onDone">Done ✓</button>
           </template>
 
           <template v-else>
@@ -69,10 +103,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { useGraphStore } from '~/stores/graph';
 import type { Commitment, Habit } from '~/lib/domain';
 import type { Density } from '~/lib/home/prefs';
+import {
+  start as startStayWithMeSession,
+  checkInDue,
+  markCheckedIn,
+  isEnded,
+  statusLine,
+  PRESENCE_CUE_TEXT,
+  CHECK_IN_TEXT,
+  END_TEXT,
+  type StayWithMeState,
+} from '~/lib/home/stay-with-me';
 
 defineProps<{ density: Density }>();
 const emit = defineEmits<{ (e: 'open-plan'): void; (e: 'said', msg: string): void }>();
@@ -80,6 +125,14 @@ const emit = defineEmits<{ (e: 'open-plan'): void; (e: 'said', msg: string): voi
 const graph = useGraphStore();
 const showPast = ref(false);
 const keepDismissed = ref(false);
+const showStayOptions = ref(false);
+const stayWithMeActive = ref(false);
+const stayWithMeState = ref<StayWithMeState | null>(null);
+const stayWithMeAmbient = ref(false);
+const stayWithMeStatus = ref('');
+const stayWithMeInteracted = ref(false);
+let stayWithMeTimer: ReturnType<typeof setInterval> | null = null;
+let audioContext: AudioContext | null = null;
 
 const current = computed(() => graph.rank.now);
 const started = computed(() => !!graph.currentState?.started);
@@ -102,4 +155,191 @@ function onDone() {
 }
 function onNotNow() { if (current.value) { graph.notNow(current.value.node.id); emit('said', 'Moved to later today.'); } }
 function onPark() { if (current.value) { graph.park(current.value.node.id); emit('said', 'Sent to the heap.'); } }
+
+function startStayWithMe(minutes: number) {
+  stayWithMeInteracted.value = true;
+  const now = Date.now();
+  stayWithMeState.value = startStayWithMeSession(now, minutes * 60 * 1000, stayWithMeAmbient.value);
+  stayWithMeActive.value = true;
+  showStayOptions.value = false;
+
+  // Try to get mute state from nudge-state (using localStorage directly as fallback)
+  const muted = typeof window !== 'undefined' ? (window.localStorage?.getItem('cadence:nudgeMuted') === 'true') : false;
+
+  // Play presence cue (tone + speech)
+  if (!muted) {
+    playPresenceCue();
+  }
+
+  // Record a 'started' occurrence on the current item if it exists
+  if (current.value) {
+    graph.start(current.value.node.id);
+  }
+
+  // Start the interval ticker
+  startStayWithMeTicker();
+}
+
+function endStayWithMe() {
+  stayWithMeActive.value = false;
+  stayWithMeState.value = null;
+  if (stayWithMeTimer) {
+    clearInterval(stayWithMeTimer);
+    stayWithMeTimer = null;
+  }
+  if (audioContext) {
+    try {
+      audioContext.close();
+    } catch {
+      /* ignore */
+    }
+    audioContext = null;
+  }
+}
+
+function playPresenceCue() {
+  try {
+    if (!audioContext) {
+      const Ctor = typeof window !== 'undefined' && (window.AudioContext || (window as any).webkitAudioContext);
+      if (Ctor) audioContext = new Ctor();
+    }
+    if (audioContext) {
+      const now = audioContext.currentTime;
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.frequency.value = 600;
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.03, now + 0.05);
+      gain.gain.linearRampToValueAtTime(0, now + 0.2);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    }
+  } catch {
+    /* ignore audio errors */
+  }
+
+  // Speak the presence cue
+  if ('speechSynthesis' in window) {
+    try {
+      const utterance = new SpeechSynthesisUtterance(PRESENCE_CUE_TEXT);
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      utterance.volume = 0.7;
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      /* ignore speech errors */
+    }
+  }
+}
+
+function startStayWithMeTicker() {
+  if (stayWithMeTimer) clearInterval(stayWithMeTimer);
+  stayWithMeTimer = setInterval(() => {
+    if (!stayWithMeState.value || !stayWithMeActive.value) {
+      if (stayWithMeTimer) {
+        clearInterval(stayWithMeTimer);
+        stayWithMeTimer = null;
+      }
+      return;
+    }
+
+    const now = Date.now();
+    const muted = typeof window !== 'undefined' ? (window.localStorage?.getItem('cadence:nudgeMuted') === 'true') : false;
+
+    // Check if check-in is due
+    if (checkInDue(stayWithMeState.value, now) && stayWithMeInteracted.value && !muted) {
+      stayWithMeState.value = markCheckedIn(stayWithMeState.value);
+      // Play tone + speak check-in
+      playCheckInCue();
+    }
+
+    // Check if session has ended
+    if (isEnded(stayWithMeState.value, now)) {
+      stayWithMeActive.value = false;
+      if (stayWithMeInteracted.value && !muted) {
+        // Speak end message
+        if ('speechSynthesis' in window) {
+          try {
+            const utterance = new SpeechSynthesisUtterance(END_TEXT);
+            utterance.rate = 1;
+            utterance.pitch = 1;
+            utterance.volume = 0.7;
+            window.speechSynthesis.speak(utterance);
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+      if (stayWithMeTimer) {
+        clearInterval(stayWithMeTimer);
+        stayWithMeTimer = null;
+      }
+      if (audioContext) {
+        try {
+          audioContext.close();
+        } catch {
+          /* ignore */
+        }
+        audioContext = null;
+      }
+      return;
+    }
+
+    // Update status line
+    stayWithMeStatus.value = statusLine(stayWithMeState.value, now);
+  }, 1000);
+}
+
+function playCheckInCue() {
+  try {
+    if (!audioContext) {
+      const Ctor = typeof window !== 'undefined' && (window.AudioContext || (window as any).webkitAudioContext);
+      if (Ctor) audioContext = new Ctor();
+    }
+    if (audioContext) {
+      const now = audioContext.currentTime;
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.frequency.value = 650;
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.05, now + 0.05);
+      gain.gain.linearRampToValueAtTime(0, now + 0.25);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    }
+  } catch {
+    /* ignore audio errors */
+  }
+
+  // Speak the check-in cue
+  if ('speechSynthesis' in window) {
+    try {
+      const utterance = new SpeechSynthesisUtterance(CHECK_IN_TEXT);
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      utterance.volume = 0.7;
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      /* ignore speech errors */
+    }
+  }
+}
+
+onBeforeUnmount(() => {
+  if (stayWithMeTimer) {
+    clearInterval(stayWithMeTimer);
+    stayWithMeTimer = null;
+  }
+  if (audioContext) {
+    try {
+      audioContext.close();
+    } catch {
+      /* ignore */
+    }
+  }
+});
 </script>
