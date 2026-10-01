@@ -16,6 +16,7 @@
  * is a no-op and the app runs exactly as the local-first version did.
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { GRAPH_TABLE_NAMES, pullGraph, pushGraph, resetGraphBaseline } from './graph-sync';
 import {
   getTasks, saveTasks,
   getTimeBlocks, saveTimeBlocks,
@@ -82,6 +83,7 @@ const baseline: Record<string, Set<string>> = {};
 
 export function resetBaseline() {
   for (const k of Object.keys(baseline)) delete baseline[k];
+  resetGraphBaseline();
 }
 
 function tsOf(d: any): string | null {
@@ -143,6 +145,7 @@ async function pullKv(sb: SupabaseClient, userId: string) {
 
 export async function pullAll(sb: SupabaseClient, userId: string) {
   for (const c of COLLECTIONS) await pullCollection(sb, userId, c);
+  await pullGraph(sb, userId);
   await pullKv(sb, userId);
 }
 
@@ -175,13 +178,14 @@ async function pushKv(sb: SupabaseClient, userId: string) {
 
 export async function pushAll(sb: SupabaseClient, userId: string) {
   for (const c of COLLECTIONS) await pushCollection(sb, userId, c);
+  await pushGraph(sb, userId);
   await pushKv(sb, userId);
 }
 
 // ── Realtime ────────────────────────────────────────────────
 /** Wake `onRemote` (debounced) whenever any of the user's rows change elsewhere. */
 export function subscribeRealtime(sb: SupabaseClient, userId: string, onRemote: () => void): () => void {
-  const tables = [...COLLECTIONS.map((c) => `cadence_${c.table}`), 'cadence_kv'];
+  const tables = [...COLLECTIONS.map((c) => `cadence_${c.table}`), ...GRAPH_TABLE_NAMES, 'cadence_kv'];
   const channel = sb.channel(`cadence:${userId}`);
   for (const t of tables) {
     channel.on('postgres_changes', { event: '*', schema: 'public', table: t, filter: `user_id=eq.${userId}` }, onRemote);
