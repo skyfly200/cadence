@@ -28,3 +28,10 @@ export function wasAway(now: Date = new Date()): boolean {
   return Number.isFinite(last) && last > 0 && now.getTime() - last >= AWAY_AFTER_MS;
 }
 export function markOpened(now: Date = new Date()): void { write(OPENED_KEY, String(now.getTime())); }
+
+const MENTIONED_KEY = 'cadence:habitMentioned';
+/** Habit period windows already given their one final-stretch mention, as `habitId|windowKey`. */
+export function getMentioned(): string[] {
+  try { const v = JSON.parse(read(MENTIONED_KEY) ?? '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch { return []; }
+}
+export function addMentioned(keys: string[]): void { write(MENTIONED_KEY, JSON.stringify([...new Set([...getMentioned(), ...keys])].slice(-200))); }

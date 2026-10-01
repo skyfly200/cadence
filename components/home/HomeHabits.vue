@@ -3,6 +3,10 @@
     <h1 class="text-xl font-semibold">Habits</h1>
     <p class="text-sm text-slate-500 dark:text-slate-400">{{ graph.weeklyTally }} accomplished this week. Each period starts fresh.</p>
 
+    <p v-if="nearEnd.length" class="mt-3 rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-stone-700 dark:bg-white/10 dark:text-slate-200">
+      Near the end of their period, still open: {{ nearEnd.join(', ') }}. Only if you want to.
+    </p>
+
     <div v-for="g in groups" :key="g.period" class="mt-4">
       <h2 class="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{{ HEADING[g.period] }}</h2>
       <div class="mt-1.5 grid grid-cols-2 gap-3">
@@ -38,8 +42,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { PERIODS } from '~/lib/domain';
+import { computed, onMounted, ref } from 'vue';
+import { PERIODS, finalStretchMention } from '~/lib/domain';
+import { addMentioned, getMentioned } from '~/lib/home/prefs';
 import type { Period } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
 
@@ -53,6 +58,18 @@ const WORD: Record<Period, string> = { day: 'today', week: 'this week', month: '
 const groups = computed(() =>
   PERIODS.map((period) => ({ period, rows: graph.habitRows.filter((r) => r.habit.recurrence.period === period && !r.habit.quiet) })).filter((g) => g.rows.length),
 );
+
+// Each longer-period habit gets one gentle mention near the end of its period, shown once.
+const nearEnd = ref<string[]>([]);
+onMounted(() => {
+  const seen = getMentioned();
+  const hits = graph.habits.flatMap((h) => {
+    const key = finalStretchMention(h, graph.occurrences, graph.asOf, seen.filter((m) => m.startsWith(`${h.id}|`)).map((m) => m.split('|')[1]));
+    return key ? [{ title: h.title, mark: `${h.id}|${key}` }] : [];
+  });
+  nearEnd.value = hits.map((h) => h.title);
+  addMentioned(hits.map((h) => h.mark));
+});
 
 const title = ref('');
 const target = ref(1);
