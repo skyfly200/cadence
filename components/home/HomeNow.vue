@@ -59,10 +59,6 @@
                   {{ dur }}m
                 </button>
               </div>
-              <div class="mt-3 flex items-center gap-2">
-                <input type="checkbox" id="ambient-toggle" v-model="stayWithMeAmbient" class="size-4 rounded">
-                <label for="ambient-toggle" class="text-sm text-slate-600 dark:text-slate-300">Ambient sound</label>
-              </div>
             </div>
 
             <div v-if="stayWithMeActive && stayWithMeState" class="mt-4 rounded-2xl bg-stone-50 p-4 dark:bg-white/10">
@@ -128,7 +124,6 @@ const keepDismissed = ref(false);
 const showStayOptions = ref(false);
 const stayWithMeActive = ref(false);
 const stayWithMeState = ref<StayWithMeState | null>(null);
-const stayWithMeAmbient = ref(false);
 const stayWithMeStatus = ref('');
 const stayWithMeInteracted = ref(false);
 let stayWithMeTimer: ReturnType<typeof setInterval> | null = null;
@@ -159,7 +154,7 @@ function onPark() { if (current.value) { graph.park(current.value.node.id); emit
 function startStayWithMe(minutes: number) {
   stayWithMeInteracted.value = true;
   const now = Date.now();
-  stayWithMeState.value = startStayWithMeSession(now, minutes * 60 * 1000, stayWithMeAmbient.value);
+  stayWithMeState.value = startStayWithMeSession(now, minutes * 60 * 1000);
   stayWithMeActive.value = true;
   showStayOptions.value = false;
 
