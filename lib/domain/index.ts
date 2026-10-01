@@ -3,3 +3,4 @@ export * from './periods';
 export * from './habits';
 export * from './runs';
 export * from './tally';
+export * from './parse-capture';
