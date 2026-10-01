@@ -1,5 +1,6 @@
 -- ============================================================================
--- DRAFT ONLY, NOT APPLIED.
+-- APPLIED 2026-10-01 to the cadence project as migration "cadence_nudges_push" (via the Supabase MCP).
+-- The cron job needs the Vault secret (see the scheduler note at the bottom) before it can deliver.
 --
 -- Web push delivery infrastructure for nudges: subscriptions and the queue.
 -- Source: .scratch/cadence-adhd-pivot/tickets/09 (nudges), 10 (architecture).
@@ -95,51 +96,49 @@ returns table (
 )
 language plpgsql
 set search_path = ''
-as $
+as $$
+#variable_conflict use_column
 begin
-  update public.nudge_queue
-  set sent_at = now()
-  where (user_id, id) in (
-    select user_id, id
-    from public.nudge_queue
-    where sent_at is null and fire_at <= now()
-    order by fire_at
+  return query
+  with due as (
+    select q.user_id, q.id
+    from public.nudge_queue q
+    where q.sent_at is null and q.fire_at <= now()
+    order by q.fire_at
     limit batch
     for update skip locked
   )
-  returning public.nudge_queue.user_id, public.nudge_queue.id, public.nudge_queue.kind,
-            public.nudge_queue.title, public.nudge_queue.body, public.nudge_queue.tag,
-            public.nudge_queue.fire_at, public.nudge_queue.drop_after
-  into user_id, id, kind, title, body, tag, fire_at, drop_after;
-
-  return next;
+  update public.nudge_queue n
+  set sent_at = now()
+  from due
+  where n.user_id = due.user_id and n.id = due.id
+  returning n.user_id, n.id, n.kind, n.title, n.body, n.tag, n.fire_at, n.drop_after;
 end;
 $$;
 
 -- Only the server can call this; it bypasses RLS to claim rows across all users.
+revoke execute on function public.claim_due_nudges(int) from public, anon, authenticated;
 grant execute on function public.claim_due_nudges(int) to service_role;
-revoke execute on function public.claim_due_nudges(int) from anon, authenticated;
 
 -- ─────────────────────────────────────────────────────────────────────────
--- Pg_cron job (commented out; enable after manual deployment and testing).
+-- The scheduler: every minute, call the dispatch route with the shared secret.
+-- The secret lives in Supabase Vault, never in this file. Store it once, with the
+-- same value as NUDGE_CRON_SECRET in Vercel (run in the SQL editor):
+--   select vault.create_secret('<the secret>', 'nudge_cron_secret');
+-- Until it exists the job's calls are answered 401 and nothing is sent.
 -- ─────────────────────────────────────────────────────────────────────────
--- select cron.schedule('nudge_dispatch', '* * * * *',
---   'select net.http_post(
---      url := $1,
---      headers := $2,
---      timeout_milliseconds := 2000
---    ) from json_to_record(
---      json_object_agg(
---        ''url'',
---        json_build_object(
---          ''value'', ''https://cadence.skylerfly.com/api/nudges/dispatch''
---        ),
---        ''headers'',
---        json_build_object(
---          ''value'', jsonb_build_object(
---            ''x-nudge-cron'', (vault.decrypted_secrets ->> ''nudge_cron_secret'')
---          )
---        )
---      )
---    ) as x(url text, headers jsonb)'
--- );
+select cron.schedule(
+  'nudge_dispatch',
+  '* * * * *',
+  $cron$
+  select net.http_post(
+    url := 'https://cadence.skylerfly.com/api/nudges/dispatch',
+    headers := jsonb_build_object(
+      'content-type', 'application/json',
+      'x-nudge-cron', coalesce((select decrypted_secret from vault.decrypted_secrets where name = 'nudge_cron_secret'), '')
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 2000
+  );
+  $cron$
+);
