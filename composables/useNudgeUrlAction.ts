@@ -3,11 +3,14 @@
  * Parses ?nudge=<id>&action=notnow|stop, applies feedback, and strips the query.
  */
 
-import { onMounted } from 'vue';
 import { applyNotificationAction, loadState, saveState } from '~/lib/home/nudge-state';
 
+/**
+ * Runs at setup, before useNudges loads its state, so the saved feedback is the
+ * state useNudges starts from (client only; the app is gated on a session).
+ */
 export function useNudgeUrlAction() {
-  onMounted(() => {
+  {
     if (typeof window === 'undefined') return;
 
     const url = new URL(window.location.href);
@@ -29,5 +32,5 @@ export function useNudgeUrlAction() {
       url.searchParams.delete('action');
       window.history.replaceState({}, '', url.toString());
     }
-  });
+  }
 }

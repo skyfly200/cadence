@@ -52,7 +52,8 @@ create policy "push_subscriptions_delete_own" on public.push_subscriptions
 -- nudge_queue: the queue of nudges to send.
 -- ─────────────────────────────────────────────────────────────────────────
 create table if not exists public.nudge_queue (
-  user_id    uuid        not null references auth.users (id) on delete cascade,
+  -- default auth.uid(): the client inserts rows without a user_id and RLS checks it.
+  user_id    uuid        not null default auth.uid() references auth.users (id) on delete cascade,
   id         text        not null,
   kind       text        not null check (kind in ('leave_by', 'at_risk', 'transition', 'habit_summary')),
   title      text        not null,

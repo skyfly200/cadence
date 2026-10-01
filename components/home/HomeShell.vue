@@ -65,11 +65,13 @@ import { useAppStore } from '~/stores/app';
 import { useGraphStore } from '~/stores/graph';
 import { getDensity, markOpened, setDensity, wasAway, type Density } from '~/lib/home/prefs';
 import { useNudges } from '~/composables/useNudges';
+import { useNudgeUrlAction } from '~/composables/useNudgeUrlAction';
 
 type Lens = 'now' | 'plan' | 'habits' | 'goals';
 
 const app = useAppStore();
 const graph = useGraphStore();
+useNudgeUrlAction();
 const nudges = useNudges();
 const lens = ref<Lens>('now');
 const density = ref<Density>(1);

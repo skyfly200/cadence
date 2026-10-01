@@ -4,6 +4,8 @@
  */
 
 import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { getSupabase } from '~/lib/supabase';
+import { syncNudgesToQueue } from '~/lib/home/nudge-queue-sync';
 import { planNudges, type Nudge, type NudgeSettings } from '~/lib/domain';
 import { addMentioned, getMentioned } from '~/lib/home/prefs';
 import { showNotification } from '~/lib/notifications';
@@ -142,6 +144,8 @@ export function useNudges() {
     }
   }
 
+  let lastSyncedIds = new Set<string>();
+
   function tick(): void {
     if (!graph.loaded) return;
 
@@ -161,6 +165,10 @@ export function useNudges() {
       disabledKinds: Array.from(state.value.disabledKinds),
       opts: { timeZone: tz },
     });
+
+    // Queue them for Web Push so they also arrive when the app is closed (signed-in only)
+    const ids = new Set(planned.map((n) => n.id));
+    void syncNudgesToQueue(planned, getSupabase(), now, lastSyncedIds).then((synced) => { if (synced) lastSyncedIds = ids; }).catch(() => {});
 
     // Filter to due nudges
     const due = dueNudges(planned, now);
