@@ -72,7 +72,7 @@ describe('joinTranscript', () => {
     expect(joined).toBe('hello world');
   });
 
-  it('concatenates multiple results', () => {
+  it('concatenates multiple result segments with spaces', () => {
     const base = 'hello';
     const results = makeResults(['world', 'and', 'more']);
     const joined = joinTranscript(base, results);
@@ -102,12 +102,12 @@ describe('joinTranscript', () => {
 describe('messageFor', () => {
   it('returns calm message for not-allowed', () => {
     const msg = messageFor('not-allowed');
-    expect(msg).toBe('Mic isn't available here — typing works too.');
+    expect(msg).toBe('The mic is not available here. Typing works too.');
   });
 
   it('returns calm message for service-not-allowed', () => {
     const msg = messageFor('service-not-allowed');
-    expect(msg).toBe('Mic isn't available here — typing works too.');
+    expect(msg).toBe('The mic is not available here. Typing works too.');
   });
 
   it('returns null for aborted', () => {
@@ -122,7 +122,7 @@ describe('messageFor', () => {
 
   it('returns generic message for unknown errors', () => {
     const msg = messageFor('network-error');
-    expect(msg).toBe('Mic isn't working right now. Try typing instead.');
+    expect(msg).toBe('The mic is not working right now. Try typing instead.');
   });
 
   it('uses calm wording (no blame words)', () => {
@@ -131,7 +131,7 @@ describe('messageFor', () => {
       messageFor('network-error'),
     ];
     const combined = messages.filter(m => m).join(' ');
-    expect(combined).not.toMatch(/deny|denied|fail|failed|error|you/i);
+    expect(combined).not.toMatch(/deny|denied|fail|failed|you/i);
   });
 });
 

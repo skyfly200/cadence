@@ -51,6 +51,7 @@ export function getRecognitionCtor(win: Window): SpeechRecognitionConstructor | 
  * Join interim and final transcript parts into a single string.
  * Rebuilds from scratch each time to ensure live updates and no duplicates.
  * Respects existing base text (e.g., previously captured transcript).
+ * Takes the best alternative (first) from each result, rebuilds every event.
  *
  * @param base - existing text to build on (e.g., from a previous final result)
  * @param results - SpeechRecognitionResultList from the event
@@ -60,14 +61,14 @@ export function joinTranscript(
   base: string,
   results: SpeechRecognitionResultList
 ): string {
-  let spoken = '';
+  const parts: string[] = [];
   for (let i = 0; i < results.length; i++) {
     const result = results[i];
-    for (let j = 0; j < result.length; j++) {
-      spoken += result[j].transcript;
+    if (result.length > 0) {
+      parts.push(result[0].transcript);
     }
   }
-  spoken = spoken.replace(/\s+/g, ' ').trim();
+  let spoken = parts.join(' ').replace(/\s+/g, ' ').trim();
   if (!spoken) return base;
   const baseTrimmed = base.trimEnd();
   if (!baseTrimmed) return spoken;
@@ -82,13 +83,13 @@ export function messageFor(errorCode: string): string | null {
   switch (errorCode) {
     case 'not-allowed':
     case 'service-not-allowed':
-      return 'Mic isn't available here — typing works too.';
+      return 'The mic is not available here. Typing works too.';
     case 'aborted':
       return null;
     case 'no-speech':
       return null;
     default:
-      return 'Mic isn't working right now. Try typing instead.';
+      return 'The mic is not working right now. Try typing instead.';
   }
 }
 

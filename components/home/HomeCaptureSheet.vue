@@ -48,6 +48,7 @@ const speechState = ref(initialState());
 
 let recognition: any = null;
 let baseSpeech = '';
+let ignoreResults = false;
 
 onMounted(() => {
   const ctor = getRecognitionCtor(window);
@@ -60,11 +61,13 @@ onMounted(() => {
     recognition.interimResults = true;
 
     recognition.addEventListener('start', () => {
+      ignoreResults = false;
       speechState.value = setListening(speechState.value, true);
       speechState.value = setMessage(speechState.value, null);
     });
 
     recognition.addEventListener('result', (event: any) => {
+      if (ignoreResults) return;
       const text = joinTranscript(baseSpeech, event.results);
       draft.value = text;
     });
@@ -86,6 +89,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  ignoreResults = true;
   if (recognition) {
     try { recognition.abort(); } catch { /* noop */ }
   }
@@ -95,10 +99,12 @@ watch(() => props.open, async (o) => {
   if (o) {
     error.value = '';
     baseSpeech = '';
+    ignoreResults = false;
     speechState.value = initialState();
     await nextTick();
     box.value?.focus();
   } else {
+    ignoreResults = true;
     if (recognition) {
       try { recognition.abort(); } catch { /* noop */ }
     }
@@ -112,20 +118,20 @@ function toggleSpeech() {
   try {
     if (speechState.value.listening) {
       recognition.stop();
-      baseSpeech = draft.value;
     } else {
       baseSpeech = draft.value;
       recognition.start();
     }
   } catch {
-    speechState.value = setMessage(speechState.value, 'Mic isn't working right now. Try typing instead.');
+    speechState.value = setMessage(speechState.value, messageFor('unknown'));
   }
 }
 
 async function add() {
   if (busy.value) return;
+  ignoreResults = true;
   if (recognition && speechState.value.listening) {
-    recognition.abort();
+    try { recognition.abort(); } catch { /* noop */ }
   }
   busy.value = true;
   const r = await graph.capture(draft.value);
