@@ -1,7 +1,7 @@
 <template>
   <section class="px-4 pt-4">
     <h1 class="text-xl font-semibold">Habits</h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400">{{ graph.weeklyTally }} kept this week. Each period starts fresh.</p>
+    <p class="text-sm text-slate-500 dark:text-slate-400">{{ graph.weeklyTally }} accomplished this week. Each period starts fresh.</p>
 
     <div v-for="g in groups" :key="g.period" class="mt-4">
       <h2 class="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{{ HEADING[g.period] }}</h2>

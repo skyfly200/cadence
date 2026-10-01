@@ -10,7 +10,7 @@
       <p v-if="error" class="mt-2 text-sm text-amber-700 dark:text-amber-300">{{ error }}</p>
       <div class="mt-3 flex gap-2">
         <button class="min-h-[44px] rounded-2xl bg-stone-100 px-4 text-sm dark:bg-white/10" @click="$emit('close')">Close</button>
-        <button class="min-h-[44px] flex-1 rounded-2xl bg-[#E07A45] font-semibold text-white disabled:opacity-50" :disabled="!draft.trim()" @click="add">Add</button>
+        <button class="min-h-[44px] flex-1 rounded-2xl bg-[#E07A45] font-semibold text-white disabled:opacity-50" :disabled="!draft.trim() || busy" @click="add">{{ busy ? 'Adding…' : 'Add' }}</button>
       </div>
     </div>
   </div>
@@ -25,14 +25,18 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'said', msg: string): void }>
 const graph = useGraphStore();
 const draft = ref('');
 const error = ref('');
+const busy = ref(false);
 const box = ref<HTMLTextAreaElement | null>(null);
 
 watch(() => props.open, async (o) => {
   if (o) { error.value = ''; await nextTick(); box.value?.focus(); }
 });
 
-function add() {
-  const r = graph.capture(draft.value);
+async function add() {
+  if (busy.value) return;
+  busy.value = true;
+  const r = await graph.capture(draft.value);
+  busy.value = false;
   if (!r.ok) { error.value = r.message; return; }
   draft.value = '';
   emit('close');

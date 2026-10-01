@@ -3,14 +3,16 @@
  * synced by the existing engine. Local-first on purpose: capture works offline
  * and signed out, and the sync (lib/graph-sync.ts) carries it to the cloud.
  *
- * Decision to confirm: the app saves captures here directly instead of posting
- * to /api/capture, so capture works offline. The endpoint stays for assistant
- * channels (Phase 5).
+ * Capture uses the shared capture endpoint when signed in and online (dedupe, rate limits). Offline or
+ * signed out it saves here and the normal sync carries it up. A capture with a date or time becomes a
+ * Commitment (on-device parser); everything else stays an Idea.
  */
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrences, saveGraphNodes, saveGraphOccurrences } from '~/lib/graph-storage';
-import { habitProgress, habitTap, homeHabitsPiece, rankNow, weeklyKept } from '~/lib/domain';
+import { habitProgress, habitTap, homeHabitsPiece, parseCapture, rankNow, weeklyKept } from '~/lib/domain';
+import type { ParsedCapture } from '~/lib/domain';
+import { postCapture } from '~/lib/capture-client';
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/lib/domain';
 import { keptToday, nodeState, parkedItems } from '~/lib/home/derive';
 import type { Density } from '~/lib/home/prefs';
@@ -68,20 +70,58 @@ export const useGraphStore = defineStore('graph', () => {
   const currentState = computed(() => (rank.value.now ? nodeState(rank.value.now.node.id, occurrences.value) : null));
 
   // ── actions ──────────────────────────────────────────
-  /** Save a Capture as an Idea (instantly, offline-safe). Returns the calm reply, or an error string. */
-  function capture(text: string): { ok: true; reply: string } | { ok: false; message: string } {
+  const when = (iso: string) => new Date(iso).toLocaleString([], { weekday: 'long', hour: 'numeric', minute: '2-digit' });
+
+  function nodeFromCapture(id: string, p: ParsedCapture, now: Date): Node {
+    const t = now.toISOString();
+    if (p.kind === 'idea') return { id, kind: 'idea', title: p.title, private: false, createdAt: t, updatedAt: t };
+    return {
+      id, kind: 'commitment', title: p.title, notes: p.text !== p.title ? p.text : null, private: false, createdAt: t, updatedAt: t,
+      fixedTime: p.fixedAt ?? null, deadline: p.deadline ?? null, windowStart: p.windowStart ?? null, windowEnd: p.windowEnd ?? null,
+      durationMinutes: p.durationMinutes ?? null, slog: false, quiet: false,
+    };
+  }
+
+  /**
+   * Save a Capture. Signed in and online: through /api/capture (it stores the Idea; we keep the same id here).
+   * Otherwise (signed out, offline, or the request failed): saved on this device and carried up by the normal sync.
+   * Text with a date or time becomes a Commitment; everything else stays an Idea.
+   */
+  async function capture(text: string): Promise<{ ok: true; reply: string } | { ok: false; message: string }> {
     const title = text.trim();
     if (!title) return { ok: false, message: 'Nothing to add yet.' };
     if (title.length > MAX_CAPTURE) return { ok: false, message: 'That is a bit long to add at once. Try splitting it.' };
     const now = new Date();
-    const idea: Idea = { id: uid(), kind: 'idea', title, private: false, createdAt: now.toISOString(), updatedAt: now.toISOString() };
-    nodes.value = [...nodes.value, idea];
+    const parsed = parseCapture(title, { now, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+
+    let id: string = uid();
+    let viaServer = false;
+    const token = app.session?.access_token;
+    if (token) {
+      const r = await postCapture(title, { accessToken: token });
+      if (r.status === 'saved') { id = r.id; viaServer = true; }
+      else if (r.status === 'rejected') return { ok: false, message: r.message };
+      // signed_out, queued or failed: fall through and keep it on this device.
+    }
+
+    const reply = parsed.kind === 'commitment'
+      ? `Got it. ${parsed.fixedAt ? when(parsed.fixedAt) : parsed.deadline ? `by ${when(parsed.deadline)}` : 'Added'}.${parsed.ambiguous ? ' I guessed the time.' : ''}`
+      : 'Got it, parked.';
+
+    if (nodes.value.some((n) => n.id === id)) return { ok: true, reply }; // a replayed or duplicate capture
+
+    nodes.value = [...nodes.value, nodeFromCapture(id, parsed, now)];
     persistNodes();
-    const o = occ(idea.id, 'captured', now);
-    append([o]);
+    if (viaServer) {
+      // The server already wrote the captured record and cannot be undone from here.
+      lastAction.value = null;
+    } else {
+      const o = occ(id, 'captured', now);
+      append([o]);
+      lastAction.value = { label: 'Added', occurrences: [o], addedNodeIds: [id] };
+    }
     asOf.value = now;
-    lastAction.value = { label: 'Added', occurrences: [o], addedNodeIds: [idea.id] };
-    return { ok: true, reply: 'Got it, parked.' };
+    return { ok: true, reply };
   }
 
   /** "Do this today": turn a parked Idea into a Commitment (no bucket questions). */

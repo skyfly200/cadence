@@ -1,7 +1,7 @@
 <template>
   <section class="px-4 pt-4">
     <button v-if="density >= 1 && graph.kept.length" class="mb-1 ml-8 text-xs font-medium text-slate-500 dark:text-slate-400" @click="showPast = !showPast">
-      {{ showPast ? 'Hide' : `Kept earlier ✓ ${graph.kept.length}` }}
+      {{ showPast ? 'Hide' : `Accomplished earlier ✓ ${graph.kept.length}` }}
     </button>
 
     <ol class="relative ml-3 border-l-2 border-dashed border-teal-900/15 pl-6 dark:border-white/15">
@@ -98,7 +98,7 @@ function onDone() {
   if (!node) return;
   // A habit is logged (and counts toward its period); a Commitment is finished.
   if (node.kind === 'habit') graph.tapHabit(node.id); else graph.complete(node.id);
-  emit('said', `Nice. ${graph.kept.length} kept today.`);
+  emit('said', `Nice. ${graph.kept.length} accomplished today.`);
 }
 function onNotNow() { if (current.value) { graph.notNow(current.value.node.id); emit('said', 'Moved to later today.'); } }
 function onPark() { if (current.value) { graph.park(current.value.node.id); emit('said', 'Got it, parked.'); } }

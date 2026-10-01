@@ -10,7 +10,7 @@
         <button class="grid size-11 shrink-0 place-items-center rounded-lg border border-teal-900/10 bg-white text-base dark:border-white/10 dark:bg-[#2A2645]" aria-label="Display and account" @click="settingsOpen = true">⚙</button>
       </div>
       <div v-if="density >= 1" class="mt-2 flex flex-wrap items-center gap-2">
-        <span v-if="graph.kept.length" class="text-[12px] font-semibold text-teal-800 dark:text-[#FFB59F]">{{ graph.kept.length }} kept today</span>
+        <span v-if="graph.kept.length" class="text-[12px] font-semibold text-teal-800 dark:text-[#FFB59F]">{{ graph.kept.length }} accomplished today</span>
         <button
           v-if="graph.habitsPiece.total > 0"
           class="inline-flex min-h-[32px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-xs text-slate-600 dark:border-white/10 dark:bg-[#2A2645] dark:text-slate-300"
