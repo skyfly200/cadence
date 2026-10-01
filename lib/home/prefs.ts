@@ -1,0 +1,30 @@
+/**
+ * Small per-device preferences for the new Home: display density and the last
+ * time the app was opened (to show the warm "welcome back" greeting after a
+ * break). Plain localStorage, wrapped so a blocked store never breaks Home.
+ */
+export type Density = 0 | 1 | 2; // Simple, Balanced (default), Rich
+
+const DENSITY_KEY = 'cadence:homeDensity';
+const OPENED_KEY = 'cadence:homeLastOpened';
+const AWAY_AFTER_MS = 24 * 60 * 60 * 1000;
+
+function read(key: string): string | null {
+  try { return typeof window === 'undefined' ? null : window.localStorage.getItem(key); } catch { return null; }
+}
+function write(key: string, value: string): void {
+  try { if (typeof window !== 'undefined') window.localStorage.setItem(key, value); } catch { /* storage blocked */ }
+}
+
+export function getDensity(): Density {
+  const v = Number(read(DENSITY_KEY));
+  return v === 0 || v === 1 || v === 2 ? v : 1;
+}
+export function setDensity(d: Density): void { write(DENSITY_KEY, String(d)); }
+
+/** True if the app has not been opened for a day or more (never on the very first open). */
+export function wasAway(now: Date = new Date()): boolean {
+  const last = Number(read(OPENED_KEY));
+  return Number.isFinite(last) && last > 0 && now.getTime() - last >= AWAY_AFTER_MS;
+}
+export function markOpened(now: Date = new Date()): void { write(OPENED_KEY, String(now.getTime())); }
