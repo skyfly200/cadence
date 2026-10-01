@@ -78,7 +78,9 @@ const tab = (k: Lens) => [
   lens.value === k ? 'bg-teal-100 text-teal-900 dark:bg-[#3A3560] dark:text-[#FFB59F]' : 'text-slate-500 dark:text-slate-400',
 ];
 
-const dateLabel = computed(() => graph.asOf.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }));
+// Client-only: the server's date and locale differ from the browser's, which would cause a hydration mismatch.
+const mounted = ref(false);
+const dateLabel = computed(() => (mounted.value ? graph.asOf.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }) : ''));
 
 function say(msg: string) {
   toast.value = msg;
@@ -89,7 +91,7 @@ function undo() {
   const label = graph.undoLast();
   say(label ? `${label} undone.` : 'Nothing to undo.');
 }
-function setDensityValue(d: Density) { density.value = d; setDensity(d); }
+function setDensityValue(d: Density) { density.value = d; graph.density = d; setDensity(d); }
 
 const onHydrated = () => graph.load();
 
@@ -100,7 +102,9 @@ onMounted(() => {
     void navigateTo(`/classic${window.location.search}`, { replace: true });
     return;
   }
+  mounted.value = true;
   density.value = getDensity();
+  graph.density = density.value;
   away.value = wasAway();
   markOpened();
   graph.load();

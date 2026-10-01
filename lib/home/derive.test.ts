@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Commitment, Idea, Occurrence } from '../domain/types';
-import { candidates, keptToday, nodeState, parkedItems, pickNow, shelfNote, SHELF_MS } from './derive';
+import type { Commitment, Idea, Occurrence } from '../domain';
+import { keptToday, nodeState, parkedItems } from './derive';
 
 const NOW = new Date('2026-10-03T15:00:00.000Z');
 const opts = { timeZone: 'UTC' };
@@ -18,55 +18,15 @@ const occ = (nodeId: string, type: Occurrence['type'], at: string, extra: Partia
 });
 
 describe('nodeState', () => {
-  it('tracks done, and an undone cancels it', () => {
+  it('tracks done and started, and an undone cancels them', () => {
     const d = occ('a', 'done', '2026-10-03T12:00:00.000Z');
-    expect(nodeState('a', [d]).done).toBe(true);
-    expect(nodeState('a', [d, occ('a', 'undone', '2026-10-03T12:05:00.000Z', { undoes: d.id })]).done).toBe(false);
-  });
-
-  it('parked, and bringing it back with an undone', () => {
-    const p = occ('a', 'parked', '2026-10-03T12:00:00.000Z');
-    expect(nodeState('a', [p]).parked).toBe(true);
-    expect(nodeState('a', [p, occ('a', 'undone', '2026-10-03T13:00:00.000Z', { undoes: p.id })]).parked).toBe(false);
-  });
-
-  it('reads the shelf time from a moved occurrence', () => {
-    const until = new Date(NOW.getTime() + SHELF_MS).toISOString();
-    expect(nodeState('a', [occ('a', 'moved', NOW.toISOString(), { note: shelfNote(NOW) })]).shelvedUntil).toBe(until);
+    const s = occ('a', 'started', '2026-10-03T11:00:00.000Z');
+    expect(nodeState('a', [s, d])).toMatchObject({ done: true, started: true });
+    expect(nodeState('a', [s, d, occ('a', 'undone', '2026-10-03T12:05:00.000Z', { undoes: d.id })]).done).toBe(false);
   });
 
   it('ignores other nodes', () => {
     expect(nodeState('a', [occ('b', 'done', NOW.toISOString())]).done).toBe(false);
-  });
-});
-
-describe('candidates and pickNow', () => {
-  it('excludes done, parked, shelved (until it expires) and quiet commitments', () => {
-    const nodes = [commitment('done'), commitment('parked'), commitment('shelved'), commitment('quiet', { quiet: true }), commitment('open')];
-    const occs = [
-      occ('done', 'done', '2026-10-03T10:00:00.000Z'),
-      occ('parked', 'parked', '2026-10-03T10:00:00.000Z'),
-      occ('shelved', 'moved', '2026-10-03T14:00:00.000Z', { note: shelfNote(new Date('2026-10-03T14:00:00.000Z')) }), // until 16:00
-    ];
-    expect(candidates(nodes, occs, NOW).map((c) => c.id)).toEqual(['open']);
-    const later = new Date('2026-10-03T16:30:00.000Z');
-    expect(candidates(nodes, occs, later).map((c) => c.id).sort()).toEqual(['open', 'shelved']);
-  });
-
-  it('puts timed items first (soonest), then the rest oldest first', () => {
-    const nodes = [
-      commitment('plain-new', { createdAt: '2026-10-02T00:00:00.000Z' }),
-      commitment('plain-old', { createdAt: '2026-10-01T00:00:00.000Z' }),
-      commitment('later', { fixedTime: '2026-10-03T20:00:00.000Z' }),
-      commitment('sooner', { deadline: '2026-10-03T18:00:00.000Z' }),
-    ];
-    const r = pickNow(nodes, [], NOW);
-    expect(r.now?.id).toBe('sooner');
-    expect(r.strip.map((c) => c.id)).toEqual(['later', 'plain-old', 'plain-new']);
-  });
-
-  it('returns no card when nothing is open', () => {
-    expect(pickNow([idea('i')], [], NOW)).toEqual({ now: null, strip: [] });
   });
 });
 
@@ -77,6 +37,10 @@ describe('parkedItems', () => {
     expect(parkedItems(nodes, [p]).map((x) => x.id)).toEqual(['new', 'c1', 'old']);
     const back = occ('c1', 'undone', '2026-10-03T10:00:00.000Z', { undoes: p.id });
     expect(parkedItems(nodes, [p, back]).map((x) => x.id)).toEqual(['new', 'old']);
+  });
+
+  it('does not list a commitment that was never parked', () => {
+    expect(parkedItems([commitment('open')], [])).toEqual([]);
   });
 });
 

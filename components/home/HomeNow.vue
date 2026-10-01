@@ -23,8 +23,18 @@
 
           <template v-if="current">
             <p class="text-center text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-[#FFB59F]">{{ started ? 'You are on it' : 'Right now' }}</p>
-            <h1 class="mt-1 break-words text-center font-serif text-[1.7rem] leading-tight">{{ current.title }}</h1>
-            <p v-if="density >= 1 && whenText" class="mt-2 text-center text-[15px] text-stone-600 dark:text-slate-300">{{ whenText }}</p>
+            <h1 class="mt-1 break-words text-center font-serif text-[1.7rem] leading-tight">{{ current.node.title }}</h1>
+            <p v-if="density >= 1 && graph.rank.reason" class="mt-2 text-center text-[15px] text-stone-600 dark:text-slate-300">{{ graph.rank.reason }}</p>
+            <p v-if="density >= 2 && graph.rank.chain.length" class="mt-1 text-center text-xs text-stone-500 dark:text-slate-400">{{ graph.rank.chain.join(' · ') }}</p>
+
+            <div v-if="graph.rank.offerShrinkParkKeep && !keepDismissed" class="mt-4 rounded-2xl bg-amber-50 p-3 text-center text-sm dark:bg-white/10">
+              <p>This has moved a few times. Park it, or keep it?</p>
+              <div class="mt-2 flex justify-center gap-2">
+                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-[#1D1A2F]" @click="onPark">Park it</button>
+                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-[#1D1A2F]" @click="keepDismissed = true">Keep it</button>
+              </div>
+            </div>
+
             <div v-if="!started" class="mt-5 grid grid-cols-3 gap-2">
               <button class="col-span-3 min-h-[44px] rounded-2xl bg-[#E07A45] py-3.5 text-base font-semibold text-white shadow-sm active:scale-[.99]" @click="onStart">Start</button>
               <button class="col-span-2 min-h-[44px] rounded-2xl bg-stone-100 py-3 text-sm font-medium dark:bg-white/10" @click="onNotNow">Not now</button>
@@ -41,12 +51,16 @@
             <button v-if="graph.parked.length" class="mx-auto mt-4 block min-h-[44px] rounded-2xl bg-[#E07A45] px-5 text-sm font-semibold text-white" @click="$emit('open-parked')">Open parked</button>
           </template>
         </div>
+
+        <p v-if="density >= 1 && graph.rank.workloadGuard.show" class="mt-3 rounded-2xl bg-white/70 px-4 py-2.5 text-center text-sm text-slate-600 dark:bg-white/5 dark:text-slate-300">
+          {{ graph.rank.workloadGuard.line }}
+        </p>
       </li>
 
-      <li v-for="c in ahead" :key="c.id" class="relative pb-3">
+      <li v-for="item in graph.rank.strip" :key="item.node.id" class="relative pb-3">
         <span class="absolute -left-[31px] top-1.5 size-3.5 rounded-full bg-sky-400 ring-4 ring-[#EEF5F3] dark:ring-[#1D1A2F]" />
-        <p v-if="timeOf(c)" class="text-[11px] font-bold text-slate-400">{{ timeOf(c) }}</p>
-        <p class="break-words text-[15px]">{{ c.title }}</p>
+        <p v-if="timeOf(item.node)" class="text-[11px] font-bold text-slate-400">{{ timeOf(item.node) }}</p>
+        <p class="break-words text-[15px]">{{ item.node.title }}</p>
       </li>
     </ol>
 
@@ -55,27 +69,37 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useGraphStore } from '~/stores/graph';
-import type { Commitment } from '~/lib/domain';
+import type { Commitment, Habit } from '~/lib/domain';
 import type { Density } from '~/lib/home/prefs';
 
-const props = defineProps<{ density: Density }>();
+defineProps<{ density: Density }>();
 const emit = defineEmits<{ (e: 'open-parked'): void; (e: 'said', msg: string): void }>();
 
 const graph = useGraphStore();
 const showPast = ref(false);
+const keepDismissed = ref(false);
 
-const current = computed(() => graph.pick.now);
+const current = computed(() => graph.rank.now);
 const started = computed(() => !!graph.currentState?.started);
-const ahead = computed(() => graph.pick.strip.slice(0, props.density === 0 ? 0 : props.density === 1 ? 3 : 5));
+// A new card gets a fresh prompt.
+watch(() => current.value?.node.id, () => { keepDismissed.value = false; });
 
 const fmt = (iso: string) => new Date(iso).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
-const timeOf = (c: Commitment) => (c.fixedTime ? fmt(c.fixedTime) : c.deadline ? `by ${fmt(c.deadline)}` : '');
-const whenText = computed(() => (current.value ? timeOf(current.value) : ''));
+const timeOf = (n: Commitment | Habit) => {
+  if (n.kind !== 'commitment') return '';
+  return n.fixedTime ? fmt(n.fixedTime) : n.deadline ? `by ${fmt(n.deadline)}` : '';
+};
 
-function onStart() { if (current.value) graph.start(current.value.id); }
-function onDone() { if (current.value) { graph.complete(current.value.id); emit('said', `Nice. ${graph.kept.length} kept today.`); } }
-function onNotNow() { if (current.value) { graph.notNow(current.value.id); emit('said', 'Moved to later today.'); } }
-function onPark() { if (current.value) { graph.park(current.value.id); emit('said', 'Got it, parked.'); } }
+function onStart() { if (current.value) graph.start(current.value.node.id); }
+function onDone() {
+  const node = current.value?.node;
+  if (!node) return;
+  // A habit is logged (and counts toward its period); a Commitment is finished.
+  if (node.kind === 'habit') graph.tapHabit(node.id); else graph.complete(node.id);
+  emit('said', `Nice. ${graph.kept.length} kept today.`);
+}
+function onNotNow() { if (current.value) { graph.notNow(current.value.node.id); emit('said', 'Moved to later today.'); } }
+function onPark() { if (current.value) { graph.park(current.value.node.id); emit('said', 'Got it, parked.'); } }
 </script>

@@ -10,9 +10,10 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrences, saveGraphNodes, saveGraphOccurrences } from '~/lib/graph-storage';
-import { habitProgress, habitTap, homeHabitsPiece, weeklyKept } from '~/lib/domain';
+import { habitProgress, habitTap, homeHabitsPiece, rankNow, weeklyKept } from '~/lib/domain';
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/lib/domain';
-import { keptToday, nodeState, parkedItems, pickNow, shelfNote } from '~/lib/home/derive';
+import { keptToday, nodeState, parkedItems } from '~/lib/home/derive';
+import type { Density } from '~/lib/home/prefs';
 import { useAppStore } from './app';
 
 const MAX_CAPTURE = 4000; // same limit as the server route
@@ -26,6 +27,8 @@ export const useGraphStore = defineStore('graph', () => {
   /** "Now" for derivations. Refreshed when Home opens and after each action, never on a timer. */
   const asOf = ref(new Date());
   const loaded = ref(false);
+  /** How much Home shows (the strip length); set by the Home screen from its preference. */
+  const density = ref<Density>(1);
   /** What the last action appended, so it can be undone (every action is undoable). */
   const lastAction = ref<{ label: string; occurrences: Occurrence[]; addedNodeIds: string[] } | null>(null);
 
@@ -51,14 +54,18 @@ export const useGraphStore = defineStore('graph', () => {
     ({ id: uid(), nodeId, type, at: now.toISOString(), source: 'app', ...extra });
 
   // ── derived ──────────────────────────────────────────
-  const pick = computed(() => pickNow(nodes.value, occurrences.value, asOf.value, 8));
+  const rankInput = (d: Density) => ({ now: asOf.value, nodes: nodes.value, links: links.value, occurrences: occurrences.value, density: d });
+  /** The Now card and strip (ticket 23). */
+  const rank = computed(() => rankNow(rankInput(density.value)));
+  /** The Today lens list: always the fullest strip. */
+  const rankToday = computed(() => rankNow(rankInput(2)));
   const parked = computed(() => parkedItems(nodes.value, occurrences.value));
   const kept = computed(() => keptToday(nodes.value, occurrences.value, asOf.value));
   const habits = computed(() => nodes.value.filter((n): n is Habit => n.kind === 'habit'));
   const habitsPiece = computed(() => homeHabitsPiece(habits.value, occurrences.value, asOf.value));
   const weeklyTally = computed(() => weeklyKept(occurrences.value, asOf.value));
   const habitRows = computed(() => habits.value.map((habit) => ({ habit, progress: habitProgress(habit, occurrences.value, asOf.value) })));
-  const currentState = computed(() => (pick.value.now ? nodeState(pick.value.now.id, occurrences.value) : null));
+  const currentState = computed(() => (rank.value.now ? nodeState(rank.value.now.node.id, occurrences.value) : null));
 
   // ── actions ──────────────────────────────────────────
   /** Save a Capture as an Idea (instantly, offline-safe). Returns the calm reply, or an error string. */
@@ -99,10 +106,7 @@ export const useGraphStore = defineStore('graph', () => {
   const start = (id: string) => act(id, 'started', 'Started');
   const complete = (id: string) => act(id, 'done', 'Done');
   const park = (id: string) => act(id, 'parked', 'Parked');
-  function notNow(id: string) {
-    const now = new Date();
-    act(id, 'moved', 'Moved to later', { note: shelfNote(now) });
-  }
+  const notNow = (id: string) => act(id, 'moved', 'Moved to later');
 
   /** Bring a parked Commitment back (cancels the parked record) or promote a parked Idea. */
   function bringBack(id: string) {
@@ -159,8 +163,8 @@ export const useGraphStore = defineStore('graph', () => {
   function refresh() { asOf.value = new Date(); }
 
   return {
-    nodes, links, occurrences, asOf, loaded, lastAction,
-    pick, parked, kept, habits, habitsPiece, weeklyTally, habitRows, currentState,
+    nodes, links, occurrences, asOf, loaded, lastAction, density,
+    rank, rankToday, parked, kept, habits, habitsPiece, weeklyTally, habitRows, currentState,
     load, refresh, capture, promote, start, complete, park, notNow, bringBack, undoLast, createHabit, tapHabit,
   };
 });
