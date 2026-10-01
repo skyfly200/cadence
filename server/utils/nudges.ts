@@ -7,12 +7,11 @@
  *  * Atomically claim a batch of rows with sent_at is null and fire_at <= now.
  *  * Rows past drop_after are not sent, but are still marked sent.
  *  * Send in parallel to each subscription, with a per-send timeout.
- *  * Mark 404/410 subscriptions as deleted; don't retry or escalate any error.
+ *  * Delete subscriptions that answer 404/410; don't retry or escalate any error.
  *  * Idempotent: once sent_at is set, a rerun sees nothing to send.
  *  * Must complete well within 2 seconds (the scheduler's timeout).
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import * as webpush from 'web-push';
 import { timingSafeEqual } from 'crypto';
 import { createHash } from 'crypto';
 
@@ -73,9 +72,8 @@ function secretEquals(provided: string | null, expected: string): boolean {
 
 export interface DispatchDeps {
   store: DispatchStore;
-  vapidPrivateKey: string;
-  vapidPublicKey: string;
-  vapidSubject: string;
+  /** Sends one web push; rejects with a `statusCode` on a push-service error. The route injects web-push. */
+  send: (sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: string, ttlSeconds: number) => Promise<unknown>;
   nudgeCronSecret: string;
   sendTimeout?: number;
   now?: () => Date;
@@ -96,12 +94,6 @@ export async function handleDispatch(deps: DispatchDeps, input: { secret: string
   if (!secretEquals(input.secret, deps.nudgeCronSecret)) {
     return fail(401, 'unauthorized', 'Invalid secret.');
   }
-  if (!deps.vapidPrivateKey || !deps.vapidPublicKey || !deps.vapidSubject) {
-    return fail(503, 'unavailable', 'Web push is not configured.');
-  }
-
-  webpush.setVapidDetails(deps.vapidSubject, deps.vapidPublicKey, deps.vapidPrivateKey);
-
   const timeout = deps.sendTimeout ?? 1000;
   const now = (deps.now ?? (() => new Date))();
   let sent = 0;
@@ -128,17 +120,7 @@ export async function handleDispatch(deps: DispatchDeps, input: { secret: string
       const results = await Promise.allSettled(
         subscriptions.map(async (sub) => {
           const racePromise = Promise.race([
-            webpush.sendNotification(
-              {
-                endpoint: sub.endpoint,
-                keys: {
-                  p256dh: sub.p256dh,
-                  auth: sub.auth,
-                },
-              },
-              payload,
-              { TTL: ttl },
-            ),
+            deps.send({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload, ttl),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeout)),
           ]);
 
@@ -170,7 +152,8 @@ export async function handleDispatch(deps: DispatchDeps, input: { secret: string
 
 /** In-memory store for tests. */
 export function createMemoryDispatchStore() {
-  let nudges: QueuedNudge[] = [];
+  const nudges: QueuedNudge[] = [];
+  const claimedIds = new Set<string>();
   const subscriptions: PushSubscriptionRow[] = [];
 
   const store: DispatchStore & { nudges: typeof nudges; subscriptions: typeof subscriptions; failNext?: boolean } = {
@@ -178,9 +161,8 @@ export function createMemoryDispatchStore() {
     subscriptions,
     async claimDue(batchSize) {
       if (store.failNext) throw new Error('boom: store error');
-      const now = new Date();
-      const claimed = this.nudges.filter((n) => !n.fireAt || new Date(n.fireAt) <= now).slice(0, batchSize);
-      for (const n of claimed) n.fireAt = 'marked_sent'; // Mark as claimed
+      const claimed = this.nudges.filter((n) => !claimedIds.has(`${n.userId}|${n.id}`)).slice(0, batchSize);
+      for (const n of claimed) claimedIds.add(`${n.userId}|${n.id}`);
       return claimed;
     },
     async getSubscriptions(userId) {
