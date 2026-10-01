@@ -23,6 +23,25 @@
         </div>
       </ClientOnly>
 
+      <p class="mt-5 font-serif text-xl">Notifications</p>
+
+      <p v-if="pushBlocked" class="mt-3 text-sm text-slate-600 dark:text-slate-400">
+        Notifications are blocked in your browser settings.
+      </p>
+      <p v-else-if="pushUnsupported" class="mt-3 text-sm text-slate-600 dark:text-slate-400">
+        Notifications are not supported on this device.
+      </p>
+      <label v-else class="mt-3 flex items-center gap-3">
+        <input
+          type="checkbox"
+          :checked="pushEnabled"
+          :disabled="pushLoading"
+          class="h-5 w-5 rounded disabled:opacity-50"
+          @change="(e) => onTogglePush((e.target as HTMLInputElement).checked)"
+        />
+        <span class="text-sm">When Cadence is closed</span>
+      </label>
+
       <p class="mt-5 font-serif text-xl">Nudges</p>
 
       <div class="mt-3 space-y-2">
@@ -66,10 +85,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import type { Density } from '~/lib/home/prefs';
 import type { NudgeKind } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
+import { useAppStore } from '~/stores/app';
+import { enablePush, disablePush } from '~/lib/push-client';
+import { getSupabase } from '~/lib/supabase';
 
 interface StoppedItem {
   id: string;
@@ -91,6 +113,12 @@ const emit = defineEmits<{
 
 const colorMode = useColorMode();
 const graph = useGraphStore();
+const app = useAppStore();
+
+const pushEnabled = ref(false);
+const pushBlocked = ref(false);
+const pushUnsupported = ref(false);
+const pushLoading = ref(false);
 const MODES = [
   { value: 'system', label: 'Auto' },
   { value: 'light', label: 'Light' },
@@ -140,4 +168,58 @@ function onRestore(item: StoppedItem): void {
     emit('restore-kind', item.kind!);
   }
 }
+
+async function checkPushStatus(): Promise<void> {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    pushUnsupported.value = true;
+    pushBlocked.value = false;
+    return;
+  }
+
+  if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+    pushBlocked.value = true;
+    pushUnsupported.value = false;
+    return;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) {
+      pushUnsupported.value = true;
+      return;
+    }
+    const subscription = await registration.pushManager.getSubscription();
+    pushEnabled.value = !!subscription;
+  } catch {
+    pushUnsupported.value = true;
+  }
+}
+
+async function onTogglePush(enable: boolean): Promise<void> {
+  if (!props.signedIn) return;
+  pushLoading.value = true;
+
+  const cfg = useRuntimeConfig();
+  const token = app.session?.access_token;
+  const vapidKey = cfg.public.vapidPublicKey as string;
+
+  try {
+    if (enable) {
+      const result = await enablePush({ accessToken: token, vapidPublicKey: vapidKey });
+      pushEnabled.value = result.status === 'subscribed' || result.status === 'already_subscribed';
+    } else {
+      const result = await disablePush({ accessToken: token, vapidPublicKey: vapidKey });
+      pushEnabled.value = false;
+    }
+  } catch {
+    // Revert on error
+    await checkPushStatus();
+  } finally {
+    pushLoading.value = false;
+  }
+}
+
+onMounted(async () => {
+  await checkPushStatus();
+});
 </script>
