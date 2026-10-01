@@ -13,7 +13,11 @@ describe('validateSubscription', () => {
       endpoint: 'https://example.com/push/abc123',
       keys: { p256dh: 'key1', auth: 'key2' },
     };
-    expect(validateSubscription(sub)).toEqual(sub);
+    expect(validateSubscription(sub)).toEqual({
+      endpoint: 'https://example.com/push/abc123',
+      p256dh: 'key1',
+      auth: 'key2',
+    });
   });
 
   it('rejects null, non-objects, missing fields, and non-string keys', () => {
@@ -44,12 +48,13 @@ describe('handleSubscribe: validation', () => {
 
   it('rejects endpoints below MIN_ENDPOINT_LENGTH or above MAX_ENDPOINT_LENGTH', async () => {
     const d = deps();
-    const short = 'x'.repeat(MIN_ENDPOINT_LENGTH - 1);
-    const rShort = await handleSubscribe(d, { userId: 'u1', body: { endpoint: `https://${short}`, keys: { p256dh: 'a', auth: 'b' } } });
+    // Create an endpoint that's below minimum: make it short enough to fail the check
+    const short = 'https://' + 'x'.repeat(Math.max(0, MIN_ENDPOINT_LENGTH - 8 - 1)); // -8 for https://, -1 to be below minimum
+    const rShort = await handleSubscribe(d, { userId: 'u1', body: { endpoint: short, keys: { p256dh: 'a', auth: 'b' } } });
     expect(rShort.status).toBe(400);
 
-    const long = 'x'.repeat(MAX_ENDPOINT_LENGTH + 1);
-    const rLong = await handleSubscribe(d, { userId: 'u1', body: { endpoint: `https://${long}`, keys: { p256dh: 'a', auth: 'b' } } });
+    const long = 'https://' + 'x'.repeat(MAX_ENDPOINT_LENGTH - 8 + 1); // -8 for https://, +1 to exceed maximum
+    const rLong = await handleSubscribe(d, { userId: 'u1', body: { endpoint: long, keys: { p256dh: 'a', auth: 'b' } } });
     expect(rLong.status).toBe(400);
   });
 

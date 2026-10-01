@@ -74,6 +74,7 @@ function secretEquals(provided: string | null, expected: string): boolean {
 export interface DispatchDeps {
   store: DispatchStore;
   vapidPrivateKey: string;
+  vapidPublicKey: string;
   vapidSubject: string;
   nudgeCronSecret: string;
   sendTimeout?: number;
@@ -95,11 +96,11 @@ export async function handleDispatch(deps: DispatchDeps, input: { secret: string
   if (!secretEquals(input.secret, deps.nudgeCronSecret)) {
     return fail(401, 'unauthorized', 'Invalid secret.');
   }
-  if (!deps.vapidPrivateKey || !deps.vapidSubject) {
+  if (!deps.vapidPrivateKey || !deps.vapidPublicKey || !deps.vapidSubject) {
     return fail(503, 'unavailable', 'Web push is not configured.');
   }
 
-  webpush.setVapidDetails(deps.vapidSubject, '', deps.vapidPrivateKey);
+  webpush.setVapidDetails(deps.vapidSubject, deps.vapidPublicKey, deps.vapidPrivateKey);
 
   const timeout = deps.sendTimeout ?? 1000;
   const now = (deps.now ?? (() => new Date))();

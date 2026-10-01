@@ -12,6 +12,7 @@ import { createSupabaseDispatchStore, createServiceClient } from '../../utils/nu
 export default defineEventHandler(async (event) => {
   const cfg = useRuntimeConfig(event);
   const vapidPrivateKey = String(cfg.vapidPrivateKey || process.env.VAPID_PRIVATE_KEY || '');
+  const vapidPublicKey = String(cfg.public.vapidPublicKey || process.env.NUXT_PUBLIC_VAPID_PUBLIC_KEY || '');
   const vapidSubject = String(cfg.vapidSubject || process.env.VAPID_SUBJECT || '');
   const nudgeCronSecret = String(cfg.nudgeCronSecret || process.env.NUDGE_CRON_SECRET || '');
   const serviceRoleKey = String(cfg.supabaseServiceRoleKey || process.env.SUPABASE_SERVICE_ROLE_KEY || '');
@@ -23,6 +24,7 @@ export default defineEventHandler(async (event) => {
     {
       store,
       vapidPrivateKey,
+      vapidPublicKey,
       vapidSubject,
       nudgeCronSecret,
     },

@@ -17,7 +17,7 @@ import type { Database } from '../../types/database';
 /** Maximum endpoint URL length (most are ~500 bytes; 2KB is conservative). */
 export const MAX_ENDPOINT_LENGTH = 2048;
 /** Minimum endpoint length to reject obviously malformed subscriptions. */
-export const MIN_ENDPOINT_LENGTH = 100;
+export const MIN_ENDPOINT_LENGTH = 20;
 
 // ── store ──────────────────────────────────────────────────────
 
