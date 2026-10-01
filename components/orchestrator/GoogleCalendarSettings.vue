@@ -136,7 +136,8 @@ async function handleConnect() {
     not_configured: 'The server settings for Calendar are not all in place yet.',
     failed: 'Something went wrong starting the connection. Try again in a moment.',
   };
-  toast({ title: 'Couldn\u2019t start the connection', description: why[r.reason], variant: 'destructive' });
+  const detail = r.reason === 'not_configured' && r.missing?.length ? ` Missing: ${r.missing.join(', ')}.` : '';
+  toast({ title: 'Couldn\u2019t start the connection', description: why[r.reason] + detail, variant: 'destructive' });
 }
 
 async function handleUnlink() {

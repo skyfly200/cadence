@@ -1275,18 +1275,23 @@ export const useAppStore = defineStore('app', () => {
   }
 
   /** Start the Google consent flow. Needs a signed-in session; returns false if it could not start. */
-  async function connectGoogleCalendar(): Promise<{ ok: true } | { ok: false; reason: 'signed_out' | 'unauthorized' | 'not_configured' | 'failed' }> {
+  async function connectGoogleCalendar(): Promise<{ ok: true } | { ok: false; reason: 'signed_out' | 'unauthorized' | 'not_configured' | 'failed'; missing?: string[] }> {
     const headers = gcalAuthHeaders();
     if (!headers) return { ok: false, reason: 'signed_out' };
     try {
-      const { url } = await fetchJSON<{ url: string }>('/api/google-calendar/start', { method: 'POST', headers });
+      const r = await fetch('/api/google-calendar/start', { method: 'POST', headers });
+      if (r.status === 401) return { ok: false, reason: 'unauthorized' };
+      if (r.status === 503) {
+        // The server lists which settings are missing (names only, never values).
+        const body = await r.json().catch(() => ({} as { missing?: string[] }));
+        return { ok: false, reason: 'not_configured', missing: Array.isArray(body?.missing) ? body.missing : undefined };
+      }
+      if (!r.ok) throw new Error(`/api/google-calendar/start: ${r.status}`);
+      const { url } = (await r.json()) as { url: string };
       window.location.href = url;
       return { ok: true };
     } catch (e) {
       console.error('Could not start the Google Calendar connection', e);
-      const status = /: (\d{3})$/.exec(String((e as Error)?.message ?? ''))?.[1];
-      if (status === '401') return { ok: false, reason: 'unauthorized' };
-      if (status === '503') return { ok: false, reason: 'not_configured' };
       return { ok: false, reason: 'failed' };
     }
   }
