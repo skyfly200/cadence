@@ -182,8 +182,8 @@ export function restoreKind(state: NudgeState, kind: NudgeKind): NudgeState {
   };
 }
 
-export function markIssued(state: NudgeState, nudges: Nudge[]): NudgeState {
-  const today = new Date().toISOString().split('T')[0]!;
+export function markIssued(state: NudgeState, nudges: Nudge[], now: Date = new Date()): NudgeState {
+  const today = now.toISOString().split('T')[0]!;
   // Keep old issued nudges but prune to today
   const kept = state.issued.filter((i) => i.day === today);
   const issued = [

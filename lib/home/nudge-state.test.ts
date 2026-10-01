@@ -47,10 +47,22 @@ describe('nudge state', () => {
       muted: false,
       disclosed: false,
     };
-    // Mock localStorage
+    // Mock localStorage with a proper API
+    const store = new Map<string, string>();
+    const localStorageMock = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => store.set(key, value),
+      removeItem: (key: string) => store.delete(key),
+      clear: () => store.clear(),
+      length: 0,
+      key: (index: number) => {
+        const keys = Array.from(store.keys());
+        return keys[index] ?? null;
+      },
+    };
     vi.stubGlobal('window', {
-      localStorage: new Map<string, string>(),
-    });
+      localStorage: localStorageMock,
+    } as any);
   });
 
   afterEach(() => {
@@ -161,16 +173,18 @@ describe('nudge state', () => {
 
   describe('markIssued', () => {
     it('adds nudges to the issued list', () => {
+      const now = at('2026-03-08T12:00:00.000Z');
       const ns = [nudge('a', 'n1'), nudge('b', 'n2')];
-      const next = markIssued(state, ns);
+      const next = markIssued(state, ns, now);
       expect(next.issued).toHaveLength(2);
       expect(next.issued[0]!.id).toBe('a');
     });
 
     it('keeps today\'s old issued nudges and prunes old days', () => {
-      let s = markIssued(state, [nudge('a', 'n1')]);
+      const now = at('2026-03-08T12:00:00.000Z');
+      let s = markIssued(state, [nudge('a', 'n1')], now);
       s = { ...s, issued: [{ id: 'old', kind: 'leave_by' as const, nodeId: 'n0', day: '2026-03-07' }, ...s.issued] };
-      s = markIssued(s, [nudge('b', 'n2')]);
+      s = markIssued(s, [nudge('b', 'n2')], now);
       expect(s.issued.filter((i) => i.day === '2026-03-08')).toHaveLength(2);
       expect(s.issued.filter((i) => i.day === '2026-03-07')).toHaveLength(0);
     });
