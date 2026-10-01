@@ -32,7 +32,7 @@
  */
 import type { Commitment, Habit, Link, Node, Occurrence } from './types';
 import { FINAL_STRETCH_FROM, habitProgress } from './habits';
-import { localParts, localWeekday, periodProgress, periodWindow, type PeriodOptions } from './periods';
+import { dayKey, localParts, localWeekday, periodProgress, periodWindow, type PeriodOptions } from './periods';
 import { DEFAULT_DURATION_MIN, activeOccurrences, learnedDuration } from './estimates';
 import { SHRINK_PARK_KEEP_AT, isParked, notNowCount, shelvedSince } from './shelf';
 
@@ -153,7 +153,9 @@ export function rankNow(input: RankInput): RankResult {
   const travelOf = (c: Commitment): number => Math.max(0, prov.travel?.(c, now) ?? 0);
 
   // ── Commitments in play ───────────────────────────────────────────────
+  const todayKey = dayKey(now, tz);
   const open = input.nodes.filter((n): n is Commitment => n.kind === 'commitment'
+    && !(n.plannedFor && !n.fixedTime && n.plannedFor > todayKey) // planned for a later day
     && !doneIds.has(n.id) && !isParked(n.id, rawOccs) && (!n.quiet || prov.atRisk?.(n) === true));
 
   const prereqs = new Map<string, string[]>();

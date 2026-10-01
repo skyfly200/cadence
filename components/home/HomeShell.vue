@@ -19,8 +19,8 @@
       </div>
     </header>
 
-    <HomeNow v-if="lens === 'now'" :density="density" @open-parked="parkedOpen = true" @said="say" />
-    <HomeToday v-else-if="lens === 'today'" :density="density" />
+    <HomeNow v-if="lens === 'now'" :density="density" @open-plan="lens = 'plan'" @said="say" />
+    <HomePlan v-else-if="lens === 'plan'" @said="say" />
     <HomeHabits v-else-if="lens === 'habits'" @said="say" />
     <HomeGoals v-else />
 
@@ -40,7 +40,6 @@
     </nav>
 
     <HomeCaptureSheet :open="captureOpen" @close="captureOpen = false" @said="say" />
-    <HomeParkedSheet :open="parkedOpen" @close="parkedOpen = false" @said="say" />
     <HomeSettingsSheet
       :open="settingsOpen" :density="density" :signed-in="app.signedIn"
       @close="settingsOpen = false" @update:density="setDensityValue" @account="settingsOpen = false; authOpen = true"
@@ -57,7 +56,7 @@ import { useAppStore } from '~/stores/app';
 import { useGraphStore } from '~/stores/graph';
 import { getDensity, markOpened, setDensity, wasAway, type Density } from '~/lib/home/prefs';
 
-type Lens = 'now' | 'today' | 'habits' | 'goals';
+type Lens = 'now' | 'plan' | 'habits' | 'goals';
 
 const app = useAppStore();
 const graph = useGraphStore();
@@ -65,13 +64,12 @@ const lens = ref<Lens>('now');
 const density = ref<Density>(1);
 const away = ref(false);
 const captureOpen = ref(false);
-const parkedOpen = ref(false);
 const settingsOpen = ref(false);
 const authOpen = ref(false);
 const toast = ref<string | null>(null);
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
-const LEFT: { k: Lens; i: string; n: string }[] = [{ k: 'now', i: '◉', n: 'Now' }, { k: 'today', i: '▤', n: 'Today' }];
+const LEFT: { k: Lens; i: string; n: string }[] = [{ k: 'now', i: '◉', n: 'Now' }, { k: 'plan', i: '▤', n: 'Plan' }];
 const RIGHT: { k: Lens; i: string; n: string }[] = [{ k: 'habits', i: '↻', n: 'Habits' }, { k: 'goals', i: '△', n: 'Goals' }];
 const tab = (k: Lens) => [
   'flex min-h-[44px] w-16 flex-col items-center gap-0.5 rounded-2xl py-1 text-[11px] font-medium',

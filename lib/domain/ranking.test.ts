@@ -346,6 +346,19 @@ describe('workload guard', () => {
   });
 });
 
+describe('planned days', () => {
+  it('keeps a Commitment planned for a later day out of today, and brings it in on its day', () => {
+    const later = commitment('later', { plannedFor: '2026-03-16' });
+    expect(run({ nodes: [later] }).now).toBeNull();
+    expect(run({ now: at('2026-03-16T09:00:00.000Z'), nodes: [later] }).now?.node.id).toBe('later');
+  });
+
+  it('lets a fixed time win over the planned day', () => {
+    const c = commitment('c', { plannedFor: '2026-03-20', fixedTime: '2026-03-14T20:00:00.000Z' });
+    expect(run({ nodes: [c] }).now?.node.id).toBe('c');
+  });
+});
+
 describe('purity', () => {
   it('is deterministic and does not mutate its input', () => {
     const input = deepFreeze({

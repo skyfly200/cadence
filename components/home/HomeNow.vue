@@ -28,9 +28,9 @@
             <p v-if="density >= 2 && graph.rank.chain.length" class="mt-1 text-center text-xs text-stone-500 dark:text-slate-400">{{ graph.rank.chain.join(' · ') }}</p>
 
             <div v-if="graph.rank.offerShrinkParkKeep && !keepDismissed" class="mt-4 rounded-2xl bg-amber-50 p-3 text-center text-sm dark:bg-white/10">
-              <p>This has moved a few times. Park it, or keep it?</p>
+              <p>This has moved a few times. Send it to the heap, or keep it?</p>
               <div class="mt-2 flex justify-center gap-2">
-                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-[#1D1A2F]" @click="onPark">Park it</button>
+                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-[#1D1A2F]" @click="onPark">To the heap</button>
                 <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-[#1D1A2F]" @click="keepDismissed = true">Keep it</button>
               </div>
             </div>
@@ -38,17 +38,17 @@
             <div v-if="!started" class="mt-5 grid grid-cols-3 gap-2">
               <button class="col-span-3 min-h-[44px] rounded-2xl bg-[#E07A45] py-3.5 text-base font-semibold text-white shadow-sm active:scale-[.99]" @click="onStart">Start</button>
               <button class="col-span-2 min-h-[44px] rounded-2xl bg-stone-100 py-3 text-sm font-medium dark:bg-white/10" @click="onNotNow">Not now</button>
-              <button class="min-h-[44px] rounded-2xl bg-stone-100 py-3 text-sm font-medium dark:bg-white/10" @click="onPark">Park</button>
+              <button class="min-h-[44px] rounded-2xl bg-stone-100 py-3 text-sm font-medium dark:bg-white/10" @click="onPark">To the heap</button>
             </div>
             <button v-else class="mt-5 min-h-[44px] w-full rounded-2xl bg-emerald-500 py-3.5 text-base font-semibold text-white" @click="onDone">Done ✓</button>
           </template>
 
           <template v-else>
-            <h1 class="mt-2 text-center font-serif text-2xl">{{ graph.parked.length ? 'Nothing is queued for now' : 'You’re clear for now' }} 🌤</h1>
+            <h1 class="mt-2 text-center font-serif text-2xl">{{ graph.heap.length ? 'Nothing is queued for now' : 'You’re clear for now' }} 🌤</h1>
             <p class="mt-2 text-center text-stone-600 dark:text-slate-300">
-              {{ graph.parked.length ? 'Open the parked list and pick something to do today.' : 'Nothing needs you. Capture anything that pops up with the + button.' }}
+              {{ graph.heap.length ? 'Open Plan and put something from the heap on your stack.' : 'Nothing needs you. Capture anything that pops up with the + button.' }}
             </p>
-            <button v-if="graph.parked.length" class="mx-auto mt-4 block min-h-[44px] rounded-2xl bg-[#E07A45] px-5 text-sm font-semibold text-white" @click="$emit('open-parked')">Open parked</button>
+            <button v-if="graph.heap.length" class="mx-auto mt-4 block min-h-[44px] rounded-2xl bg-[#E07A45] px-5 text-sm font-semibold text-white" @click="$emit('open-plan')">Open Plan</button>
           </template>
         </div>
 
@@ -64,7 +64,7 @@
       </li>
     </ol>
 
-    <button v-if="density >= 1" class="ml-8 mt-3 min-h-[44px] text-xs font-medium text-teal-700 underline dark:text-[#B9A6FF]" @click="$emit('open-parked')">Parked ideas</button>
+    <button v-if="density >= 1" class="ml-8 mt-3 min-h-[44px] text-xs font-medium text-teal-700 underline dark:text-[#B9A6FF]" @click="$emit('open-plan')">The heap</button>
   </section>
 </template>
 
@@ -75,7 +75,7 @@ import type { Commitment, Habit } from '~/lib/domain';
 import type { Density } from '~/lib/home/prefs';
 
 defineProps<{ density: Density }>();
-const emit = defineEmits<{ (e: 'open-parked'): void; (e: 'said', msg: string): void }>();
+const emit = defineEmits<{ (e: 'open-plan'): void; (e: 'said', msg: string): void }>();
 
 const graph = useGraphStore();
 const showPast = ref(false);
@@ -101,5 +101,5 @@ function onDone() {
   emit('said', `Nice. ${graph.kept.length} accomplished today.`);
 }
 function onNotNow() { if (current.value) { graph.notNow(current.value.node.id); emit('said', 'Moved to later today.'); } }
-function onPark() { if (current.value) { graph.park(current.value.node.id); emit('said', 'Got it, parked.'); } }
+function onPark() { if (current.value) { graph.park(current.value.node.id); emit('said', 'Sent to the heap.'); } }
 </script>

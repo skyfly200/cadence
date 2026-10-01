@@ -12,7 +12,7 @@ Users: the author first (dog-fooding), designed for the general ADHD/AuDHD patte
 
 1. **Lowest-friction capture.** One prompt, typed or spoken; you are never asked which bucket [11].
 2. **The system carries the complexity.** The user lives; the graph updates from behaviour and conversation [03].
-3. **Never punish absence.** No failure marks, no streaks that die, no overdue lists; periods close quietly; unfinished items roll silently into the Parking lot [01, 17].
+3. **Never punish absence.** No failure marks, no streaks that die, no overdue lists; periods close quietly; unfinished items roll silently into the Heap [01, 17].
 4. **Depth on demand.** Cadence handles the obvious automatically; deeper planning (timeline, Eisenhower matrix, manual estimates, Trips and Map) is always available and never required [07].
 5. **Simple, not overly minimal.** Calm and uncluttered, but with visible progress, colour, warmth and enough on screen to see the day [01].
 6. **Honest evidence.** Sensory controls are well supported; body doubling, spoken-nudge and gamification claims are hypotheses to test, not facts (research on the map).
@@ -121,7 +121,7 @@ Replace the Nuxt app slice by slice; tag `pre-pivot` (created locally at `ba0ed1
 ## 13. Roadmap [22]
 
 - **Phase 0 Groundwork: DONE (2026-09-30).** The two code branches are reviewed and merged to `main`; both SQL migrations are applied to the cadence Supabase project; the Vercel project builds and serves `cadence.skylerfly.com` with its environment variables set; `netlify.toml` is removed; the `pre-pivot` tag is pushed; Google Calendar connects end to end. Found and fixed on the way: the Google token endpoint the app had always used returned 404 (now `oauth2.googleapis.com/token`, pinned by a test).
-- **Phase 1 Capture-first core (start living in it here):** new tables and sync; the capture endpoint; Home with simple Now-card ordering; bottom bar and capture sheet (Add); Today and the Parking lot; Habits with periods; dark toggle, density, basic settings; the weekly tally. A "Classic view" switch keeps the old app until after Phase 3.
+- **Phase 1 Capture-first core (start living in it here):** new tables and sync; the capture endpoint; Home with simple Now-card ordering; bottom bar and capture sheet (Add); the Plan lens (a week Stack and the Heap, with a sort flow); Habits with periods; dark toggle, density, basic settings; the weekly tally. A "Classic view" switch keeps the old app until after Phase 3.
 - **Phase 2 Nudges and voice.**
 - **Phase 3 Understanding:** AI layer, extraction (after the spike), Goals, Discuss, Planning session, "why this one", AI-off, Private, transparency, export and delete.
 - **Phase 4 Reinforcement and signals:** Garden and Pressed book, reward lines, slog tag, recaps, Signals screen, weekly check, Experiment, checkpoints.
