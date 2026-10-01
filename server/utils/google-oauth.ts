@@ -7,9 +7,9 @@ import type { GoogleTokens, TokenVault } from './google-tokens';
 
 type Fetch = typeof fetch;
 
-// Same endpoints the app already used.
+// Google's documented endpoints. (The token endpoint the app used before, accounts.google.com/o/oauth2/v2/token, returns 404.)
 export const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
-export const GOOGLE_TOKEN_URL = 'https://accounts.google.com/o/oauth2/v2/token';
+export const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 export const GOOGLE_REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
 const CALENDAR_EVENTS_URL = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.email';

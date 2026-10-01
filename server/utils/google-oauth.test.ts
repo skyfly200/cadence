@@ -154,3 +154,11 @@ describe('revokeToken', () => {
     await expect(revokeToken(fakeFetch(() => { throw new Error('offline'); }), 'x')).resolves.toBeUndefined();
   });
 });
+
+// Pin the real Google endpoints. The token endpoint once pointed at accounts.google.com/o/oauth2/v2/token, which 404s;
+// comparing against the constant alone could not catch that.
+describe("google endpoints", () => {
+  it("uses Google's documented token endpoint", () => {
+    expect(GOOGLE_TOKEN_URL).toBe("https://oauth2.googleapis.com/token");
+  });
+});
