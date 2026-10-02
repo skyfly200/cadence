@@ -70,6 +70,8 @@ export interface Commitment extends NodeBase {
   durationMinutes?: number | null;
   /** Local day 'YYYY-MM-DD' the user placed it on in the Stack. A fixed time or deadline still rules. */
   plannedFor?: string | null;
+  /** Where it sits among the untimed items of its day in the Stack (lower first); the user's drag order. */
+  dayOrder?: number | null;
   /** A fixed-time repeat obligation (a recurring Commitment). */
   repeat?: Recurrence | null;
   /** The user tagged this as a slog: a bigger reward and a "just start" ritual. */

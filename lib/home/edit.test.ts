@@ -170,6 +170,16 @@ describe('applyEdit', () => {
     expect(result.links).toContain(createdLink);
   });
 
+  it('adds a newly named place to the result nodes, with coordinates, so the link points at something', () => {
+    const c = commitment('c1');
+    const result = applyEdit('c1', { location: 'Blue Bottle', locationCoords: { lat: 37.7, lon: -122.4 } }, [c], [], () => {}, () => {});
+    const at = result.links.find((l) => l.type === 'at')!;
+    const place = result.nodes.find((n) => n.id === at.toId) as Thing;
+    expect(place.title).toBe('Blue Bottle');
+    expect(place.lat).toBe(37.7);
+    expect(place.lon).toBe(-122.4);
+  });
+
   it('removes old location link when updating location', () => {
     const c = commitment('c1');
     const p1 = thing('p1', 'place', 'Old Place');

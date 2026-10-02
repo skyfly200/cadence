@@ -14,7 +14,7 @@ import { habitProgress, habitTap, homeHabitsPiece, parseCapture, rankNow, weekly
 import type { ParsedCapture, TimeFormat } from '~/lib/domain';
 import { postCapture } from '~/lib/capture-client';
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/lib/domain';
-import { heapItems, keptToday, nodeState, stackDays, stopRecords } from '~/lib/home/derive';
+import { heapItems, keptToday, nodeState, reorderIds, stackDays, stopRecords } from '~/lib/home/derive';
 import type { Density } from '~/lib/home/prefs';
 import { applyEdit, deleteNode, type EditInput } from '~/lib/home/edit';
 import { useAppStore } from './app';
@@ -184,13 +184,20 @@ export const useGraphStore = defineStore('graph', () => {
    * Put a Heap item on the Stack on a local day ('YYYY-MM-DD'), or take its planned day off with null.
    * An Idea becomes a Commitment; a parked Commitment is brought back first.
    */
-  function plan(id: string, day: string | null) {
+  function plan(id: string, day: string | null, beforeId: string | null = null) {
     const node = nodes.value.find((n) => n.id === id);
     if (!node || (node.kind !== 'idea' && node.kind !== 'commitment')) return;
     if (node.kind === 'idea') promote(id);
     else bringBack(id);
     const now = new Date();
-    nodes.value = nodes.value.map((n) => (n.id === id && n.kind === 'commitment' ? { ...n, plannedFor: day, updatedAt: now.toISOString() } : n));
+    nodes.value = nodes.value.map((n) => (n.id === id && n.kind === 'commitment' ? { ...n, plannedFor: day, dayOrder: null, updatedAt: now.toISOString() } : n));
+    if (day) {
+      // Place it among the day's untimed items: before `beforeId`, or last.
+      const items = stackDays(nodes.value, occurrences.value, now).find((d) => d.key === day)?.items ?? [];
+      const ids = reorderIds(items.filter((i) => !i.time || i.id === id).map((i) => i.id), id, beforeId);
+      const at = new Map(ids.map((x, i) => [x, i] as const));
+      nodes.value = nodes.value.map((n) => (n.kind === 'commitment' && at.has(n.id) ? { ...n, dayOrder: at.get(n.id)! } : n));
+    }
     persistNodes();
     lastAction.value = null;
     asOf.value = now;

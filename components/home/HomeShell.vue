@@ -1,7 +1,37 @@
 <template>
-  <div class="relative mx-auto min-h-dvh w-full max-w-md bg-[#EEF5F3] pb-32 text-slate-800 md:max-w-xl dark:bg-[#1D1A2F] dark:text-slate-100">
+  <div class="relative mx-auto min-h-dvh w-full max-w-md bg-[#EEF5F3] pb-32 text-slate-800 md:max-w-xl lg:flex lg:max-w-none lg:pb-0 dark:bg-[#1D1A2F] dark:text-slate-100">
+    <!-- desktop rail: lenses, a capture box that is always there, and the menu -->
+    <aside class="sticky top-0 hidden h-dvh w-72 shrink-0 flex-col gap-5 overflow-y-auto border-r border-teal-900/5 px-5 py-6 lg:flex dark:border-white/5" aria-label="Cadence">
+      <div>
+        <p class="font-serif text-2xl font-semibold leading-tight">Cadence</p>
+        <p class="text-[11px] font-semibold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">{{ dateLabel }}</p>
+      </div>
+      <nav class="flex flex-col gap-1" aria-label="Lenses">
+        <button v-for="l in [...LEFT, ...RIGHT]" :key="l.k" :aria-current="lens === l.k ? 'page' : undefined" :class="['flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-left text-[15px] font-medium', lens === l.k ? 'bg-teal-100 text-teal-900 dark:bg-[#3A3560] dark:text-[#FFB59F]' : 'text-slate-600 hover:bg-white/60 dark:text-slate-300 dark:hover:bg-white/5']" @click="lens = l.k">
+          <span class="w-5 text-center text-lg">{{ l.i }}</span>{{ l.n }}
+        </button>
+      </nav>
+      <form class="flex flex-col gap-2" @submit.prevent="railCapture">
+        <label for="rail-capture" class="text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">Capture</label>
+        <textarea
+          id="rail-capture" v-model="railText" rows="3" maxlength="4000" placeholder="What's on your mind?"
+          class="w-full rounded-2xl border border-stone-200 bg-white p-3 text-[15px] outline-none dark:border-white/10 dark:bg-[#2A2645]"
+          @keydown.enter.exact.prevent="railCapture"
+        />
+        <p v-if="railError" class="text-sm text-amber-700 dark:text-amber-300">{{ railError }}</p>
+        <div class="flex gap-2">
+          <button type="submit" class="min-h-[44px] flex-1 rounded-2xl bg-[#E07A45] font-semibold text-white disabled:opacity-50" :disabled="!railText.trim() || railBusy">Add</button>
+          <button type="button" class="grid min-h-[44px] min-w-[44px] place-items-center rounded-2xl bg-white text-xl dark:bg-[#2A2645]" aria-label="Talk to capture" @click="captureOpen = true">🎤</button>
+        </div>
+      </form>
+      <div class="mt-auto flex flex-col gap-1">
+        <button class="min-h-[44px] rounded-xl px-3 text-left text-[15px] hover:bg-white/60 dark:hover:bg-white/5" @click="settingsOpen = true">Settings</button>
+        <NuxtLink to="/classic" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-white/60 dark:hover:bg-white/5">Classic view</NuxtLink>
+      </div>
+    </aside>
+    <div class="min-w-0 flex-1">
     <!-- header -->
-    <header class="sticky top-0 z-20 border-b border-teal-900/5 bg-[#EEF5F3]/95 px-4 pb-2 pt-3 backdrop-blur dark:border-white/5 dark:bg-[#1D1A2F]/95">
+    <header class="sticky top-0 z-20 border-b lg:hidden border-teal-900/5 bg-[#EEF5F3]/95 px-4 pb-2 pt-3 backdrop-blur dark:border-white/5 dark:bg-[#1D1A2F]/95">
       <div class="flex items-center gap-2">
         <button class="grid size-11 shrink-0 place-items-center rounded-lg border border-teal-900/10 bg-white text-lg dark:border-white/10 dark:bg-[#2A2645]" aria-label="Menu" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">☰</button>
         <div class="min-w-0">
@@ -21,7 +51,7 @@
     </header>
 
 <!-- menu: more pages go here later -->
-    <div v-if="menuOpen" class="fixed inset-0 z-40" @click.self="menuOpen = false">
+    <div v-if="menuOpen" class="fixed inset-0 z-40 lg:hidden" @click.self="menuOpen = false">
       <div class="mx-auto max-w-md px-4 pt-[4.25rem] md:max-w-xl">
         <ul class="w-60 rounded-2xl bg-white p-2 shadow-lg dark:bg-[#2A2645]" role="menu">
           <li><button class="min-h-[44px] w-full rounded-xl px-3 text-left text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem" @click="menuOpen = false; settingsOpen = true">Settings</button></li>
@@ -30,25 +60,29 @@
       </div>
     </div>
 
+    <main :class="['lg:mx-auto lg:w-full lg:pb-12 lg:pt-4', lens === 'plan' ? 'lg:max-w-6xl' : 'lg:max-w-2xl']">
     <HomeNow v-if="lens === 'now'" :density="density" @open-plan="lens = 'plan'" @said="say" @edit="onEdit" />
     <HomePlan v-else-if="lens === 'plan'" @said="say" @edit="onEdit" />
     <HomeHabits v-else-if="lens === 'habits'" @said="say" @edit="onEdit" />
     <HomeGoals v-else />
+    </main>
 
     <!-- toast with Undo -->
-    <div v-if="toast" class="fixed inset-x-0 bottom-28 z-40 mx-auto flex w-fit max-w-[85%] items-center gap-3 rounded-full bg-slate-800 px-4 py-2 text-sm text-white shadow-lg dark:bg-white dark:text-[#1D1A2F]" role="status">
+    <div v-if="toast" class="fixed inset-x-0 bottom-28 z-40 lg:bottom-6 mx-auto flex w-fit max-w-[85%] items-center gap-3 rounded-full bg-slate-800 px-4 py-2 text-sm text-white shadow-lg dark:bg-white dark:text-[#1D1A2F]" role="status">
       <span>{{ toast }}</span>
       <button v-if="graph.lastAction" class="min-h-[32px] font-semibold underline" @click="undo">Undo</button>
     </div>
 
     <!-- bottom bar: four lenses, capture in the middle -->
-    <nav class="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md md:max-w-xl" aria-label="Lenses">
+    <nav class="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md md:max-w-xl lg:hidden" aria-label="Lenses">
       <div class="relative mx-3 mb-3 flex items-end justify-between rounded-[1.75rem] bg-white px-3 pb-2 pt-2 shadow-[0_-4px_24px_rgba(20,60,60,0.15)] dark:bg-[#2A2645]">
         <button v-for="l in LEFT" :key="l.k" :class="tab(l.k)" @click="lens = l.k"><span class="text-xl">{{ l.i }}</span>{{ l.n }}</button>
         <button class="-mt-8 grid size-16 place-items-center rounded-full bg-[#E07A45] text-3xl text-white shadow-lg ring-4 ring-[#EEF5F3] dark:ring-[#1D1A2F]" aria-label="Talk to capture" @click="captureOpen = true">🎤</button>
         <button v-for="l in RIGHT" :key="l.k" :class="tab(l.k)" @click="lens = l.k"><span class="text-xl">{{ l.i }}</span>{{ l.n }}</button>
       </div>
     </nav>
+
+    </div>
 
     <HomeCaptureSheet :open="captureOpen" listen @close="captureOpen = false" @said="say" />
     <HomeEditSheet :open="editOpen" :node-id="editingNodeId" @close="editOpen = false" @deleted="say('Deleted.')" />
@@ -95,6 +129,19 @@ const editOpen = ref(false);
 const editingNodeId = ref<string | null>(null);
 const settingsOpen = ref(false);
 const authOpen = ref(false);
+const railText = ref('');
+const railBusy = ref(false);
+const railError = ref('');
+async function railCapture() {
+  if (railBusy.value || !railText.value.trim()) return;
+  railBusy.value = true;
+  railError.value = '';
+  const r = await graph.capture(railText.value);
+  railBusy.value = false;
+  if (!r.ok) { railError.value = r.message; return; }
+  railText.value = '';
+  say(r.reply);
+}
 const toast = ref<string | null>(null);
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 

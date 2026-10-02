@@ -23,7 +23,7 @@ export function useCurrentLocation() {
         () => resolve(null),
         { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
       );
-    });
+    }).finally(() => { inflight = null; }); // a denied or timed-out try must not be remembered forever
     return inflight;
   }
   return { coords, request };

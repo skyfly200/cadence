@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Commitment, Idea, Node, Occurrence } from '../domain';
-import { heapItems, keptToday, nodeState, stackDays, stopRecords } from './derive';
+import { heapItems, keptToday, nodeState, reorderIds, stackDays, stopRecords } from './derive';
 
 const NOW = new Date('2026-10-03T15:00:00.000Z');
 const opts = { timeZone: 'UTC' };
@@ -126,5 +126,24 @@ describe('stopRecords', () => {
     expect(stopRecords('a', [], make)).toEqual([]);
     const s = occ('a', 'started', '2026-10-03T11:00:00.000Z');
     expect(stopRecords('a', [s, occ('a', 'undone', '2026-10-03T11:30:00.000Z', { undoes: s.id })], make)).toEqual([]);
+  });
+});
+
+describe('day order', () => {
+  it('sorts untimed items by dayOrder after timed ones, and unordered ones last', () => {
+    const nodes = [
+      commitment('late', { plannedFor: '2026-10-03', dayOrder: 2 }),
+      commitment('timed', { fixedTime: '2026-10-03T16:00:00.000Z' }),
+      commitment('first', { plannedFor: '2026-10-03', dayOrder: 0 }),
+      commitment('none', { plannedFor: '2026-10-03' }),
+    ];
+    expect(stackDays(nodes, [], NOW, 7, opts)[0]!.items.map((i) => i.id)).toEqual(['timed', 'first', 'late', 'none']);
+  });
+
+  it('reorderIds drops before a target, or at the end', () => {
+    expect(reorderIds(['a', 'b', 'c'], 'c', 'a')).toEqual(['c', 'a', 'b']);
+    expect(reorderIds(['a', 'b', 'c'], 'a', null)).toEqual(['b', 'c', 'a']);
+    expect(reorderIds(['a', 'b'], 'x', 'b')).toEqual(['a', 'x', 'b']);
+    expect(reorderIds(['a', 'b'], 'a', 'missing')).toEqual(['b', 'a']);
   });
 });

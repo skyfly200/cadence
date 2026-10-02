@@ -70,6 +70,7 @@ export function stackDays(nodes: readonly Node[], occs: readonly Occurrence[], n
     return { key: dayKey(date, tz), date, items: [] };
   });
   const byKey = new Map(out.map((d) => [d.key, d] as const));
+  const order = new Map<string, number>();
   for (const c of nodes.filter(isCommitment)) {
     if (isParked(c.id, occs) || nodeState(c.id, occs).done) continue;
     const at = c.fixedTime ?? c.deadline ?? null;
@@ -78,7 +79,17 @@ export function stackDays(nodes: readonly Node[], occs: readonly Occurrence[], n
     const day = byKey.get(key);
     if (!day) continue;
     day.items.push({ id: c.id, title: c.title, time: at });
+    order.set(c.id, c.dayOrder ?? Infinity);
   }
-  for (const d of out) d.items.sort((a, b) => (a.time ?? '￿').localeCompare(b.time ?? '￿'));
+  const rank = (id: string) => order.get(id) ?? Infinity;
+  for (const d of out) d.items.sort((a, b) => (a.time ?? '￿').localeCompare(b.time ?? '￿') || (rank(a.id) === rank(b.id) ? 0 : rank(a.id) < rank(b.id) ? -1 : 1));
   return out;
+}
+
+/** The untimed ids of a day in their new order once `id` is dropped before `beforeId` (or at the end when null or not in the list). */
+export function reorderIds(untimedIds: readonly string[], id: string, beforeId: string | null): string[] {
+  const rest = untimedIds.filter((x) => x !== id);
+  const at = beforeId ? rest.indexOf(beforeId) : -1;
+  rest.splice(at < 0 ? rest.length : at, 0, id);
+  return rest;
 }

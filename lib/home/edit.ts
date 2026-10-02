@@ -66,6 +66,7 @@ export function getOrCreatePlace(
   placeName: string,
   nodes: readonly Node[],
   onCreateNode: (node: Thing) => void,
+  coords?: { lat: number; lon: number } | null,
 ): string {
   const trimmed = placeName.trim();
   if (!trimmed) throw new Error('Place name cannot be empty');
@@ -86,8 +87,8 @@ export function getOrCreatePlace(
     private: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    lat: null,
-    lon: null,
+    lat: coords?.lat ?? null,
+    lon: coords?.lon ?? null,
   };
   onCreateNode(newPlace);
   return newPlace.id;
@@ -101,6 +102,7 @@ export interface EditInput {
   deadline?: string | null;
   durationMinutes?: number | null;
   location?: string | null;  // place name or null to clear the 'at' link
+  locationCoords?: { lat: number; lon: number } | null;  // where a newly named place is, when known (from a search or the device)
   dependencyId?: string | null;  // commitment id or null to clear
   recurrence?: { period: Period; target: number };  // a Habit: how often
   weekdays?: number[] | null;  // a Habit: pin to these weekdays (0 = Sunday), or null to clear
@@ -154,7 +156,7 @@ export function applyEdit(
     }
   }
 
-  const newNodes = nodes.map((n) => (n.id === nodeId ? updatedNode : n));
+  let newNodes = nodes.map((n) => (n.id === nodeId ? updatedNode : n));
   let newLinks = [...links];
 
   // Handle location (at link)
@@ -164,7 +166,10 @@ export function applyEdit(
 
     if (input.location) {
       // Create new place and link
-      const placeId = getOrCreatePlace(input.location, newNodes, onCreateNode);
+      const placeId = getOrCreatePlace(input.location, newNodes, (place) => {
+        newNodes = [...newNodes, place]; // the link must point at a node that exists in the result
+        onCreateNode(place);
+      }, input.locationCoords);
       const newLink: Link = {
         id: globalThis.crypto.randomUUID(),
         type: 'at',

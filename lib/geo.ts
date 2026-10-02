@@ -57,6 +57,18 @@ export async function searchPlaces(
   }
 }
 
+/** The place name for a coordinate (Nominatim reverse lookup), or null on any failure. */
+export async function reversePlace(at: { lat: number; lon: number }): Promise<Place | null> {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=${at.lat}&lon=${at.lon}`, { headers: { Accept: 'application/json' } });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d?.display_name ? { label: d.display_name, lat: at.lat, lon: at.lon } : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Duration matrix (seconds) for a list of coordinates in one OSRM call.
  * matrix[i][j] = travel seconds from point i to point j. null on failure.

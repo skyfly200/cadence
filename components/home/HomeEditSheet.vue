@@ -71,23 +71,7 @@
       <!-- Location (if commitment) -->
       <div v-if="node.kind === 'commitment'" class="mt-4">
         <label class="text-sm font-medium">Location</label>
-        <div class="mt-1 flex gap-2">
-          <input
-            v-model="draft.location"
-            type="text"
-            class="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
-            placeholder="Place name"
-          />
-          <button
-            v-if="draft.location"
-            type="button"
-            aria-label="Clear location"
-            class="min-h-[44px] min-w-[44px] rounded-xl bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-white/10 dark:text-stone-300 dark:hover:bg-white/15"
-            @click="draft.location = ''"
-          >
-            <X class="size-4 mx-auto" />
-          </button>
-        </div>
+        <HomePlaceField v-model="draft.location" class="mt-1" @coords="draft.locationCoords = $event" />
       </div>
 
       <!-- How often (habit) -->
@@ -216,6 +200,7 @@ const draft = reactive({
   deadline: '',
   durationMinutes: null as number | null,
   location: '',
+  locationCoords: null as { lat: number; lon: number } | null,
   dependencyId: '',
   link: '',
   target: 1,
@@ -253,6 +238,7 @@ watch(
       const atLink = graph.links.find((l) => l.type === 'at' && l.fromId === c.id);
       const place = atLink ? graph.nodes.find((n) => n.id === atLink.toId) : null;
       draft.location = place && place.kind === 'thing' ? place.title : '';
+      draft.locationCoords = null;
 
       // Get current dependency from links
       const reqLink = graph.links.find((l) => l.type === 'requires' && l.fromId === c.id);
@@ -316,7 +302,8 @@ function save() {
     input.fixedTime = draft.fixedTime ? new Date(draft.fixedTime).toISOString() : null;
     input.deadline = draft.deadline ? new Date(draft.deadline).toISOString() : null;
     input.durationMinutes = draft.durationMinutes;
-    input.location = draft.location || null;
+    input.location = draft.location.trim() || null;
+    input.locationCoords = draft.locationCoords;
     input.dependencyId = draft.dependencyId || null;
   }
 

@@ -1,7 +1,7 @@
 <template>
   <section class="px-4 pt-4">
     <h1 class="text-xl font-semibold">Plan</h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400">Drag to a day or the heap.</p>
+    <p class="text-sm text-slate-500 dark:text-slate-400">Drag to a day, the heap, or into place within a day. Swipe a row to delete it.</p>
 
     <form class="mt-3 flex gap-2" @submit.prevent="addEntry">
       <input
@@ -15,20 +15,26 @@
     <template v-if="graph.loaded">
       <!-- The Stack: every day, always there; empty days stay slim -->
       <h2 class="mt-4 text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">Your stack</h2>
+      <div class="lg:grid lg:grid-cols-3 lg:gap-x-3 xl:grid-cols-4">
       <div
         v-for="(day, i) in graph.stack" :key="day.key" :data-drop="day.key"
         :class="['mt-2 rounded-xl border border-transparent px-2 transition-colors data-[over]:border-[#E07A45] data-[over]:bg-amber-50 dark:data-[over]:bg-white/10', day.items.length ? 'py-2' : dragging ? 'py-4' : 'py-1']"
       >
         <p :class="['text-sm', day.items.length ? 'font-semibold' : 'text-slate-400']">{{ label(day, i) }}</p>
         <ul v-if="day.items.length" class="mt-1 space-y-1.5">
-          <li v-for="it in day.items" :key="it.id" class="flex items-center gap-2 rounded-lg bg-white px-2 py-1 shadow-sm dark:bg-[#2A2645]">
+          <li
+            v-for="it in day.items" :key="it.id" :data-drop="it.time ? undefined : `before:${it.id}`"
+            class="flex items-center gap-2 rounded-lg bg-white px-2 py-1 shadow-sm transition-colors data-[over]:ring-2 data-[over]:ring-[#E07A45] dark:bg-[#2A2645]"
+          >
             <span v-if="it.time" class="grid size-11 shrink-0 place-items-center text-slate-300" title="Has its own time">⏱</span>
-            <button v-else :class="grip" aria-label="Drag to another day" @pointerdown.prevent="drag($event, it.id, it.title)">⠿</button>
-            <span class="min-w-0 flex-1 break-words text-[15px]">{{ it.title }}</span>
+            <button v-else :class="grip" aria-label="Drag to another day or position" @pointerdown.prevent="drag($event, it.id, it.title)">⠿</button>
+            <span class="min-w-0 flex-1 touch-pan-y break-words text-[15px]" @pointerdown="swipe($event, it.id)">{{ it.title }}</span>
             <span v-if="it.time" class="shrink-0 text-xs text-slate-400">{{ timeLabel(it.time) }}</span>
             <button class="min-h-[32px] rounded-lg px-2 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30" @click="$emit('edit', it.id)">Edit</button>
+            <button :class="del" :aria-label="`Delete ${it.title}`" @click="remove(it.id)">Delete</button>
           </li>
         </ul>
+      </div>
       </div>
 
       <!-- The Heap: captured things not yet placed -->
@@ -56,8 +62,9 @@
         <ul v-if="graph.heap.length" class="space-y-1.5">
           <li v-for="h in graph.heap" :key="h.id" class="flex items-center gap-2 rounded-lg bg-white px-2 py-1 shadow-sm dark:bg-[#2A2645]">
             <button :class="grip" aria-label="Drag onto a day" @pointerdown.prevent="drag($event, h.id, h.title)">⠿</button>
-            <span class="min-w-0 flex-1 break-words text-[15px]">{{ h.title }}</span>
+            <span class="min-w-0 flex-1 touch-pan-y break-words text-[15px]" @pointerdown="swipe($event, h.id)">{{ h.title }}</span>
             <button class="min-h-[32px] rounded-lg px-2 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30" @click="$emit('edit', h.id)">Edit</button>
+            <button :class="del" :aria-label="`Delete ${h.title}`" @click="remove(h.id)">Delete</button>
           </li>
         </ul>
         <p v-else class="px-2 py-3 text-[15px] text-slate-500 dark:text-slate-400">Heap is empty.</p>
@@ -70,6 +77,7 @@
 import { computed, ref } from 'vue';
 import { useGraphStore } from '~/stores/graph';
 import { startDrag } from '~/lib/home/drag';
+import { startSwipe } from '~/lib/home/swipe';
 import type { StackDay } from '~/lib/home/derive';
 
 const emit = defineEmits<{ (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void }>();
@@ -77,6 +85,7 @@ const graph = useGraphStore();
 
 const chip = 'min-h-[44px] rounded-xl bg-stone-100 px-3 text-sm font-medium dark:bg-white/10';
 const grip = 'grid size-11 shrink-0 touch-none cursor-grab place-items-center text-xl text-slate-400 active:cursor-grabbing';
+const del = 'min-h-[32px] rounded-lg px-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30';
 const dragging = ref(false);
 const sorting = ref(false);
 const queue = ref<string[]>([]);
@@ -110,10 +119,20 @@ function drag(e: PointerEvent, id: string, title: string) {
     label: title,
     onDrop: (zone) => {
       if (zone === 'heap') { if (!graph.heap.some((h) => h.id === id)) { graph.park(id); emit('said', 'Back in the heap.'); } }
-      else { graph.plan(id, zone); emit('said', 'Added to your stack.'); }
+      else if (zone.startsWith('before:')) {
+        const beforeId = zone.slice('before:'.length);
+        const day = graph.stack.find((d) => d.items.some((i) => i.id === beforeId));
+        if (day) { graph.plan(id, day.key, beforeId); emit('said', 'Moved.'); }
+      } else { graph.plan(id, zone); emit('said', 'Added to your stack.'); }
     },
     onEnd: () => { dragging.value = false; },
   });
+}
+
+function remove(id: string) { graph.removeNode(id); emit('said', 'Deleted.'); }
+function swipe(e: PointerEvent, id: string) {
+  const row = (e.currentTarget as HTMLElement).closest('li');
+  if (row) startSwipe(e, row, () => remove(id));
 }
 
 function startSort() { queue.value = graph.heap.map((h) => h.id); sorting.value = true; }

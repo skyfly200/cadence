@@ -77,8 +77,8 @@
             <div v-if="stayWithMeActive && stayWithMeState" class="mt-4 rounded-2xl bg-stone-50 p-4 dark:bg-white/10">
               <p class="text-center text-sm text-slate-700 dark:text-slate-200">{{ stayWithMeStatus }}</p>
               <div class="mt-3 flex justify-center">
-                <button class="mr-2 min-h-[44px] rounded-xl bg-white px-4 text-sm font-medium dark:bg-[#1D1A2F]" @click="launchMusic">
-                  {{ musicTarget(music).name }} ↗
+                <button class="mr-2 min-h-[44px] min-w-[44px] rounded-xl bg-white px-3 text-lg dark:bg-[#1D1A2F]" :aria-label="`Open ${musicTarget(music).name}`" :title="musicTarget(music).name" @click="launchMusic">
+                  🎵
                 </button>
                 <button class="min-h-[44px] rounded-xl bg-white px-4 text-sm font-medium dark:bg-[#1D1A2F]" @click="endStayWithMe">
                   End
