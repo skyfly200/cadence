@@ -16,11 +16,20 @@
         </button>
         <div v-if="speechState.message" class="flex-1 text-xs text-stone-600 dark:text-stone-300">{{ speechState.message }}</div>
       </div>
-      <textarea
-        ref="box" v-model="draft" rows="3" maxlength="4000"
-        class="mt-3 w-full rounded-2xl border border-stone-200 bg-stone-50 p-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
-        placeholder="Say it or type it. I'll park it." @keydown.ctrl.enter="add" @keydown.meta.enter="add"
-      />
+      <div class="relative mt-3">
+        <textarea
+          ref="box" v-model="draft" rows="3" maxlength="4000"
+          class="w-full rounded-2xl border border-stone-200 bg-stone-50 p-3 pr-11 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
+          placeholder="Say it or type it. I'll park it." @keydown.ctrl.enter="add" @keydown.meta.enter="add"
+        />
+        <button
+          v-if="draft" type="button" aria-label="Clear" :disabled="busy"
+          class="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full text-stone-500 hover:bg-stone-200 dark:text-stone-300 dark:hover:bg-white/15"
+          @click="clear"
+        >
+          <X class="size-4" />
+        </button>
+      </div>
       <p v-if="error" class="mt-2 text-sm text-amber-700 dark:text-amber-300">{{ error }}</p>
       <div class="mt-3 flex gap-2">
         <button type="button" class="min-h-[44px] rounded-2xl bg-stone-100 px-4 text-sm dark:bg-white/10" @click="$emit('close')">Close</button>
@@ -32,7 +41,7 @@
 
 <script setup lang="ts">
 import { nextTick, ref, watch, onMounted, onUnmounted } from 'vue';
-import { Mic, Square } from 'lucide-vue-next';
+import { Mic, Square, X } from 'lucide-vue-next';
 import { useGraphStore } from '~/stores/graph';
 import { loadState } from '~/lib/home/nudge-state';
 import { getRecognitionCtor, joinTranscript, messageFor, initialState, setListening, setMessage } from '~/lib/home/speech-input';
@@ -131,6 +140,16 @@ function toggleSpeech() {
   } catch {
     speechState.value = setMessage(speechState.value, messageFor('unknown'));
   }
+}
+
+function clear() {
+  // Stop listening first: recognition rebuilds the text from everything heard so far.
+  if (recognition && speechState.value.listening) {
+    try { recognition.abort(); } catch { /* noop */ }
+  }
+  draft.value = '';
+  baseSpeech = '';
+  nextTick(() => box.value?.focus());
 }
 
 async function add() {
