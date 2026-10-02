@@ -240,7 +240,8 @@ export function parseNudgeId(id: string): {
 export function applyNotificationAction(
   state: NudgeState,
   nudgeId: string,
-  action: string
+  action: string,
+  now: Date = new Date(),
 ): NudgeState {
   if (!action || action !== 'notnow' && action !== 'stop') {
     return state;
@@ -261,7 +262,7 @@ export function applyNotificationAction(
         ...fb,
         notNow: {
           ...fb.notNow,
-          [parsed.nodeId]: { count: nn.count + 1, lastAt: new Date().toISOString() },
+          [parsed.nodeId]: { count: nn.count + 1, lastAt: now.toISOString() },
         },
       },
     };
@@ -277,4 +278,19 @@ export function applyNotificationAction(
   }
 
   return state;
+}
+
+/**
+ * Handle the link a notification button opens (`/?nudge=<id>&action=notnow|stop`):
+ * apply the feedback and give back the same address without those two params, other
+ * params and the hash kept. Null when the address carries no nudge, so nothing changes.
+ */
+export function consumeNudgeUrl(href: string, state: NudgeState, now: Date = new Date()): { state: NudgeState; href: string } | null {
+  const url = new URL(href);
+  const id = url.searchParams.get('nudge');
+  if (!id) return null;
+  const action = url.searchParams.get('action') ?? '';
+  url.searchParams.delete('nudge');
+  url.searchParams.delete('action');
+  return { state: applyNotificationAction(state, id, action, now), href: url.toString() };
 }

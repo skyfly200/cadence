@@ -14,6 +14,7 @@ import {
   setDisclosed,
   parseNudgeId,
   applyNotificationAction,
+  consumeNudgeUrl,
   type NudgeState,
 } from './nudge-state';
 import type { Nudge, IssuedNudge } from '~/lib/domain';
@@ -312,5 +313,43 @@ describe('nudge state', () => {
       const next = applyNotificationAction(state, 'invalid', 'stop');
       expect(next).toEqual(state);
     });
+  });
+});
+
+describe('consumeNudgeUrl', () => {
+  const NOW = new Date('2026-10-03T12:00:00.000Z');
+  const fresh = () => loadState();
+
+  it('does nothing for an address with no nudge', () => {
+    expect(consumeNudgeUrl('https://cadence.skylerfly.com/', fresh(), NOW)).toBeNull();
+    expect(consumeNudgeUrl('https://cadence.skylerfly.com/?action=stop', fresh(), NOW)).toBeNull();
+  });
+
+  it('Not now counts one dismissal for the node and clears the params', () => {
+    const r = consumeNudgeUrl('https://cadence.skylerfly.com/?nudge=leave_by%7Cdentist%7C2026-10-03&action=notnow', fresh(), NOW)!;
+    expect(r.state.feedback.notNow.dentist).toEqual({ count: 1, lastAt: NOW.toISOString() });
+    expect(r.href).toBe('https://cadence.skylerfly.com/');
+  });
+
+  it('a second Not now through the link is the second dismissal', () => {
+    const first = consumeNudgeUrl('https://x.example/?nudge=at_risk%7Cb%7C2026-10-03&action=notnow', fresh(), NOW)!;
+    const second = consumeNudgeUrl('https://x.example/?nudge=at_risk%7Cb%7C2026-10-03%7Cagain&action=notnow', first.state, NOW)!;
+    expect(second.state.feedback.notNow.b.count).toBe(2);
+  });
+
+  it('Stop silences the node, or the whole kind for a nudge with no node', () => {
+    const node = consumeNudgeUrl('https://x.example/?nudge=leave_by%7Cdentist%7C2026-10-03&action=stop', fresh(), NOW)!;
+    expect(node.state.feedback.stoppedNodes).toContain('dentist');
+    const kind = consumeNudgeUrl('https://x.example/?nudge=habit_summary%7C-%7C2026-10-03&action=stop', fresh(), NOW)!;
+    expect(kind.state.feedback.stoppedKinds).toContain('habit_summary');
+  });
+
+  it('keeps other params and the hash, and does not change state for an unknown action or a bad id', () => {
+    const r = consumeNudgeUrl('https://x.example/app?tab=plan&nudge=leave_by%7Ca%7C2026-10-03&action=explode#top', fresh(), NOW)!;
+    expect(r.href).toBe('https://x.example/app?tab=plan#top');
+    expect(r.state.feedback).toEqual(fresh().feedback);
+    const bad = consumeNudgeUrl('https://x.example/?nudge=garbage&action=stop', fresh(), NOW)!;
+    expect(bad.state.feedback).toEqual(fresh().feedback);
+    expect(bad.href).toBe('https://x.example/');
   });
 });
