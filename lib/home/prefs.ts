@@ -5,6 +5,7 @@
  */
 import type { TimeFormat } from '~/lib/domain/clock';
 import { DEFAULT_MUSIC, providerById, type MusicConfig } from './music';
+import { recordSetting } from './signals-state';
 
 export type Density = 0 | 1 | 2; // Simple, Balanced (default), Rich
 
@@ -60,7 +61,7 @@ export function getVolume(kind: SoundKind): number {
 export function setVolume(kind: SoundKind, v: number): void { write(volumeKey(kind), String(Math.min(100, Math.max(0, Math.round(v))))); }
 /** Tone and speech can each be switched off on their own. On by default. */
 export function getSoundOn(kind: SoundKind): boolean { return read(onKey(kind)) !== 'false'; }
-export function setSoundOn(kind: SoundKind, on: boolean): void { write(onKey(kind), String(on)); }
+export function setSoundOn(kind: SoundKind, on: boolean): void { write(onKey(kind), String(on)); recordSetting(`sound:${kind}`, on); }
 /** Peak gain of the soft tone: a squared curve so the slider feels even; 100 is 0.4. */
 export function toneGain(volume: number): number { return 0.4 * (volume / 100) ** 2; }
 /** SpeechSynthesisUtterance.volume (0 to 1). */
@@ -124,9 +125,9 @@ export type RecapKind = 'week' | 'month' | 'quarter';
 const recapKey = (k: RecapKind) => `cadence:recap:${k}`;
 /** Recaps in the Planning session are opt-in: all off until switched on, each on its own. */
 export function getRecapOn(kind: RecapKind): boolean { return read(recapKey(kind)) === 'true'; }
-export function setRecapOn(kind: RecapKind, on: boolean): void { write(recapKey(kind), String(on)); }
+export function setRecapOn(kind: RecapKind, on: boolean): void { write(recapKey(kind), String(on)); recordSetting(`recap:${kind}`, on); }
 
 const PLANNING_REMINDER_KEY = 'cadence:planningReminder';
 /** A quiet in-app prompt when a week has passed since the last session. Off unless switched on. */
 export function getPlanningReminder(): boolean { return read(PLANNING_REMINDER_KEY) === 'true'; }
-export function setPlanningReminder(on: boolean): void { write(PLANNING_REMINDER_KEY, String(on)); }
+export function setPlanningReminder(on: boolean): void { write(PLANNING_REMINDER_KEY, String(on)); recordSetting('planning_reminder', on); }

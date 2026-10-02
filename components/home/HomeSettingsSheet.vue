@@ -113,9 +113,18 @@
         <option value="ZZ">Somewhere else</option>
       </select>
 
+      <p class="mt-5 font-serif text-xl">Signals</p>
+      <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">A private page for you: is Cadence helping, and which features earn their place? Worked out on this device only.</p>
+      <label class="mt-2 flex items-center gap-3">
+        <input v-model="signalsOn" type="checkbox" class="h-5 w-5 rounded" @change="setSignalsOn(signalsOn)" />
+        <span class="text-sm">Show the Signals page</span>
+      </label>
+      <button v-if="signalsOn" class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 text-sm dark:border-white/10" @click="signalsOpen = true">Open Signals</button>
+
       <button class="mt-4 min-h-[44px] w-full rounded-2xl bg-stone-100 text-sm dark:bg-white/10" @click="$emit('close')">Close</button>
     </div>
   </div>
+  <HomeSignals :open="signalsOpen" @close="signalsOpen = false" />
 </template>
 
 <script setup lang="ts">
@@ -130,6 +139,7 @@ import { useGraphStore } from '~/stores/graph';
 import { useAppStore } from '~/stores/app';
 import { enablePush, disablePush } from '~/lib/push-client';
 import { getSupabase } from '~/lib/supabase';
+import { getSignalsOn, setSignalsOn } from '~/lib/home/signals-state';
 
 interface StoppedItem {
   id: string;
@@ -200,6 +210,8 @@ const music = reactive(getMusic());
 const playlistNote = ref('');
 function saveMusic(): void { setMusic({ ...music }); }
 const helpCountry = ref(getCountryOverride() ?? '');
+const signalsOn = ref(getSignalsOn());
+const signalsOpen = ref(false);
 function saveHelpCountry(): void { setCountryOverride(helpCountry.value || null); }
 /** A pasted link picks its own app; one that is not a known player is not kept. */
 function savePlaylist(): void {

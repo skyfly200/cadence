@@ -8,6 +8,7 @@ import { getSupabase } from '~/lib/supabase';
 import { syncNudgesToQueue } from '~/lib/home/nudge-queue-sync';
 import { planNudges, type Nudge, type NudgeSettings } from '~/lib/domain';
 import { addMentioned, getMentioned, speechLevel, toneLevel } from '~/lib/home/prefs';
+import { recordNudge, recordSetting } from '~/lib/home/signals-state';
 import { showNotification } from '~/lib/notifications';
 import {
   loadState,
@@ -180,6 +181,7 @@ export function useNudges() {
       if (!firedNudges.value.has(nudge.id)) {
         firedNudges.value.add(nudge.id);
         notifyNudge(nudge);
+        recordNudge(nudge.kind, 'shown');
         const newState = markIssued(state.value, [nudge]);
         updateState(newState);
         // Record habit mentions
@@ -191,6 +193,7 @@ export function useNudges() {
   }
 
   function onNotNow(nudge: Nudge): void {
+    recordNudge(nudge.kind, 'not_now');
     const newState = applyNotNow(state.value, nudge, new Date());
     updateState(newState);
   }
@@ -201,11 +204,14 @@ export function useNudges() {
   }
 
   function onStopKind(kind: string): void {
+    recordNudge(kind, 'stopped');
+    recordSetting(`nudge:${kind}`, false);
     const newState = applyStopKind(state.value, kind as any);
     updateState(newState);
   }
 
   function onToggleMute(muted: boolean): void {
+    recordSetting('nudge:sound', !muted);
     const newState = setMuted(state.value, muted);
     updateState(newState);
   }
@@ -216,6 +222,7 @@ export function useNudges() {
   }
 
   function onRestoreKind(kind: string): void {
+    recordSetting(`nudge:${kind}`, true);
     const newState = restoreKind(state.value, kind as any);
     updateState(newState);
   }
