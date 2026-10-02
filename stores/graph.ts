@@ -12,7 +12,7 @@ import { computed, ref } from 'vue';
 import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrences, saveGraphNodes, saveGraphOccurrences, saveGraphLinks } from '~/lib/graph-storage';
 import { activeOccurrences, goalRows, habitProgress, habitTap, homeHabitsPiece, parseCapture, rankNow, weeklyKept } from '~/lib/domain';
 import { attachable, newGoal, newStep, partOf } from '~/lib/home/goal-edit';
-import { acceptLink, type LinkProposal } from '~/lib/home/proposals';
+import { acceptLink, nodeFromProposal, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
 import type { ParsedCapture, TimeFormat } from '~/lib/domain';
 import { postCapture } from '~/lib/capture-client';
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/lib/domain';
@@ -283,6 +283,19 @@ export const useGraphStore = defineStore('graph', () => {
     return true;
   }
 
+  /** Save a Node the AI proposed in Discuss and the user tapped "Keep" on. Returns its id, or null if it had no title. */
+  function keepProposedNode(p: NodeProposal): string | null {
+    const now = new Date();
+    const node = nodeFromProposal(p, now, uid());
+    if (!node) return null;
+    nodes.value = [...nodes.value, node];
+    persistNodes();
+    const o = occ(node.id, 'captured', now);
+    append([o]);
+    asOf.value = now;
+    return node.id;
+  }
+
   /** A new open step (Commitment) under a Goal or milestone. */
   function addStep(title: string, parentId: string): boolean {
     const now = new Date();
@@ -340,6 +353,6 @@ export const useGraphStore = defineStore('graph', () => {
   return {
     nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat,
     rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, attachableTo,
-    load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, addStep, tapHabit, edit, removeNode,
+    load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, keepProposedNode, addStep, tapHabit, edit, removeNode,
   };
 });

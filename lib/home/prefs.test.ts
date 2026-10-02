@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  DEFAULT_VOLUME, addPlanningReviewed, finishPlanning, getPlanningFinished, getPlanningReminder, getPlanningReviewed, getRecapOn, getSoundOn, getVolume,
+  DEFAULT_VOLUME, addPlanningReviewed, finishPlanning, getDiscussDisclosed, getPlanningFinished, setDiscussDisclosed, getPlanningReminder, getPlanningReviewed, getRecapOn, getSoundOn, getVolume,
   greeting, setPlanningReminder, setRecapOn, setVolume, speechLevel, speechVolume, toneGain, toneLevel,
 } from './prefs';
 
@@ -26,6 +26,24 @@ describe('volume', () => {
     expect(speechVolume(0)).toBe(0);
     expect(speechVolume(70)).toBeCloseTo(0.7);
     expect(speechVolume(100)).toBe(1);
+  });
+});
+
+describe('discuss disclosure', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('is not accepted until the person accepts it, then is remembered on this device', () => {
+    const map = new Map<string, string>();
+    vi.stubGlobal('window', { localStorage: { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => void map.set(k, v) } });
+    expect(getDiscussDisclosed()).toBe(false);
+    setDiscussDisclosed(true);
+    expect(getDiscussDisclosed()).toBe(true);
+  });
+
+  it('asks again when storage is blocked rather than assuming consent', () => {
+    expect(getDiscussDisclosed()).toBe(false);
+    expect(() => setDiscussDisclosed(true)).not.toThrow();
+    expect(getDiscussDisclosed()).toBe(false);
   });
 });
 

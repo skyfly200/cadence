@@ -100,6 +100,11 @@ const AI_KEY = 'cadence:aiOn';
 export function getAiOn(): boolean { return read(AI_KEY) !== 'false'; }
 export function setAiOn(on: boolean): void { write(AI_KEY, String(on)); }
 
+const DISCUSS_DISCLOSED_KEY = 'cadence:discussDisclosed';
+/** Whether this device has seen, and accepted, the one-line note on what Discuss sends. */
+export function getDiscussDisclosed(): boolean { return read(DISCUSS_DISCLOSED_KEY) === 'true'; }
+export function setDiscussDisclosed(on: boolean): void { write(DISCUSS_DISCLOSED_KEY, String(on)); }
+
 const PLANNING_FINISHED_KEY = 'cadence:planningFinished';
 const PLANNING_REVIEWED_KEY = 'cadence:planningReviewed';
 /** When the last Planning session was finished (ISO), or null if none yet. */

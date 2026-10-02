@@ -2,6 +2,15 @@
   <div v-if="open" class="fixed inset-0 z-50 flex items-end bg-stone-900/30" @click.self="$emit('close')">
     <div class="mx-auto w-full max-w-md rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-[#2A2645]" role="dialog" aria-label="Capture">
       <CrisisCard v-if="crisis" :resources="crisis" @okay="dismissCrisis" @not-meant="dismissCrisis" />
+      <div v-else-if="mode === 'disclose'" role="region" aria-label="Before we talk">
+        <p class="font-serif text-xl">Before we talk</p>
+        <p class="mt-2 text-[15px] text-slate-700 dark:text-slate-200">This sends this conversation and the relevant part of your list to Claude.</p>
+        <div class="mt-3 flex gap-2">
+          <button type="button" class="min-h-[44px] rounded-2xl bg-stone-100 px-4 text-sm dark:bg-white/10" @click="mode = 'form'">Not now</button>
+          <button type="button" class="min-h-[44px] flex-1 rounded-2xl bg-[#E07A45] font-semibold text-white" @click="acceptDisclosure">Continue</button>
+        </div>
+      </div>
+      <HomeDiscuss v-else-if="mode === 'discuss'" :initial="draft" @close="$emit('close')" @said="(m: string) => $emit('said', m)" @crisis="onDiscussCrisis" />
       <template v-else>
       <p class="font-serif text-xl">What's on your mind?</p>
       <div v-if="speechSupported" class="mt-3 flex items-center gap-2">
@@ -35,6 +44,7 @@
       <p v-if="error" class="mt-2 text-sm text-amber-700 dark:text-amber-300">{{ error }}</p>
       <div class="mt-3 flex gap-2">
         <button type="button" class="min-h-[44px] rounded-2xl bg-stone-100 px-4 text-sm dark:bg-white/10" @click="$emit('close')">Close</button>
+        <button v-if="discussAvailable" type="button" class="min-h-[44px] rounded-2xl bg-stone-100 px-4 text-sm font-medium dark:bg-white/10" :disabled="busy" @click="startDiscuss">Discuss</button>
         <button type="button" class="min-h-[44px] flex-1 rounded-2xl bg-[#E07A45] font-semibold text-white disabled:opacity-50" :disabled="!draft.trim() || busy" @click="add">{{ busy ? 'Adding…' : 'Add' }}</button>
       </div>
       </template>
@@ -49,13 +59,20 @@ import { useGraphStore } from '~/stores/graph';
 import { loadState } from '~/lib/home/nudge-state';
 import { checkCrisis, type Resource } from '~/lib/domain/crisis';
 import { currentResources, markCardShown, shouldShowCard } from '~/lib/home/crisis-state';
+import { getAiOn, getDiscussDisclosed, setDiscussDisclosed } from '~/lib/home/prefs';
+import { useAppStore } from '~/stores/app';
 import { getRecognitionCtor, joinTranscript, messageFor, initialState, setListening, setMessage } from '~/lib/home/speech-input';
 
 /** `listen`: the sheet was opened from the mic button, so start listening right away. */
 const props = defineProps<{ open: boolean; listen?: boolean }>();
 const emit = defineEmits<{ (e: 'close'): void; (e: 'said', msg: string): void }>();
 const graph = useGraphStore();
+const app = useAppStore();
 const draft = ref('');
+/** form: the usual box. disclose: the one-line note on what Discuss sends. discuss: the conversation. */
+const mode = ref<'form' | 'disclose' | 'discuss'>('form');
+/** Discuss needs AI on and a signed-in account (the server holds the switch and the cap). Read each time the sheet opens. */
+const discussAvailable = ref(false);
 const error = ref('');
 const busy = ref(false);
 /** The help lines to show in place of the form, after a crisis-language capture. */
@@ -117,6 +134,8 @@ watch(() => props.open, async (o) => {
   if (o) {
     error.value = '';
     crisis.value = null;
+    mode.value = 'form';
+    discussAvailable.value = getAiOn() && app.signedIn;
     baseSpeech = '';
     ignoreResults = false;
     speechState.value = initialState();
@@ -150,6 +169,39 @@ function toggleSpeech() {
   } catch {
     speechState.value = setMessage(speechState.value, messageFor('unknown'));
   }
+}
+
+function stopListening() {
+  ignoreResults = true;
+  if (recognition && speechState.value.listening) {
+    try { recognition.abort(); } catch { /* noop */ }
+  }
+}
+
+function startDiscuss() {
+  stopListening();
+  mode.value = getDiscussDisclosed() ? 'discuss' : 'disclose';
+}
+
+function acceptDisclosure() {
+  setDiscussDisclosed(true);
+  mode.value = 'discuss';
+}
+
+/**
+ * Crisis language in Discuss (ticket 24): no AI call was or will be made for it. What the person said is
+ * kept as a Private Idea, and the calm card shows at most once a day. A match in an AI reply has no text to keep.
+ */
+async function onDiscussCrisis(text: string | null) {
+  if (text) await graph.capture(text, { private: true });
+  mode.value = 'form';
+  draft.value = '';
+  if (shouldShowCard()) {
+    markCardShown();
+    crisis.value = currentResources().resources;
+    return;
+  }
+  emit('close');
 }
 
 function dismissCrisis() {

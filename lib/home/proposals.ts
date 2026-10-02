@@ -45,3 +45,49 @@ export function acceptLink(p: LinkProposal, links: readonly Link[], now: Date, i
     createdAt: stamp, updatedAt: stamp,
   };
 }
+
+// ── proposed Nodes (Discuss) ──────────────────────────────────────
+
+/** One proposed Node as POST /api/ai/extract answers it. `ref` is how the proposed Links point at it. */
+export interface NodeProposal {
+  ref: string;
+  kind: Node['kind'];
+  title: string;
+  confidence: number;
+  evidence: string;
+}
+
+/**
+ * The Node a tap on "Keep" saves. Nothing about a proposal is trusted beyond its title and kind. A Habit
+ * is saved as an Idea, because a Habit needs a frequency the conversation did not give.
+ */
+export function nodeFromProposal(p: NodeProposal, now: Date, id: string): Node | null {
+  const title = p.title.trim();
+  if (!title) return null;
+  const t = now.toISOString();
+  const base = { id, title, private: false, createdAt: t, updatedAt: t };
+  switch (p.kind) {
+    case 'goal': return { ...base, kind: 'goal', finishLine: false, checkpoint: false };
+    case 'commitment': return { ...base, kind: 'commitment', slog: false, quiet: false };
+    case 'thing': return { ...base, kind: 'thing', thingType: 'object' };
+    default: return { ...base, kind: 'idea' };
+  }
+}
+
+/**
+ * The proposed Links that can be shown once some proposed Nodes are kept: each end is either a Node the
+ * user already has or one they just kept (`kept` maps a proposal's ref to the saved id). Ends are rewritten to ids.
+ */
+export function linksAfterKeeping(proposals: readonly LinkProposal[], kept: ReadonlyMap<string, string>, nodes: readonly Node[], links: readonly Link[]): LinkProposal[] {
+  const ids = new Set(nodes.map((n) => n.id));
+  const end = (x: string) => kept.get(x) ?? (ids.has(x) ? x : null);
+  const out: LinkProposal[] = [];
+  for (const p of proposals) {
+    const from = end(p.from);
+    const to = end(p.to);
+    if (from === null || to === null) continue;
+    const q = { ...p, from, to };
+    if (connectionProposals([q], nodes, links, 1).length) out.push(q);
+  }
+  return out.sort((a, b) => b.confidence - a.confidence);
+}
