@@ -1,5 +1,5 @@
 -- ============================================================================
--- DRAFT, not applied. Review, then run in the Supabase SQL editor.
+-- APPLIED 2026-10-02 to the cadence project as migration "cadence_planning_nudge" (via the Supabase MCP).
 -- Needs 0003_nudges.sql first (it creates nudge_queue).
 --
 -- The weekly Planning session invitation is a new nudge kind, 'planning', sent

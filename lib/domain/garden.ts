@@ -41,7 +41,7 @@ export const PERENNIAL_PERIODS: readonly Period[] = ['quarter', 'four_months', '
 export const STAGE_AT = [1, 3, 8, 20] as const;
 export const MAX_BLOOMS = 5;
 export const MAX_GROUND = 12;
-export const PRESS_PLANTS = 3;
+export const PRESS_PLANTS = 5;
 /** The first days of a season are shown as "resting", by the calendar alone. */
 export const RESTING_DAYS = 3;
 const MAX_WINDOWS = 400;

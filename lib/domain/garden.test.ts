@@ -174,10 +174,10 @@ describe('pressed book', () => {
     expect(pressSeason([day], [], [l, un], seasonOf(new Date('2026-08-20T00:00:00Z'), UTC), UTC)).toBeNull();
   });
 
-  it('presses at most three plants per season', () => {
-    const many = Array.from({ length: 5 }, (_, i) => habit({ id: `m${i}`, title: `M${i}`, period: 'day' }));
+  it('presses at most five plants per season', () => {
+    const many = Array.from({ length: 7 }, (_, i) => habit({ id: `m${i}`, title: `M${i}`, period: 'day' }));
     const occs = many.flatMap((h) => logs(h.id, ['2026-08-10']));
-    expect(pressSeason(many, [], occs, seasonOf(new Date('2026-08-20T00:00:00Z'), UTC), UTC)!.plants).toHaveLength(3);
+    expect(pressSeason(many, [], occs, seasonOf(new Date('2026-08-20T00:00:00Z'), UTC), UTC)!.plants).toHaveLength(5);
   });
 });
 

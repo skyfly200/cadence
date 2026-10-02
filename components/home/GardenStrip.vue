@@ -21,6 +21,6 @@ onMounted(() => { motion.value = getGardenMotion(); });
 const caption = computed(() => {
   const g = graph.garden;
   if (g.resting) return `A new ${g.season.name.toLowerCase()}. The garden is resting.`;
-  return g.empty ? 'A light garden. It grows as you keep things.' : `${g.season.name} garden`;
+  return g.empty ? 'Things you keep will grow here.' : `${g.season.name} garden`;
 });
 </script>

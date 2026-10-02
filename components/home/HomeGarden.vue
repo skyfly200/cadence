@@ -18,7 +18,7 @@
           <p class="mt-2 px-1 font-serif text-lg">{{ garden.season.name }} {{ garden.season.year }}</p>
           <p class="px-1 text-sm text-slate-600 dark:text-slate-300">
             <template v-if="garden.resting">A new season. The garden starts light, and last season is in the Pressed book.</template>
-            <template v-else-if="garden.empty">A light garden. It grows as you keep things.</template>
+            <template v-else-if="garden.empty">Things you keep will grow here.</template>
             <template v-else>{{ garden.kept }} {{ garden.kept === 1 ? 'thing' : 'things' }} kept this season.</template>
           </p>
         </div>
@@ -44,6 +44,7 @@
             <li v-for="p in s.plants" :key="p.nodeId" class="flex flex-col items-center rounded-2xl border border-amber-200/70 bg-white/60 p-2 text-center dark:border-white/10 dark:bg-white/5">
               <svg viewBox="-20 -46 40 50" class="size-14" aria-hidden="true"><GardenPiece :kind="p.kind" :stage="p.stage" :id="p.nodeId" /></svg>
               <span class="mt-1 break-words text-xs leading-tight">{{ p.title }}</span>
+              <span class="text-[11px] text-slate-500 dark:text-slate-400">Kept {{ p.count }} {{ p.count === 1 ? 'time' : 'times' }}</span>
             </li>
           </ul>
         </article>
