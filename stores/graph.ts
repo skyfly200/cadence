@@ -13,6 +13,7 @@ import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrenc
 import { activeOccurrences, gardenState, goalRows, habitProgress, habitTap, homeHabitsPiece, keepDeleted, parseCapture, pressSeason, pressedBook, rankNow, weeklyKept } from '~/lib/domain';
 import { getPressedPages, getSeasonDraft, savePressedPages, saveSeasonDraft } from '~/lib/home/garden-state';
 import { attachable, newGoal, newStep, partOf } from '~/lib/home/goal-edit';
+import { ideasFromTasks, type ImportedTask } from '~/lib/home/import';
 import { acceptLink, defaultChoice, nodeFromProposal, type KeepChoice, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
 import type { ParsedCapture, TimeFormat } from '~/lib/domain';
 import { postCapture } from '~/lib/capture-client';
@@ -314,6 +315,19 @@ export const useGraphStore = defineStore('graph', () => {
     return node.id;
   }
 
+  /** Add imported Google Tasks as Ideas, skipping any already imported. Returns how many were added and skipped. */
+  function importTasks(tasks: ImportedTask[]): { imported: number; skipped: number } {
+    const now = new Date();
+    const r = ideasFromTasks(tasks, nodes.value, now, uid);
+    if (r.ideas.length) {
+      nodes.value = [...nodes.value, ...r.ideas];
+      persistNodes();
+      append(r.ideas.map((i) => occ(i.id, 'captured', now)));
+      asOf.value = now;
+    }
+    return { imported: r.imported, skipped: r.skipped };
+  }
+
   /** A new open step (Commitment) under a Goal or milestone. */
   function addStep(title: string, parentId: string): boolean {
     const now = new Date();
@@ -371,6 +385,6 @@ export const useGraphStore = defineStore('graph', () => {
   return {
     nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat,
     rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, garden, pressed, attachableTo,
-    load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, keepProposedNode, addStep, tapHabit, edit, removeNode,
+    load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, keepProposedNode, importTasks, addStep, tapHabit, edit, removeNode,
   };
 });

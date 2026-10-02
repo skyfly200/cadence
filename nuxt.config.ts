@@ -108,6 +108,8 @@ export default defineNuxtConfig({
     nudgeCronSecret: process.env.NUDGE_CRON_SECRET || '',
     public: {
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '',
+      // Google Picker (reading a Google Doc): a browser API key restricted to the Picker API and this site.
+      googlePickerApiKey: process.env.NUXT_PUBLIC_GOOGLE_PICKER_API_KEY || '',
       supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || 'https://wgdjwzlqvpvltedzasga.supabase.co',
       supabaseAnonKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_5mdrxPgP4XBxsbIh2t1jQg_eqvTSuKM',
       // Where auth emails/OAuth send users back to (must be allow-listed in
