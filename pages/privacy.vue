@@ -31,7 +31,8 @@
       <section class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
         <h2 class="font-serif text-lg">What each feature sends</h2>
         <ul class="mt-2 list-disc space-y-2 pl-5 text-[15px]">
-          <li><strong>Capture, Now, Plan, Habits:</strong> nothing to any AI. The ranking and the "why this one" lines run on your device.</li>
+          <li><strong>Capture, Now, Plan, Habits:</strong> nothing to any AI. The ranking and the Why now lines run on your device.</li>
+          <li><strong>Polished Why now line:</strong> when AI is on, the title of your current item and its Why now line go to the AI to be reworded. Private items are never sent.</li>
           <li><strong>AI wording and sorting (when used):</strong> only the few items it needs, sent to the AI provider to answer, on a paid plan with retention off where the provider allows. <strong>Private</strong> items are never included.</li>
           <li><strong>Analytics:</strong> none.</li>
         </ul>

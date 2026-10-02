@@ -29,7 +29,7 @@
                 Edit
               </button>
             </div>
-            <p v-if="density >= 1 && graph.rank.reason" class="mt-2 text-center text-[15px] text-stone-600 dark:text-slate-300">{{ graph.rank.reason }}</p>
+            <p v-if="density >= 1 && graph.rank.reason" class="mt-2 text-center text-[15px] text-stone-600 dark:text-slate-300">{{ whyNowText }}</p>
             <a
               v-if="openApp" :href="openLink(openApp, android)" :target="android ? undefined : '_blank'" rel="noopener"
               class="mx-auto mt-3 flex min-h-[44px] w-fit items-center gap-1 rounded-2xl bg-stone-100 px-4 text-sm font-medium dark:bg-white/10"
@@ -121,6 +121,8 @@ import { appForItem, isAndroidUa, openLink } from '~/lib/home/apps';
 import { musicTarget } from '~/lib/home/music';
 import { useGraphStore } from '~/stores/graph';
 import type { Commitment, Habit } from '~/lib/domain';
+import { useAppStore } from '~/stores/app';
+import { createWhyNowCache, fetchWhyNow, shownLine, whyNowKey } from '~/lib/home/why-now';
 import { getMusic, setMusic, speechLevel, toneLevel, type Density } from '~/lib/home/prefs';
 import {
   start as startStayWithMeSession,
@@ -162,6 +164,27 @@ function launchMusic() {
 }
 const openApp = computed(() => (current.value ? appForItem(current.value.node.title, current.value.node.kind === 'idea' ? null : (current.value.node as { link?: string | null }).link) : null));
 const started = computed(() => !!graph.currentState?.started);
+// Why now: the template reason first. An AI-polished line is fetched in the background and cached; it is
+// picked up only when the card changes or the app is opened again, never while the user is looking at it.
+const app = useAppStore();
+const whyCache = createWhyNowCache();
+const whyKey = computed(() => (current.value ? whyNowKey(current.value.node.id, graph.rank.reason ?? '') : ''));
+const whyShown = ref<{ key: string; line: string }>({ key: '', line: '' });
+const whyNowText = computed(() => (whyShown.value.key === whyKey.value ? whyShown.value.line : graph.rank.reason));
+function pickWhyNow() {
+  const c = current.value;
+  whyShown.value = c ? { key: whyKey.value, line: shownLine(whyCache, c.node.id, graph.rank.reason ?? '') } : { key: '', line: '' };
+}
+watch([whyKey, () => graph.currentState?.started], pickWhyNow, { immediate: true });
+watch(whyKey, () => {
+  const c = current.value;
+  if (!c || !graph.rank.reason) return;
+  void fetchWhyNow(
+    { nodeId: c.node.id, title: c.node.title, template: graph.rank.reason, private: c.node.private },
+    whyCache, { accessToken: app.session?.access_token },
+  );
+}, { immediate: true });
+
 // A new card gets a fresh prompt.
 watch(() => current.value?.node.id, () => { keepDismissed.value = false; });
 
