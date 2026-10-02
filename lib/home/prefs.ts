@@ -35,3 +35,17 @@ export function getMentioned(): string[] {
   try { const v = JSON.parse(read(MENTIONED_KEY) ?? '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch { return []; }
 }
 export function addMentioned(keys: string[]): void { write(MENTIONED_KEY, JSON.stringify([...new Set([...getMentioned(), ...keys])].slice(-200))); }
+
+const VOLUME_KEY = 'cadence:nudgeVolume';
+export const DEFAULT_VOLUME = 70;
+/** Nudge and cue loudness, 0 to 100 (per device). The mute switch is separate. */
+export function getVolume(): number {
+  const raw = read(VOLUME_KEY);
+  const v = raw === null ? NaN : Number(raw);
+  return Number.isFinite(v) ? Math.min(100, Math.max(0, Math.round(v))) : DEFAULT_VOLUME;
+}
+export function setVolume(v: number): void { write(VOLUME_KEY, String(Math.min(100, Math.max(0, Math.round(v))))); }
+/** Peak gain of the soft tone: a squared curve so the slider feels even; 100 is 0.4. */
+export function toneGain(volume: number): number { return 0.4 * (volume / 100) ** 2; }
+/** SpeechSynthesisUtterance.volume (0 to 1). */
+export function speechVolume(volume: number): number { return volume / 100; }

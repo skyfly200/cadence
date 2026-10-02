@@ -61,6 +61,11 @@
         <input type="checkbox" :checked="!nudgeState.muted" class="h-5 w-5 rounded" @change="(e) => onToggleMute(!(e.target as HTMLInputElement).checked)" />
         <span class="text-sm">Play tone and speech</span>
       </label>
+      <div class="mt-2 flex items-center gap-3">
+        <label for="nudge-volume" class="text-sm">Volume</label>
+        <input id="nudge-volume" type="range" min="0" max="100" step="5" v-model.number="volume" class="flex-1" @change="onVolume" />
+        <button class="text-xs text-blue-600 dark:text-blue-400" @click="playPreview">Test</button>
+      </div>
 
       <div v-if="stoppedOrSilenced.length > 0" class="mt-3">
         <p class="text-sm font-medium">Muted items</p>
@@ -86,7 +91,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
-import type { Density } from '~/lib/home/prefs';
+import { getVolume, setVolume, toneGain, type Density } from '~/lib/home/prefs';
 import type { NudgeKind } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
 import { useAppStore } from '~/stores/app';
@@ -155,6 +160,30 @@ const stoppedOrSilenced = computed(() => {
 
 function onToggleKind(kind: NudgeKind, enabled: boolean): void {
   emit('toggle-kind', kind, enabled);
+}
+
+const volume = ref(getVolume());
+function onVolume(): void { setVolume(volume.value); }
+
+/** A short tone at the chosen volume (a tap, so the browser allows it). */
+function playPreview(): void {
+  setVolume(volume.value);
+  try {
+    const Ctor = window.AudioContext || (window as any).webkitAudioContext;
+    const ctx = new Ctor();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.value = 650;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    const now = ctx.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(toneGain(volume.value), now + 0.05);
+    gain.gain.linearRampToValueAtTime(0, now + 0.25);
+    osc.start(now);
+    osc.stop(now + 0.25);
+    osc.onended = () => { void ctx.close(); };
+  } catch { /* no audio here */ }
 }
 
 function onToggleMute(muted: boolean): void {

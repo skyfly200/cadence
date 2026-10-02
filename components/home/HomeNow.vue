@@ -102,7 +102,7 @@
 import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { useGraphStore } from '~/stores/graph';
 import type { Commitment, Habit } from '~/lib/domain';
-import type { Density } from '~/lib/home/prefs';
+import { getVolume, speechVolume, toneGain, type Density } from '~/lib/home/prefs';
 import {
   start as startStayWithMeSession,
   checkInDue,
@@ -206,7 +206,7 @@ function playPresenceCue() {
       osc.connect(gain);
       gain.connect(audioContext.destination);
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.03, now + 0.05);
+      gain.gain.linearRampToValueAtTime(toneGain(getVolume()), now + 0.05);
       gain.gain.linearRampToValueAtTime(0, now + 0.2);
       osc.start(now);
       osc.stop(now + 0.2);
@@ -221,7 +221,7 @@ function playPresenceCue() {
       const utterance = new SpeechSynthesisUtterance(PRESENCE_CUE_TEXT);
       utterance.rate = 1;
       utterance.pitch = 1;
-      utterance.volume = 0.7;
+      utterance.volume = speechVolume(getVolume());
       window.speechSynthesis.speak(utterance);
     } catch {
       /* ignore speech errors */
@@ -260,7 +260,7 @@ function startStayWithMeTicker() {
             const utterance = new SpeechSynthesisUtterance(END_TEXT);
             utterance.rate = 1;
             utterance.pitch = 1;
-            utterance.volume = 0.7;
+            utterance.volume = speechVolume(getVolume());
             window.speechSynthesis.speak(utterance);
           } catch {
             /* ignore */
@@ -301,7 +301,7 @@ function playCheckInCue() {
       osc.connect(gain);
       gain.connect(audioContext.destination);
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.05, now + 0.05);
+      gain.gain.linearRampToValueAtTime(toneGain(getVolume()), now + 0.05);
       gain.gain.linearRampToValueAtTime(0, now + 0.25);
       osc.start(now);
       osc.stop(now + 0.25);
@@ -316,7 +316,7 @@ function playCheckInCue() {
       const utterance = new SpeechSynthesisUtterance(CHECK_IN_TEXT);
       utterance.rate = 1;
       utterance.pitch = 1;
-      utterance.volume = 0.7;
+      utterance.volume = speechVolume(getVolume());
       window.speechSynthesis.speak(utterance);
     } catch {
       /* ignore speech errors */
