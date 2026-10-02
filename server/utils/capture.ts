@@ -51,6 +51,8 @@ export interface NewCapture {
   /** SHA-256 of the normalised text, for the duplicate window (never the text itself). */
   hash: string;
   idempotencyKey?: string;
+  /** Saved as a Private Idea (never sent to the AI). The client sets it for crisis language. */
+  private?: boolean;
 }
 
 export interface CaptureStore {
@@ -70,7 +72,7 @@ export function buildIdeaData(c: NewCapture): IdeaData {
     kind: 'idea',
     title: c.text,
     notes: null,
-    private: false,
+    private: c.private === true,
     createdAt: c.createdAt,
     updatedAt: c.createdAt,
     captureSource: c.source,
@@ -115,7 +117,7 @@ export async function handleCapture(
   const now = deps.now ?? Date.now;
   const newId = deps.newId ?? randomUUID;
 
-  const body = input.body as { text?: unknown; idempotencyKey?: unknown } | null | undefined;
+  const body = input.body as { text?: unknown; idempotencyKey?: unknown; private?: unknown } | null | undefined;
   if (!body || typeof body !== 'object' || typeof body.text !== 'string') {
     return fail(400, 'bad_request', 'Send the thought as text.');
   }
@@ -123,6 +125,7 @@ export async function handleCapture(
   if (key !== undefined && (typeof key !== 'string' || !KEY_PATTERN.test(key))) {
     return fail(400, 'bad_request', 'That request could not be read.');
   }
+  if (body.private !== undefined && typeof body.private !== 'boolean') return fail(400, 'bad_request', 'That request could not be read.');
   const text = body.text.trim();
   if (!text) return fail(400, 'empty', 'There was nothing to save yet.');
   if (text.length > MAX_TEXT_LENGTH) return fail(400, 'too_long', 'That is a bit long to capture in one go. Try a shorter piece.');
@@ -153,6 +156,7 @@ export async function handleCapture(
       source: input.source,
       hash,
       ...(key ? { idempotencyKey: key } : {}),
+      ...(body.private === true ? { private: true } : {}),
     };
     await deps.store.create(capture);
     return ok({ nodeId: capture.nodeId, createdAt }, false);

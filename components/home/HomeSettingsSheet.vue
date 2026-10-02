@@ -105,6 +105,14 @@
         <NuxtLink to="/classic" class="grid min-h-[44px] place-items-center rounded-xl border border-slate-200 text-sm dark:border-white/10">Classic view (the old app)</NuxtLink>
       </div>
 
+      <p class="mt-5 font-serif text-xl">Help lines</p>
+      <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">If something you write sounds heavy, Cadence shows local help lines. Which country?</p>
+      <select v-model="helpCountry" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Country for help lines" @change="saveHelpCountry">
+        <option value="">From this device</option>
+        <option v-for="c in COUNTRY_CHOICES" :key="c.code" :value="c.code">{{ c.label }}</option>
+        <option value="ZZ">Somewhere else</option>
+      </select>
+
       <button class="mt-4 min-h-[44px] w-full rounded-2xl bg-stone-100 text-sm dark:bg-white/10" @click="$emit('close')">Close</button>
     </div>
   </div>
@@ -114,6 +122,8 @@
 import { computed, reactive, ref, onMounted } from 'vue';
 import type { TimeFormat } from '~/lib/domain';
 import { MUSIC_PROVIDERS, parsePlaylist } from '~/lib/home/music';
+import { COUNTRY_CHOICES } from '~/lib/domain/crisis';
+import { getCountryOverride, setCountryOverride } from '~/lib/home/crisis-state';
 import { getMusic, getSoundOn, getVolume, setMusic, setSoundOn, setVolume, speechVolume, toneGain, type Density, type SoundKind } from '~/lib/home/prefs';
 import type { NudgeKind } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
@@ -189,6 +199,8 @@ function onToggleKind(kind: NudgeKind, enabled: boolean): void {
 const music = reactive(getMusic());
 const playlistNote = ref('');
 function saveMusic(): void { setMusic({ ...music }); }
+const helpCountry = ref(getCountryOverride() ?? '');
+function saveHelpCountry(): void { setCountryOverride(helpCountry.value || null); }
 /** A pasted link picks its own app; one that is not a known player is not kept. */
 function savePlaylist(): void {
   const text = music.playlist.trim();

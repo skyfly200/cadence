@@ -16,6 +16,15 @@ describe('postCapture', () => {
     expect(sent.idempotencyKey).toMatch(/^cap_/);
   });
 
+  it('asks for a Private Idea only when told to', async () => {
+    const f = vi.fn(async () => json({ ok: true, reply: 'Got it, parked.', id: 'idea_1', duplicate: false }));
+    await postCapture('plain', { accessToken: 'tok', fetch: f as unknown as typeof fetch });
+    await postCapture('heavy', { accessToken: 'tok', private: true, fetch: f as unknown as typeof fetch });
+    const bodies = f.mock.calls.map((c) => JSON.parse(String((c as unknown as [string, RequestInit])[1].body)));
+    expect(bodies[0]).not.toHaveProperty('private');
+    expect(bodies[1].private).toBe(true);
+  });
+
   it('is signed out without a token (no request) and on a 401', async () => {
     const f = vi.fn();
     expect((await postCapture('x', { accessToken: null, fetch: f as unknown as typeof fetch })).status).toBe('signed_out');

@@ -1,6 +1,8 @@
 <template>
   <div v-if="open" class="fixed inset-0 z-50 flex items-end bg-stone-900/30" @click.self="$emit('close')">
     <div class="mx-auto w-full max-w-md rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-[#2A2645]" role="dialog" aria-label="Capture">
+      <CrisisCard v-if="crisis" :resources="crisis" @okay="dismissCrisis" @not-meant="dismissCrisis" />
+      <template v-else>
       <p class="font-serif text-xl">What's on your mind?</p>
       <div v-if="speechSupported" class="mt-3 flex items-center gap-2">
         <button
@@ -35,6 +37,7 @@
         <button type="button" class="min-h-[44px] rounded-2xl bg-stone-100 px-4 text-sm dark:bg-white/10" @click="$emit('close')">Close</button>
         <button type="button" class="min-h-[44px] flex-1 rounded-2xl bg-[#E07A45] font-semibold text-white disabled:opacity-50" :disabled="!draft.trim() || busy" @click="add">{{ busy ? 'Adding…' : 'Add' }}</button>
       </div>
+      </template>
     </div>
   </div>
 </template>
@@ -44,6 +47,8 @@ import { nextTick, ref, watch, onMounted, onUnmounted } from 'vue';
 import { Mic, Square, X } from 'lucide-vue-next';
 import { useGraphStore } from '~/stores/graph';
 import { loadState } from '~/lib/home/nudge-state';
+import { checkCrisis, type Resource } from '~/lib/domain/crisis';
+import { currentResources, markCardShown, shouldShowCard } from '~/lib/home/crisis-state';
 import { getRecognitionCtor, joinTranscript, messageFor, initialState, setListening, setMessage } from '~/lib/home/speech-input';
 
 /** `listen`: the sheet was opened from the mic button, so start listening right away. */
@@ -53,6 +58,8 @@ const graph = useGraphStore();
 const draft = ref('');
 const error = ref('');
 const busy = ref(false);
+/** The help lines to show in place of the form, after a crisis-language capture. */
+const crisis = ref<Resource[] | null>(null);
 const box = ref<HTMLTextAreaElement | null>(null);
 const speechSupported = ref(false);
 const speechState = ref(initialState());
@@ -109,6 +116,7 @@ onUnmounted(() => {
 watch(() => props.open, async (o) => {
   if (o) {
     error.value = '';
+    crisis.value = null;
     baseSpeech = '';
     ignoreResults = false;
     speechState.value = initialState();
@@ -144,6 +152,11 @@ function toggleSpeech() {
   }
 }
 
+function dismissCrisis() {
+  crisis.value = null;
+  emit('close');
+}
+
 function clear() {
   // Stop listening first: recognition rebuilds the text from everything heard so far.
   if (recognition && speechState.value.listening) {
@@ -161,10 +174,18 @@ async function add() {
     try { recognition.abort(); } catch { /* noop */ }
   }
   busy.value = true;
-  const r = await graph.capture(draft.value);
+  // On-device rules only: the text is checked here and never sent anywhere to be checked.
+  // A match is saved as a Private Idea; the card shows at most once a day.
+  const heavy = checkCrisis(draft.value);
+  const r = await graph.capture(draft.value, { private: heavy });
   busy.value = false;
   if (!r.ok) { error.value = r.message; return; }
   draft.value = '';
+  if (heavy && shouldShowCard()) {
+    markCardShown();
+    crisis.value = currentResources().resources;
+    return;
+  }
   emit('close');
   emit('said', r.reply);
 }
