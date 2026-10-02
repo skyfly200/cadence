@@ -35,6 +35,7 @@ import { FINAL_STRETCH_FROM, habitProgress } from './habits';
 import { formatClock, type TimeFormat } from './clock';
 import { dayKey, localParts, localWeekday, periodProgress, periodWindow, type PeriodOptions } from './periods';
 import { DEFAULT_DURATION_MIN, activeOccurrences, learnedDuration } from './estimates';
+import { goalNextSteps } from './goals';
 import { SHRINK_PARK_KEEP_AT, isParked, notNowCount, shelvedSince } from './shelf';
 
 export type Tier = 1 | 2 | 3 | 4 | 5;
@@ -223,30 +224,10 @@ export function rankNow(input: RankInput): RankResult {
     eligible.push(c);
   }
 
-  // next step per active Goal: the oldest eligible descendant, first Goal to claim it wins
-  const children = new Map<string, string[]>();
-  for (const l of input.links) if (l.type === 'part_of') (children.get(l.toId) ?? children.set(l.toId, []).get(l.toId)!).push(l.fromId);
-  const eligibleById = new Map(eligible.map((c) => [c.id, c] as const));
+  // next step per active Goal (the walk is shared with the Goals lens, goals.ts)
+  const goalTitle = new Map(input.nodes.filter((n) => n.kind === 'goal').map((g) => [g.id, g.title] as const));
   const goalStep = new Map<string, string>(); // commitment id -> goal title
-  const goals = input.nodes.filter((n) => n.kind === 'goal')
-    .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || (a.id < b.id ? -1 : 1));
-  for (const g of goals) {
-    const found: Commitment[] = [];
-    const seen = new Set<string>();
-    const walk = (id: string) => {
-      if (seen.has(id)) return;
-      seen.add(id);
-      for (const child of children.get(id) ?? []) {
-        const e = eligibleById.get(child);
-        if (e) found.push(e);
-        walk(child);
-      }
-    };
-    walk(g.id);
-    found.sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || (a.id < b.id ? -1 : 1));
-    const step = found.find((c) => !goalStep.has(c.id));
-    if (step) goalStep.set(step.id, g.title);
-  }
+  for (const [cid, gid] of goalNextSteps(input.nodes, input.links, eligible)) goalStep.set(cid, goalTitle.get(gid)!);
 
   const cands: Cand[] = [];
   const deadlineMs = (c: Commitment) => (c.deadline ? Date.parse(c.deadline) : NaN);

@@ -10,7 +10,8 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrences, saveGraphNodes, saveGraphOccurrences, saveGraphLinks } from '~/lib/graph-storage';
-import { habitProgress, habitTap, homeHabitsPiece, parseCapture, rankNow, weeklyKept } from '~/lib/domain';
+import { activeOccurrences, goalRows, habitProgress, habitTap, homeHabitsPiece, parseCapture, rankNow, weeklyKept } from '~/lib/domain';
+import { attachable, newGoal, newStep, partOf } from '~/lib/home/goal-edit';
 import type { ParsedCapture, TimeFormat } from '~/lib/domain';
 import { postCapture } from '~/lib/capture-client';
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/lib/domain';
@@ -90,6 +91,9 @@ export const useGraphStore = defineStore('graph', () => {
   const habitsPiece = computed(() => homeHabitsPiece(habits.value, occurrences.value, asOf.value));
   const weeklyTally = computed(() => weeklyKept(occurrences.value, asOf.value));
   const habitRows = computed(() => habits.value.map((habit) => ({ habit, progress: habitProgress(habit, occurrences.value, asOf.value) })));
+  const goalList = computed(() => goalRows(nodes.value, links.value, occurrences.value));
+  /** Open Commitments that could still be attached under a Goal or milestone. */
+  const attachableTo = (parentId: string) => attachable(nodes.value, links.value, parentId, new Set(activeOccurrences(occurrences.value).filter((o) => o.type === 'done').map((o) => o.nodeId)));
   const currentState = computed(() => (rank.value.now ? nodeState(rank.value.now.node.id, occurrences.value) : null));
 
   // ── actions ──────────────────────────────────────────
@@ -243,6 +247,41 @@ export const useGraphStore = defineStore('graph', () => {
     return true;
   }
 
+  /** A new Goal, or (with a parent) a milestone under it. Returns the new Goal's id. */
+  function createGoal(title: string, parentId: string | null = null): string | null {
+    const now = new Date();
+    const g = newGoal(title, now, uid(), parentId !== null);
+    if (!g) return null;
+    nodes.value = [...nodes.value, g];
+    persistNodes();
+    if (parentId) attachTo(g.id, parentId);
+    asOf.value = now;
+    return g.id;
+  }
+
+  /** Make an existing Commitment or milestone part of a Goal or milestone (a stated Link). */
+  function attachTo(childId: string, parentId: string): boolean {
+    const now = new Date();
+    const l = partOf(links.value, childId, parentId, now, uid());
+    if (!l) return false;
+    links.value = [...links.value, l];
+    persistLinks();
+    asOf.value = now;
+    return true;
+  }
+
+  /** A new open step (Commitment) under a Goal or milestone. */
+  function addStep(title: string, parentId: string): boolean {
+    const now = new Date();
+    const step = newStep(title, now, uid());
+    if (!step) return false;
+    nodes.value = [...nodes.value, step];
+    persistNodes();
+    attachTo(step.id, parentId);
+    asOf.value = now;
+    return true;
+  }
+
   /** One tap on a habit: logs one, or (at or past the target) undoes back to zero. Returns whether it is now met. */
   function tapHabit(id: string): { met: boolean } | null {
     const habit = habits.value.find((h) => h.id === id);
@@ -287,7 +326,7 @@ export const useGraphStore = defineStore('graph', () => {
 
   return {
     nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat,
-    rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState,
-    load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, tapHabit, edit, removeNode,
+    rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, attachableTo,
+    load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, addStep, tapHabit, edit, removeNode,
   };
 });
