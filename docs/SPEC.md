@@ -129,6 +129,12 @@ Replace the Nuxt app slice by slice; tag `pre-pivot` (created locally at `ba0ed1
 - **Phase 3 Understanding: DONE (2026-10-01):** the AI layer (Vercel AI SDK, Anthropic default, OpenAI-compatible adapter, per-user cap), Goals with milestone bars, "Why now", Discuss, the Planning session, crisis handling (on-device rules), AI-off, Private, the transparency page, export and 7-day delete. Extraction runs on Sonnet 5.5 and is provisional until the extraction spike (21) has real captures. The "Classic view" switch can be removed once nothing relies on it.
 - **Phase 4 Reinforcement and signals: DONE (2026-10-02), not yet tried in a browser:** the Garden and Pressed book (five plants pressed per season), reward lines, the slog tag, recaps, the Signals screen, the weekly feeling check, Experiment and checkpoints at weeks 2, 4, 6, 8 and 12.
 - **Phase 5 Reach:** connectors, Go deeper, Trips and Map module, onboarding for others, later audio modules.
+- **Phase 5 decisions (2026-10-02):**
+  - **Connectors:** Claude first, through a remote MCP server (Streamable HTTP) with a thin OAuth server inside Nuxt (Dynamic Client Registration, PKCE S256, the claude.ai callback, passkey login on the consent screen, `read` and `write` scopes, access tokens 1 hour, rotating refresh tokens 30 days) and a "Connected assistants" list with Revoke in Settings; tools per ticket 11.
+  - **Ingest:** Google Tasks and Docs only, as user-triggered, read-only imports (Tasks become Ideas with an external id so re-import skips duplicates; a Doc, picked with the Google Picker under the `drive.file` scope, runs through extraction as tap-to-keep proposals). Keep is paste-only through Capture and Discuss (its API is Workspace-only). Needs the Google Cloud project published to Production (unverified) and a Picker API key.
+  - **Extraction:** also detects habit cycles ("twice a week", "monthly") into a Habit's recurrence, and place names, which the server resolves with the place search into an address and coordinates (the AI never supplies coordinates); Things get an optional address.
+  - **Garden:** pressed pages sync through `cadence_kv`; the Planning recap card opens the Garden; season names follow the hemisphere (time zone, with a Settings override).
+  - **Signals:** the slog signal counts a slog-tagged Commitment finished that week; Garden usage is not tracked.
 
 ## 14. How it is built
 
