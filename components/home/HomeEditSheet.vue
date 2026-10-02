@@ -107,6 +107,12 @@
         <p v-if="linkError" class="mt-1 text-sm text-amber-700 dark:text-amber-300">{{ linkError }}</p>
       </div>
 
+      <!-- Private -->
+      <label class="mt-4 flex min-h-[44px] items-start gap-3">
+        <input v-model="draft.private" type="checkbox" class="mt-1 size-5 shrink-0" />
+        <span class="text-sm"><span class="font-medium">Private</span><br /><span class="text-slate-600 dark:text-slate-400">Never sent to the AI and never shared with an assistant.</span></span>
+      </label>
+
       <!-- Dependency (if commitment) -->
       <div v-if="node.kind === 'commitment'" class="mt-4">
         <label class="text-sm font-medium">Depends on</label>
@@ -206,6 +212,7 @@ const draft = reactive({
   target: 1,
   period: 'day' as Period,
   weekdays: [] as number[],
+  private: false,
 });
 const linkError = ref('');
 
@@ -221,6 +228,7 @@ watch(
 
     const c = node.value as Commitment | Idea;
     draft.title = c.title;
+    draft.private = node.value.private;
     linkError.value = '';
     draft.link = node.value.kind === 'commitment' || node.value.kind === 'habit' ? node.value.link ?? '' : '';
     if (node.value.kind === 'habit') {
@@ -287,7 +295,7 @@ function save() {
   if (!node.value) return;
   const c = node.value as Commitment | Idea;
 
-  const input: any = { title: draft.title };
+  const input: any = { title: draft.title, private: draft.private };
   if (node.value.kind === 'habit') {
     input.recurrence = { period: draft.period, target: draft.target };
     input.weekdays = draft.weekdays;

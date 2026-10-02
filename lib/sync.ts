@@ -17,6 +17,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { GRAPH_TABLE_NAMES, pullGraph, pushGraph, resetGraphBaseline } from './graph-sync';
+import { deletionHold } from './deletion';
 import {
   getTasks, saveTasks,
   getTimeBlocks, saveTimeBlocks,
@@ -144,6 +145,7 @@ async function pullKv(sb: SupabaseClient, userId: string) {
 }
 
 export async function pullAll(sb: SupabaseClient, userId: string) {
+  if (await deletionHold(sb, userId)) return; // delete-everything is pending: pull nothing, keep the cache empty
   for (const c of COLLECTIONS) await pullCollection(sb, userId, c);
   await pullGraph(sb, userId);
   await pullKv(sb, userId);
@@ -177,6 +179,7 @@ async function pushKv(sb: SupabaseClient, userId: string) {
 }
 
 export async function pushAll(sb: SupabaseClient, userId: string) {
+  if (await deletionHold(sb, userId)) return; // delete-everything is pending: push nothing
   for (const c of COLLECTIONS) await pushCollection(sb, userId, c);
   await pushGraph(sb, userId);
   await pushKv(sb, userId);

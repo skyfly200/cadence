@@ -29,6 +29,7 @@
       </form>
       <div class="mt-auto flex flex-col gap-1">
         <button class="min-h-[44px] rounded-xl px-3 text-left text-[15px] hover:bg-white/60 dark:hover:bg-white/5" @click="settingsOpen = true">Settings</button>
+        <NuxtLink to="/privacy" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-white/60 dark:hover:bg-white/5">What Cadence knows and does</NuxtLink>
         <NuxtLink to="/classic" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-white/60 dark:hover:bg-white/5">Classic view</NuxtLink>
       </div>
     </aside>
@@ -59,6 +60,7 @@
       <div class="mx-auto max-w-md px-4 pt-[4.25rem] md:max-w-xl">
         <ul class="w-60 rounded-2xl bg-white p-2 shadow-lg dark:bg-[#2A2645]" role="menu">
           <li><button class="min-h-[44px] w-full rounded-xl px-3 text-left text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem" @click="menuOpen = false; settingsOpen = true">Settings</button></li>
+          <li><NuxtLink to="/privacy" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem">What Cadence knows and does</NuxtLink></li>
           <li><NuxtLink to="/classic" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem">Classic view</NuxtLink></li>
         </ul>
       </div>

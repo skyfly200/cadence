@@ -396,3 +396,16 @@ describe('deleteNode', () => {
     expect(result.links).toEqual([]);
   });
 });
+
+describe('applyEdit: private', () => {
+  it('sets and clears the Private flag', () => {
+    const on = applyEdit('a', { private: true }, [commitment('a')], [], () => {}, () => {});
+    expect(on.nodes[0]!.private).toBe(true);
+    const off = applyEdit('a', { private: false }, on.nodes, [], () => {}, () => {});
+    expect(off.nodes[0]!.private).toBe(false);
+  });
+  it('leaves it alone when not given', () => {
+    const r = applyEdit('a', { title: 'x' }, [commitment('a', { private: true })], [], () => {}, () => {});
+    expect(r.nodes[0]!.private).toBe(true);
+  });
+});

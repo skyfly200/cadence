@@ -53,6 +53,7 @@ class FakeDb {
           in(c: string, v: unknown[]) { q.filters.push((r) => v.includes(r[c])); return api; },
           order(c: string) { q.order = c; return api; },
           range(a: number, b: number) { q.from = a; q.to = b; return api; },
+          async maybeSingle() { return { data: db.rows(table).filter((r) => q.filters.every((f) => f(r)))[0] ?? null, error: null }; },
           then: (res: any, rej: any) => Promise.resolve(run()).then(res, rej),
         };
         return api;
@@ -306,6 +307,47 @@ describe('graph storage', () => {
     const out = exportAllData() as Record<string, any>;
     expect(out['cadence:graphNodes']).toHaveLength(1);
     expect(JSON.stringify(out['cadence:googleCalendar'])).not.toContain('secret');
+  });
+});
+
+// ── delete everything: sync holds and the cache is wiped ────
+
+describe('delete everything', () => {
+  const task = { id: 't1', title: 'mine', status: 'backlog', updatedAt: T1, createdAt: T0 } as any;
+  beforeEach(() => { vi.stubGlobal('dispatchEvent', () => true); });
+
+  it('while a request is pending, pushAll and pullAll do nothing and the local cache is cleared', async () => {
+    const db = new FakeDb();
+    db.seed('deletion_requests', [{ user_id: U, requested_at: T1, purged_at: null }]);
+    db.seed('cadence_nodes', [nodeToRow(U, habit('server'))]);
+    saveTasks([task]);
+    saveGraphNodes([habit('h1')]);
+    await pushAll(asClient(db), U);
+    expect(db.rows('cadence_tasks')).toEqual([]);
+    expect(db.rows('cadence_nodes')).toHaveLength(1); // only the seeded server row
+    expect(getTasks()).toEqual([]);
+    expect(getGraphNodes()).toEqual([]);
+    await pullAll(asClient(db), U);
+    expect(getGraphNodes()).toEqual([]);
+  });
+
+  it('after the purge, a device that never saw it wipes its stale cache once instead of re-uploading it', async () => {
+    const db = new FakeDb();
+    db.seed('deletion_requests', [{ user_id: U, requested_at: T0, purged_at: T2 }]);
+    saveGraphNodes([habit('stale')]);
+    await pushAll(asClient(db), U);
+    expect(db.rows('cadence_nodes')).toEqual([]);
+    expect(getGraphNodes()).toEqual([]);
+    saveGraphNodes([habit('fresh')]); // new data after the purge syncs normally
+    await pushAll(asClient(db), U);
+    expect(db.rows('cadence_nodes')).toHaveLength(1);
+  });
+
+  it('with no request, sync is unchanged', async () => {
+    const db = new FakeDb();
+    saveTasks([task]);
+    await pushAll(asClient(db), U);
+    expect(db.rows('cadence_tasks')).toHaveLength(1);
   });
 });
 

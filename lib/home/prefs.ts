@@ -94,3 +94,8 @@ export function getMusic(): MusicConfig {
   return { ...DEFAULT_MUSIC };
 }
 export function setMusic(m: MusicConfig): void { write(MUSIC_KEY, JSON.stringify(m)); }
+
+const AI_KEY = 'cadence:aiOn';
+/** The AI switch as this device last saw it (the server keeps the authoritative copy). On unless turned off. */
+export function getAiOn(): boolean { return read(AI_KEY) !== 'false'; }
+export function setAiOn(on: boolean): void { write(AI_KEY, String(on)); }

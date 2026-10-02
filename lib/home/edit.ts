@@ -107,6 +107,7 @@ export interface EditInput {
   recurrence?: { period: Period; target: number };  // a Habit: how often
   weekdays?: number[] | null;  // a Habit: pin to these weekdays (0 = Sunday), or null to clear
   link?: string | null;  // an https link to open for a Commitment or Habit, or null to clear
+  private?: boolean;  // Private nodes are never sent to the AI or returned to an assistant
 }
 
 export interface EditResult {
@@ -135,6 +136,7 @@ export function applyEdit(
   // Update the node
   const updatedNode = { ...node, updatedAt: now };
   if (input.title !== undefined) updatedNode.title = input.title;
+  if (input.private !== undefined) updatedNode.private = input.private;
 
   if (node.kind === 'commitment') {
     const c = updatedNode as Commitment;
