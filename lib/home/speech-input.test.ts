@@ -52,6 +52,15 @@ describe('joinTranscript', () => {
     } as any;
   }
 
+  it('does not repeat a phrase when each result carries the whole phrase so far (Android Chrome)', () => {
+    expect(joinTranscript('', makeResults(['buy', 'buy milk', 'buy milk and eggs']))).toBe('buy milk and eggs');
+    expect(joinTranscript('note:', makeResults(['Call', 'call mom']))).toBe('note: call mom');
+  });
+
+  it('still joins genuinely separate results', () => {
+    expect(joinTranscript('', makeResults(['buy milk', 'and call mom']))).toBe('buy milk and call mom');
+  });
+
   it('returns base when results is empty', () => {
     const base = 'hello';
     const results = makeResults([]);

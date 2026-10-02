@@ -65,7 +65,12 @@ export function joinTranscript(
   for (let i = 0; i < results.length; i++) {
     const result = results[i];
     if (result.length > 0) {
-      parts.push(result[0].transcript);
+      const text = result[0].transcript.replace(/\s+/g, ' ').trim();
+      const prev = parts[parts.length - 1];
+      // Android Chrome sends each result as the whole phrase so far; a result that
+      // extends the previous one replaces it instead of repeating it.
+      if (prev && text.toLowerCase().startsWith(prev.toLowerCase())) parts[parts.length - 1] = text;
+      else parts.push(text);
     }
   }
   let spoken = parts.join(' ').replace(/\s+/g, ' ').trim();
