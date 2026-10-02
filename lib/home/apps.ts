@@ -112,3 +112,10 @@ export function appForLink(link: string): KnownApp | null {
 export function appForItem(title: string, link?: string | null): KnownApp | null {
   return (link ? appForLink(link) : null) ?? matchApp(title);
 }
+
+/** A Maps link that navigates to a place: the street address if it has one, else its coordinates. Null if it has neither. */
+export function mapsUrl(place: { address?: string | null; lat?: number | null; lon?: number | null }): string | null {
+  const address = place.address?.trim();
+  const query = address || (typeof place.lat === 'number' && typeof place.lon === 'number' ? `${place.lat},${place.lon}` : '');
+  return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : null;
+}

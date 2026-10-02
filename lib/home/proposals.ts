@@ -4,7 +4,7 @@
  * few worth showing, `acceptLink` builds the Link that a tap saves, with origin
  * `proposed_accepted` so it is never mistaken for something the user said.
  */
-import type { Link, LinkType, Node } from '../domain/types';
+import { PERIODS, type Link, type LinkType, type Node, type Recurrence, type ThingType } from '../domain/types';
 import { partOf } from './goal-edit';
 
 /** One proposed Link as POST /api/ai/extract answers it. */
@@ -55,21 +55,57 @@ export interface NodeProposal {
   title: string;
   confidence: number;
   evidence: string;
+  /** Habits: the cycle the text stated, if it stated one. */
+  cycle?: Recurrence;
+  /** Things: person, place or object. */
+  thingType?: ThingType;
+  /** Places: what the lookup found, best first (empty when nothing matched). */
+  matches?: PlaceMatch[];
 }
 
+/** One place the lookup found: a navigable address and a position. */
+export interface PlaceMatch { label: string; address: string; lat: number; lon: number }
+
+/** What the user settled in the proposal card before tapping Keep: the habit's cycle, the place they picked. */
+export interface KeepChoice {
+  cycle?: Recurrence | null;
+  place?: PlaceMatch | null;
+  /** Save as Private (e.g. text that tripped the crisis check). */
+  private?: boolean;
+}
+
+/** The card's starting choice: the cycle as proposed, and the best place match. */
+export const defaultChoice = (p: NodeProposal): KeepChoice => ({ cycle: p.cycle ?? null, place: p.matches?.[0] ?? null });
+
+const validCycle = (c: Recurrence | null | undefined): c is Recurrence =>
+  !!c && PERIODS.includes(c.period) && Number.isInteger(c.target) && c.target >= 1 && c.target <= 31;
+const validPlace = (m: PlaceMatch | null | undefined): m is PlaceMatch =>
+  !!m && typeof m.address === 'string' && Number.isFinite(m.lat) && Number.isFinite(m.lon) && Math.abs(m.lat) <= 90 && Math.abs(m.lon) <= 180;
+
 /**
- * The Node a tap on "Keep" saves. Nothing about a proposal is trusted beyond its title and kind. A Habit
- * is saved as an Idea, because a Habit needs a frequency the conversation did not give.
+ * The Node a tap on "Keep" saves. Nothing about a proposal is trusted beyond its title, kind and the
+ * choice the user settled. A Habit needs a cycle, so one without a cycle is saved as an Idea (nothing is
+ * guessed); a place Thing carries the address and position the user picked from the lookup, never anything
+ * the AI said, and a place with no match keeps just its name.
  */
-export function nodeFromProposal(p: NodeProposal, now: Date, id: string): Node | null {
+export function nodeFromProposal(p: NodeProposal, now: Date, id: string, choice: KeepChoice = {}): Node | null {
   const title = p.title.trim();
   if (!title) return null;
   const t = now.toISOString();
-  const base = { id, title, private: false, createdAt: t, updatedAt: t };
+  const base = { id, title, private: choice.private === true, createdAt: t, updatedAt: t };
   switch (p.kind) {
     case 'goal': return { ...base, kind: 'goal', finishLine: false, checkpoint: false };
     case 'commitment': return { ...base, kind: 'commitment', slog: false, quiet: false };
-    case 'thing': return { ...base, kind: 'thing', thingType: 'object' };
+    case 'habit':
+      return validCycle(choice.cycle)
+        ? { ...base, kind: 'habit', recurrence: { period: choice.cycle.period, target: choice.cycle.target }, quiet: false }
+        : { ...base, kind: 'idea' };
+    case 'thing': {
+      const type: ThingType = p.thingType ?? 'object';
+      return type === 'place' && validPlace(choice.place)
+        ? { ...base, kind: 'thing', thingType: 'place', address: choice.place.address, lat: choice.place.lat, lon: choice.place.lon }
+        : { ...base, kind: 'thing', thingType: type };
+    }
     default: return { ...base, kind: 'idea' };
   }
 }

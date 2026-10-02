@@ -13,7 +13,7 @@ import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrenc
 import { activeOccurrences, gardenState, goalRows, habitProgress, habitTap, homeHabitsPiece, keepDeleted, parseCapture, pressSeason, pressedBook, rankNow, weeklyKept } from '~/lib/domain';
 import { getPressedPages, getSeasonDraft, savePressedPages, saveSeasonDraft } from '~/lib/home/garden-state';
 import { attachable, newGoal, newStep, partOf } from '~/lib/home/goal-edit';
-import { acceptLink, nodeFromProposal, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
+import { acceptLink, defaultChoice, nodeFromProposal, type KeepChoice, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
 import type { ParsedCapture, TimeFormat } from '~/lib/domain';
 import { postCapture } from '~/lib/capture-client';
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/lib/domain';
@@ -302,9 +302,9 @@ export const useGraphStore = defineStore('graph', () => {
   }
 
   /** Save a Node the AI proposed in Discuss and the user tapped "Keep" on. Returns its id, or null if it had no title. */
-  function keepProposedNode(p: NodeProposal): string | null {
+  function keepProposedNode(p: NodeProposal, choice: KeepChoice = defaultChoice(p)): string | null {
     const now = new Date();
-    const node = nodeFromProposal(p, now, uid());
+    const node = nodeFromProposal(p, now, uid(), choice);
     if (!node) return null;
     nodes.value = [...nodes.value, node];
     persistNodes();
