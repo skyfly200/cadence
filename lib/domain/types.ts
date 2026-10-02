@@ -54,6 +54,8 @@ export interface Habit extends NodeBase {
   kind: 'habit';
   recurrence: Recurrence;
   pin?: HabitPin | null;
+  /** A link to open for this habit (e.g. its app or site); https only. */
+  link?: string | null;
   /** Background: appears in no Lens unless at risk of slipping. */
   quiet: boolean;
 }
@@ -74,6 +76,8 @@ export interface Commitment extends NodeBase {
   slog: boolean;
   /** Background visibility, as for Habits. */
   quiet: boolean;
+  /** A link to open for this item (a project, doc or board); https only. */
+  link?: string | null;
   /** Mirror Node for an external item (e.g. a Google Calendar event). */
   external?: { system: string; id: string } | null;
 }

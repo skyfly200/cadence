@@ -52,3 +52,63 @@ export function openLink(app: KnownApp, android: boolean): string {
 }
 
 export const isAndroidUa = (ua: string): boolean => /Android/i.test(ua);
+
+// ── links the user attaches ──────────────────────────────────────────────
+
+interface LinkHost {
+  /** Matches the link's host (exactly, or as a parent domain). */
+  host: string;
+  name: string | ((u: URL) => string);
+  androidPackage?: string;
+}
+
+const GOOGLE_DOCS_PACKAGES: [string, string, string][] = [
+  ['/document', 'Docs', 'com.google.android.apps.docs.editors.docs'],
+  ['/spreadsheets', 'Sheets', 'com.google.android.apps.docs.editors.sheets'],
+  ['/presentation', 'Slides', 'com.google.android.apps.docs.editors.slides'],
+];
+
+const LINK_HOSTS: readonly LinkHost[] = [
+  { host: 'github.com', name: 'GitHub', androidPackage: 'com.github.android' },
+  { host: 'netlify.com', name: 'Netlify' },
+  { host: 'netlify.app', name: 'Netlify' },
+  { host: 'notion.so', name: 'Notion', androidPackage: 'notion.id' },
+  { host: 'notion.site', name: 'Notion', androidPackage: 'notion.id' },
+  { host: 'trello.com', name: 'Trello', androidPackage: 'com.trello' },
+  { host: 'docs.google.com', name: (u) => GOOGLE_DOCS_PACKAGES.find(([p]) => u.pathname.startsWith(p))?.[1] ?? 'Google Docs' },
+];
+
+const hostMatches = (host: string, want: string) => host === want || host.endsWith(`.${want}`);
+
+/** A cleaned https link, or null if the text is not one. */
+export function cleanLink(input: string): string | null {
+  try {
+    const u = new URL(input.trim());
+    return u.protocol === 'https:' ? u.toString() : null;
+  } catch { return null; }
+}
+
+/** The app a link opens: a known one by host (GitHub, Netlify, Google Docs, Notion, Trello, and the apps above), else the site itself. */
+export function appForLink(link: string): KnownApp | null {
+  const url = cleanLink(link);
+  if (!url) return null;
+  const u = new URL(url);
+  const host = u.hostname.toLowerCase();
+
+  const mine = LINK_HOSTS.find((h) => hostMatches(host, h.host));
+  if (mine) {
+    const docs = host === 'docs.google.com' ? GOOGLE_DOCS_PACKAGES.find(([p]) => u.pathname.startsWith(p)) : undefined;
+    return {
+      id: mine.host, name: typeof mine.name === 'string' ? mine.name : mine.name(u), words: [], url,
+      androidPackage: docs?.[2] ?? (host === 'docs.google.com' ? 'com.google.android.apps.docs' : mine.androidPackage),
+    };
+  }
+  const known = KNOWN_APPS.find((a) => hostMatches(host, new URL(a.url).hostname.replace(/^www\./, '')));
+  if (known) return { ...known, url };
+  return { id: host, name: host.replace(/^www\./, ''), words: [], url };
+}
+
+/** The app to offer for an item: its own link if it has one, else a known app named in its title. */
+export function appForItem(title: string, link?: string | null): KnownApp | null {
+  return (link ? appForLink(link) : null) ?? matchApp(title);
+}

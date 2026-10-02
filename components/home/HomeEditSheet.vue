@@ -90,6 +90,19 @@
         </div>
       </div>
 
+      <!-- Link (commitment or habit) -->
+      <div v-if="node.kind === 'commitment' || node.kind === 'habit'" class="mt-4">
+        <label class="text-sm font-medium">Link</label>
+        <input
+          v-model="draft.link"
+          type="url"
+          inputmode="url"
+          class="mt-1 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
+          placeholder="GitHub, Netlify, Docs, Notion, Trello…"
+        />
+        <p v-if="linkError" class="mt-1 text-sm text-amber-700 dark:text-amber-300">{{ linkError }}</p>
+      </div>
+
       <!-- Dependency (if commitment) -->
       <div v-if="node.kind === 'commitment'" class="mt-4">
         <label class="text-sm font-medium">Depends on</label>
@@ -166,6 +179,7 @@ import { X } from 'lucide-vue-next';
 import { useGraphStore } from '~/stores/graph';
 import type { Commitment, Idea, Node } from '~/lib/domain';
 import { wouldCreateCycle } from '~/lib/home/edit';
+import { cleanLink } from '~/lib/home/apps';
 
 const props = defineProps<{ open: boolean; nodeId: string | null }>();
 const emit = defineEmits<{ (e: 'close'): void; (e: 'deleted'): void }>();
@@ -183,7 +197,9 @@ const draft = reactive({
   durationMinutes: null as number | null,
   location: '',
   dependencyId: '',
+  link: '',
 });
+const linkError = ref('');
 
 // Available commitments for dependency (excluding self, ideas, and those that would create cycles)
 const availableDependencies = computed(() => {
@@ -205,6 +221,8 @@ watch(
 
     const c = node.value as Commitment | Idea;
     draft.title = c.title;
+    linkError.value = '';
+    draft.link = node.value.kind === 'commitment' || node.value.kind === 'habit' ? node.value.link ?? '' : '';
 
     if (c.kind === 'commitment') {
       draft.fixedTime = c.fixedTime ? toDatetimeLocal(c.fixedTime) : '';
@@ -263,6 +281,12 @@ function save() {
   const c = node.value as Commitment | Idea;
 
   const input: any = { title: draft.title };
+  if (node.value.kind === 'commitment' || node.value.kind === 'habit') {
+    const text = draft.link.trim();
+    const cleaned = text ? cleanLink(text) : null;
+    if (text && !cleaned) { linkError.value = 'That needs to be a link starting with https://'; return; }
+    input.link = cleaned;
+  }
   if (c.kind === 'commitment') {
     input.fixedTime = draft.fixedTime ? new Date(draft.fixedTime).toISOString() : null;
     input.deadline = draft.deadline ? new Date(draft.deadline).toISOString() : null;

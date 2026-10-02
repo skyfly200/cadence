@@ -262,6 +262,30 @@ describe('applyEdit', () => {
   });
 });
 
+describe('applyEdit: link', () => {
+  const habitNode: any = { id: 'h1', kind: 'habit', title: 'Lesson', private: false, quiet: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', recurrence: { period: 'day', target: 1 } };
+
+  it('sets and clears a link on a Commitment', () => {
+    const c: any = { id: 'c1', kind: 'commitment', title: 'Ship it', private: false, slog: false, quiet: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' };
+    const set = applyEdit('c1', { link: 'https://github.com/a/b' }, [c], [], () => {}, () => {});
+    expect((set.nodes[0] as any).link).toBe('https://github.com/a/b');
+    const cleared = applyEdit('c1', { link: null }, set.nodes, [], () => {}, () => {});
+    expect((cleared.nodes[0] as any).link).toBeNull();
+  });
+
+  it('sets a link and renames a Habit', () => {
+    const r = applyEdit('h1', { title: 'Duolingo lesson', link: 'https://www.duolingo.com/learn' }, [habitNode], [], () => {}, () => {});
+    expect(r.nodes[0]).toMatchObject({ title: 'Duolingo lesson', link: 'https://www.duolingo.com/learn' });
+  });
+
+  it('leaves the link alone when the edit does not mention it, and ignores it on an Idea', () => {
+    const withLink = { ...habitNode, link: 'https://trello.com/b/1' };
+    expect((applyEdit('h1', { title: 'x' }, [withLink], [], () => {}, () => {}).nodes[0] as any).link).toBe('https://trello.com/b/1');
+    const idea: any = { id: 'i1', kind: 'idea', title: 'Maybe', private: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' };
+    expect((applyEdit('i1', { link: 'https://github.com/a/b' }, [idea], [], () => {}, () => {}).nodes[0] as any).link).toBeUndefined();
+  });
+});
+
 describe('deleteNode', () => {
   it('removes the node and all links touching it', () => {
     const c1 = commitment('c1');

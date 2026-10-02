@@ -21,9 +21,10 @@
           <span class="mt-1 block text-[11px] opacity-70">{{ row.progress.count }} of {{ row.progress.target }} {{ WORD[g.period] }}</span>
         </button>
           <a
-            v-if="appFor(row.habit.title)" :href="openLink(appFor(row.habit.title)!, android)" :target="android ? undefined : '_blank'" rel="noopener"
+            v-if="appFor(row.habit)" :href="openLink(appFor(row.habit)!, android)" :target="android ? undefined : '_blank'" rel="noopener"
             class="flex min-h-[44px] items-center justify-center rounded-xl bg-stone-100 text-xs font-medium dark:bg-white/10"
-          >Open {{ appFor(row.habit.title)!.name }} ↗</a>
+          >Open {{ appFor(row.habit)!.name }} ↗</a>
+          <button class="min-h-[32px] text-xs text-blue-600 dark:text-blue-400" @click="$emit('edit', row.habit.id)">Edit</button>
         </div>
       </div>
     </div>
@@ -47,13 +48,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { isAndroidUa, matchApp, openLink } from '~/lib/home/apps';
+import { appForItem, isAndroidUa, openLink } from '~/lib/home/apps';
 import { PERIODS, finalStretchMention } from '~/lib/domain';
 import { addMentioned, getMentioned } from '~/lib/home/prefs';
 import type { Period } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
 
-const emit = defineEmits<{ (e: 'said', msg: string): void }>();
+const emit = defineEmits<{ (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void }>();
 const graph = useGraphStore();
 
 const HEADING: Record<Period, string> = { day: 'Every day', week: 'Each week', month: 'Each month', quarter: 'Each quarter', four_months: 'Every 4 months', six_months: 'Every 6 months', year: 'Each year' };
@@ -67,7 +68,7 @@ const groups = computed(() =>
 // Each longer-period habit gets one gentle mention near the end of its period, shown once.
 const nearEnd = ref<string[]>([]);
 const android = ref(false);
-const appFor = (title: string) => matchApp(title);
+const appFor = (h: { title: string; link?: string | null }) => appForItem(h.title, h.link);
 
 onMounted(() => {
   android.value = isAndroidUa(navigator.userAgent);

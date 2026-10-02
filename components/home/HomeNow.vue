@@ -117,7 +117,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onBeforeUnmount, onMounted } from 'vue';
-import { isAndroidUa, matchApp, openLink } from '~/lib/home/apps';
+import { appForItem, isAndroidUa, openLink } from '~/lib/home/apps';
 import { musicTarget } from '~/lib/home/music';
 import { useGraphStore } from '~/stores/graph';
 import type { Commitment, Habit } from '~/lib/domain';
@@ -160,7 +160,7 @@ function launchMusic() {
   if (!android.value) { a.target = '_blank'; a.rel = 'noopener'; }
   a.click();
 }
-const openApp = computed(() => (current.value ? matchApp(current.value.node.title) : null));
+const openApp = computed(() => (current.value ? appForItem(current.value.node.title, current.value.node.kind === 'idea' ? null : (current.value.node as { link?: string | null }).link) : null));
 const started = computed(() => !!graph.currentState?.started);
 // A new card gets a fresh prompt.
 watch(() => current.value?.node.id, () => { keepDismissed.value = false; });

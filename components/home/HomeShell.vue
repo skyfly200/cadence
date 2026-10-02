@@ -32,7 +32,7 @@
 
     <HomeNow v-if="lens === 'now'" :density="density" @open-plan="lens = 'plan'" @said="say" @edit="onEdit" />
     <HomePlan v-else-if="lens === 'plan'" @said="say" @edit="onEdit" />
-    <HomeHabits v-else-if="lens === 'habits'" @said="say" />
+    <HomeHabits v-else-if="lens === 'habits'" @said="say" @edit="onEdit" />
     <HomeGoals v-else />
 
     <!-- toast with Undo -->

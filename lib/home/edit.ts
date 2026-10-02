@@ -2,7 +2,7 @@
  * Pure functions for editing and deleting Commitments and Ideas.
  * No Vue, no Pinia, no side effects.
  */
-import type { Commitment, Idea, Link, Node, Thing } from '../domain';
+import type { Commitment, Habit, Idea, Link, Node, Thing } from '../domain';
 
 // ── Cycle detection ──────────────────────────────────────────────
 
@@ -75,6 +75,7 @@ export interface EditInput {
   durationMinutes?: number | null;
   location?: string | null;  // place name or null to clear the 'at' link
   dependencyId?: string | null;  // commitment id or null to clear
+  link?: string | null;  // an https link to open for a Commitment or Habit, or null to clear
 }
 
 export interface EditResult {
@@ -109,6 +110,10 @@ export function applyEdit(
     if (input.fixedTime !== undefined) c.fixedTime = input.fixedTime;
     if (input.deadline !== undefined) c.deadline = input.deadline;
     if (input.durationMinutes !== undefined) c.durationMinutes = input.durationMinutes;
+  }
+
+  if (input.link !== undefined && (node.kind === 'commitment' || node.kind === 'habit')) {
+    (updatedNode as Commitment | Habit).link = input.link;
   }
 
   const newNodes = nodes.map((n) => (n.id === nodeId ? updatedNode : n));
