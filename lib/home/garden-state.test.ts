@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PressedSeason } from '../domain/garden';
-import { getGardenMotion, getPressedPages, getSeasonDraft, savePressedPages, saveSeasonDraft, setGardenMotion } from './garden-state';
+import { getGardenMotion, getHemisphereChoice, getPressedPages, getSeasonDraft, replacePressedPages, resolveHemisphere, savePressedPages, saveSeasonDraft, setGardenMotion, setHemisphereChoice } from './garden-state';
 
 const page = (key: string, title = 'Walk'): PressedSeason => ({
   key, name: 'Summer', year: 2026, kept: 4, plants: [{ nodeId: 'h1', title, kind: 'sprout', stage: 1, count: 2 }],
@@ -62,5 +62,31 @@ describe('garden motion', () => {
     expect(getGardenMotion()).toBe(true);
     setGardenMotion(false);
     expect(getGardenMotion()).toBe(false);
+  });
+});
+
+describe('replacePressedPages', () => {
+  it('replaces the whole book', () => {
+    savePressedPages([page('quarter:2026-07-01')]);
+    replacePressedPages([page('quarter:2026-04-01'), page('quarter:2026-01-01')]);
+    expect(getPressedPages().map((p) => p.key)).toEqual(['quarter:2026-04-01', 'quarter:2026-01-01']);
+  });
+});
+
+describe('hemisphere choice', () => {
+  it('is automatic until chosen, and then follows the choice', () => {
+    expect(getHemisphereChoice()).toBe('auto');
+    expect(resolveHemisphere('auto', 'Australia/Sydney')).toBe('south');
+    expect(resolveHemisphere('auto', 'Europe/Paris')).toBe('north');
+    setHemisphereChoice('south');
+    expect(getHemisphereChoice()).toBe('south');
+    expect(resolveHemisphere(getHemisphereChoice(), 'Europe/Paris')).toBe('south');
+    setHemisphereChoice('auto');
+    expect(getHemisphereChoice()).toBe('auto');
+  });
+
+  it('ignores a stored value it does not know', () => {
+    store.set('cadence:hemisphere', 'sideways');
+    expect(getHemisphereChoice()).toBe('auto');
   });
 });

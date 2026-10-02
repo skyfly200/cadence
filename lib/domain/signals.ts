@@ -7,6 +7,7 @@
  * (SPEC section 11, ticket 13.)
  */
 import type { Commitment, Node, Occurrence } from './types';
+import { activeOccurrences } from './estimates';
 import { isKept } from './tally';
 import { periodWindow, previousWindow, type PeriodOptions } from './periods';
 
@@ -235,6 +236,30 @@ export function mechanismVerdict(r: MechanismRule): Verdict {
   if (r.switchedOffQuickly) return 'rework';
   if (r.weeksOn * 2 >= r.weeksTotal && !r.stopsRose) return 'keep';
   return 'undecided';
+}
+
+/**
+ * Real use of the slog tag: the weeks (of the last twelve since first use) in which a slog-tagged
+ * Commitment was finished, out of the weeks counted. A finish that was later undone does not count.
+ * Guidance for the author, like the other mechanism rules; it is never shown as a failure.
+ */
+export function slogUse(nodes: readonly Node[], occs: readonly Occurrence[], firstUseIso: string | null, now: Date): { weeksUsed: number; weeksTotal: number } {
+  const first = firstUseIso ? new Date(firstUseIso) : now;
+  const weeksTotal = Math.min(12, Math.max(0, Math.floor((now.getTime() - first.getTime()) / WEEK_MS)));
+  const slogIds = new Set(nodes.filter((n): n is Commitment => n.kind === 'commitment' && n.slog).map((n) => n.id));
+  const finishes = activeOccurrences(occs).filter((o) => o.type === 'done' && slogIds.has(o.nodeId)).map((o) => new Date(o.at).getTime());
+  let weeksUsed = 0;
+  for (let i = 1; i <= weeksTotal; i++) {
+    const from = first.getTime() + (i - 1) * WEEK_MS;
+    const to = first.getTime() + i * WEEK_MS;
+    if (finishes.some((t) => t >= from && t < to)) weeksUsed++;
+  }
+  return { weeksUsed, weeksTotal };
+}
+
+/** The keep-or-cut inputs for a mechanism measured by use rather than by a switch. */
+export function usageRule(use: { weeksUsed: number; weeksTotal: number }): MechanismRule {
+  return { weeksOn: use.weeksUsed, weeksTotal: use.weeksTotal, stopsRose: false, switchedOffQuickly: false };
 }
 
 /** Build the rule inputs for one mechanism from the event history. `nudgeKind` ties it to a nudge type's "Stop these" taps. */

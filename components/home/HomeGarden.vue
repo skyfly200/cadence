@@ -38,7 +38,7 @@
           Nothing pressed yet. When a season turns, the plants that grew most are pressed here, so nothing you did is lost.
         </p>
         <article v-for="s in book" :key="s.key" class="rounded-3xl bg-amber-50 p-4 shadow-sm dark:bg-[#332E52]">
-          <h2 class="font-serif text-lg">{{ s.name }} {{ s.year }}</h2>
+          <h2 class="font-serif text-lg">{{ seasonNameOfKey(s.key, graph.hemisphere, s.name) }} {{ s.year }}</h2>
           <p class="text-xs text-slate-500 dark:text-slate-400">{{ s.kept }} {{ s.kept === 1 ? 'thing' : 'things' }} kept</p>
           <ul class="mt-3 grid grid-cols-3 gap-2">
             <li v-for="p in s.plants" :key="p.nodeId" class="flex flex-col items-center rounded-2xl border border-amber-200/70 bg-white/60 p-2 text-center dark:border-white/10 dark:bg-white/5">
@@ -55,7 +55,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { PieceKind } from '~/lib/domain';
+import { seasonNameOfKey, type PieceKind } from '~/lib/domain';
 import { getGardenMotion } from '~/lib/home/garden-state';
 import { useGraphStore } from '~/stores/graph';
 

@@ -11,7 +11,8 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrences, saveGraphNodes, saveGraphOccurrences, saveGraphLinks } from '~/lib/graph-storage';
 import { activeOccurrences, gardenState, goalRows, habitProgress, habitTap, homeHabitsPiece, keepDeleted, parseCapture, pressSeason, pressedBook, rankNow, weeklyKept } from '~/lib/domain';
-import { getPressedPages, getSeasonDraft, savePressedPages, saveSeasonDraft } from '~/lib/home/garden-state';
+import { getPressedPages, getSeasonDraft, resolveHemisphere, savePressedPages, saveSeasonDraft } from '~/lib/home/garden-state';
+import type { Hemisphere } from '~/lib/domain';
 import { attachable, newGoal, newStep, partOf } from '~/lib/home/goal-edit';
 import { acceptLink, nodeFromProposal, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
 import type { ParsedCapture, TimeFormat } from '~/lib/domain';
@@ -37,6 +38,8 @@ export const useGraphStore = defineStore('graph', () => {
   const density = ref<Density>(1);
   /** 12 or 24 hour clock for every time shown or spoken. */
   const timeFormat = ref<TimeFormat>('12');
+  /** Which hemisphere the season names follow (from the time zone unless chosen in Settings). */
+  const hemisphere = ref<Hemisphere>(resolveHemisphere());
   /** What the last action appended, so it can be undone (every action is undoable). */
   const lastAction = ref<{ label: string; occurrences: Occurrence[]; addedNodeIds: string[] } | null>(null);
 
@@ -57,9 +60,10 @@ export const useGraphStore = defineStore('graph', () => {
   function tendBook() {
     const now = asOf.value;
     const draft = getSeasonDraft();
-    savePressedPages(pressedBook(nodes.value, links.value, occurrences.value, now, getPressedPages(), {}, draft).fresh);
-    const current = gardenState(nodes.value, links.value, occurrences.value, now).season;
-    saveSeasonDraft(keepDeleted(pressSeason(nodes.value, links.value, occurrences.value, current), draft?.key === current.key ? draft : undefined, nodes.value));
+    const opts = { hemisphere: hemisphere.value };
+    savePressedPages(pressedBook(nodes.value, links.value, occurrences.value, now, getPressedPages(), opts, draft).fresh);
+    const current = gardenState(nodes.value, links.value, occurrences.value, now, opts).season;
+    saveSeasonDraft(keepDeleted(pressSeason(nodes.value, links.value, occurrences.value, current, opts), draft?.key === current.key ? draft : undefined, nodes.value));
   }
 
   /**
@@ -108,9 +112,9 @@ export const useGraphStore = defineStore('graph', () => {
   const habitRows = computed(() => habits.value.map((habit) => ({ habit, progress: habitProgress(habit, occurrences.value, asOf.value) })));
   const goalList = computed(() => goalRows(nodes.value, links.value, occurrences.value, asOf.value));
   /** This season's garden, grown from everything kept. */
-  const garden = computed(() => gardenState(nodes.value, links.value, occurrences.value, asOf.value));
+  const garden = computed(() => gardenState(nodes.value, links.value, occurrences.value, asOf.value, { hemisphere: hemisphere.value }));
   /** The Pressed book: pages kept on this device, plus any past season not yet pressed. Newest first. */
-  const pressed = () => pressedBook(nodes.value, links.value, occurrences.value, asOf.value, getPressedPages(), {}, getSeasonDraft()).seasons;
+  const pressed = () => pressedBook(nodes.value, links.value, occurrences.value, asOf.value, getPressedPages(), { hemisphere: hemisphere.value }, getSeasonDraft()).seasons;
   /** Open Commitments that could still be attached under a Goal or milestone. */
   const attachableTo = (parentId: string) => attachable(nodes.value, links.value, parentId, new Set(activeOccurrences(occurrences.value).filter((o) => o.type === 'done').map((o) => o.nodeId)));
   const currentState = computed(() => (rank.value.now ? nodeState(rank.value.now.node.id, occurrences.value) : null));
@@ -369,7 +373,7 @@ export const useGraphStore = defineStore('graph', () => {
   }
 
   return {
-    nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat,
+    nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat, hemisphere,
     rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, garden, pressed, attachableTo,
     load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, keepProposedNode, addStep, tapHabit, edit, removeNode,
   };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CHECKPOINT_WEEKS, cameBackAfterBreak, checkpointDue, compareExperiment, firstUse, keptPerWeek, keptTrend, lapsedTimeCritical,
-  mechanismVerdict, nudgeHealth, ruleFor, triageSpeed, wasOn, weeksInUse, type SignalEvent,
+  mechanismVerdict, nudgeHealth, ruleFor, slogUse, triageSpeed, usageRule, wasOn, weeksInUse, type SignalEvent,
 } from './signals';
 import { at, commitment, occ, UTC } from './test-helpers';
 
@@ -184,5 +184,40 @@ describe('wasOn, ruleFor and mechanismVerdict', () => {
 
   it('is too early before two weeks of use', () => {
     expect(mechanismVerdict(ruleFor([], 'k', true, '2026-04-20T00:00:00Z', NOW))).toBe('too_early');
+  });
+});
+
+describe('slogUse', () => {
+  const FIRST = '2026-03-01T12:00:00Z';
+  const NOW4 = at('2026-03-29T13:00:00Z'); // four weeks and an hour after first use
+  const slog = commitment('s1', { slog: true });
+  const plain = commitment('p1');
+
+  it('counts the weeks in which a slog-tagged Commitment was finished', () => {
+    const occs = [occ('done', '2026-03-03T10:00:00Z', { nodeId: 's1' }), occ('done', '2026-03-17T10:00:00Z', { nodeId: 's1' })];
+    expect(slogUse([slog], occs, FIRST, NOW4)).toEqual({ weeksUsed: 2, weeksTotal: 4 });
+  });
+
+  it('does not count a plain Commitment, a start, or a finish that was undone', () => {
+    const undone = occ('done', '2026-03-10T10:00:00Z', { nodeId: 's1' });
+    const occs = [
+      occ('done', '2026-03-03T10:00:00Z', { nodeId: 'p1' }),
+      occ('started', '2026-03-04T10:00:00Z', { nodeId: 's1' }),
+      undone,
+      occ('undone', '2026-03-10T11:00:00Z', { nodeId: 's1', undoes: undone.id }),
+    ];
+    expect(slogUse([slog, plain], occs, FIRST, NOW4)).toEqual({ weeksUsed: 0, weeksTotal: 4 });
+  });
+
+  it('counts a week once however many slogs were finished in it, and is too early with no history', () => {
+    const occs = [occ('done', '2026-03-03T10:00:00Z', { nodeId: 's1' }), occ('done', '2026-03-04T10:00:00Z', { nodeId: 's1' })];
+    expect(slogUse([slog], occs, FIRST, NOW4).weeksUsed).toBe(1);
+    expect(slogUse([slog], [], null, NOW4)).toEqual({ weeksUsed: 0, weeksTotal: 0 });
+    expect(mechanismVerdict(usageRule({ weeksUsed: 0, weeksTotal: 0 }))).toBe('too_early');
+  });
+
+  it('feeds the keep-or-cut rule: used in at least half the weeks is kept', () => {
+    expect(mechanismVerdict(usageRule({ weeksUsed: 2, weeksTotal: 4 }))).toBe('keep');
+    expect(mechanismVerdict(usageRule({ weeksUsed: 1, weeksTotal: 4 }))).toBe('undecided');
   });
 });

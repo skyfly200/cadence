@@ -14,6 +14,8 @@ export interface Mechanism {
   defaultOn: boolean;
   /** The nudge type whose "Stop these" taps count against it. */
   nudgeKind?: string;
+  /** Measured by real use rather than a switch (so it has no setting history and cannot be flipped in an experiment). */
+  usage?: 'slog_finished';
   /** Present for switches an experiment can flip. */
   isOn?: () => boolean;
   set?: (on: boolean) => void;
@@ -33,6 +35,7 @@ export const MECHANISMS: readonly Mechanism[] = [
   { key: 'recap:month', label: 'Monthly recap', defaultOn: false, isOn: () => getRecapOn('month'), set: (on) => setRecapOn('month', on) },
   { key: 'recap:quarter', label: 'Quarterly recap', defaultOn: false, isOn: () => getRecapOn('quarter'), set: (on) => setRecapOn('quarter', on) },
   { key: 'planning_reminder', label: 'Weekly planning reminder', defaultOn: false, isOn: () => getPlanningReminder(), set: setPlanningReminder },
+  { key: 'slog_tag', label: 'Slog tag', defaultOn: true, usage: 'slog_finished' },
   ...NUDGE_KINDS.map((kind): Mechanism => ({ key: `nudge:${kind}`, label: NUDGE_KIND_LABELS[kind] ?? kind, defaultOn: true, nudgeKind: kind })),
 ];
 
