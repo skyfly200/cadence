@@ -2,13 +2,14 @@
   <div class="relative mx-auto min-h-dvh w-full max-w-md bg-[#EEF5F3] pb-32 text-slate-800 md:max-w-xl dark:bg-[#1D1A2F] dark:text-slate-100">
     <!-- header -->
     <header class="sticky top-0 z-20 border-b border-teal-900/5 bg-[#EEF5F3]/95 px-4 pb-2 pt-3 backdrop-blur dark:border-white/5 dark:bg-[#1D1A2F]/95">
-      <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <button class="grid size-11 shrink-0 place-items-center rounded-lg border border-teal-900/10 bg-white text-lg dark:border-white/10 dark:bg-[#2A2645]" aria-label="Menu" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">☰</button>
         <div class="min-w-0">
+          <p class="font-serif text-xl font-semibold leading-tight">Cadence</p>
           <p class="text-[11px] font-semibold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">{{ dateLabel }}</p>
-          <p v-if="away" class="truncate text-[15px] font-medium">Welcome back. Nothing is on fire.</p>
         </div>
-        <button class="grid size-11 shrink-0 place-items-center rounded-lg border border-teal-900/10 bg-white text-base dark:border-white/10 dark:bg-[#2A2645]" aria-label="Display and account" @click="settingsOpen = true">⚙</button>
       </div>
+      <p v-if="away" class="mt-1 truncate text-[15px] font-medium">Welcome back. Nothing is on fire.</p>
       <div v-if="density >= 1" class="mt-2 flex flex-wrap items-center gap-2">
         <span v-if="graph.kept.length" class="text-[12px] font-semibold text-teal-800 dark:text-[#FFB59F]">{{ graph.kept.length }} accomplished today</span>
         <button
@@ -18,6 +19,16 @@
         >🌱 Habits · {{ graph.habitsPiece.done }} of {{ graph.habitsPiece.total }} today <span aria-hidden="true">›</span></button>
       </div>
     </header>
+
+ <!-- menu: more pages go here later -->
+    <div v-if="menuOpen" class="fixed inset-0 z-40" @click.self="menuOpen = false">
+      <div class="mx-auto max-w-md px-4 pt-[4.25rem] md:max-w-xl">
+        <ul class="w-60 rounded-2xl bg-white p-2 shadow-lg dark:bg-[#2A2645]" role="menu">
+          <li><button class="min-h-[44px] w-full rounded-xl px-3 text-left text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem" @click="menuOpen = false; settingsOpen = true">Settings</button></li>
+          <li><NuxtLink to="/classic" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem">Classic view</NuxtLink></li>
+        </ul>
+      </div>
+    </div>
 
     <HomeNow v-if="lens === 'now'" :density="density" @open-plan="lens = 'plan'" @said="say" />
     <HomePlan v-else-if="lens === 'plan'" @said="say" />
@@ -78,6 +89,7 @@ const lens = ref<Lens>('now');
 const density = ref<Density>(1);
 const away = ref(false);
 const captureOpen = ref(false);
+const menuOpen = ref(false);
 const settingsOpen = ref(false);
 const authOpen = ref(false);
 const toast = ref<string | null>(null);
