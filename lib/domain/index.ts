@@ -6,6 +6,7 @@ export * from './tally';
 export * from './estimates';
 export * from './shelf';
 export * from './ranking';
+export * from './goals';
 export * from './parse-capture';
 export * from './nudges';
 export * from './clock';
