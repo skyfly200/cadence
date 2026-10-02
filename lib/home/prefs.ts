@@ -5,6 +5,7 @@
  */
 import type { TimeFormat } from '~/lib/domain/clock';
 import { DEFAULT_MUSIC, providerById, type MusicConfig } from './music';
+import type { DelightState, RewardPrefs } from './rewards';
 
 export type Density = 0 | 1 | 2; // Simple, Balanced (default), Rich
 
@@ -130,3 +131,32 @@ const PLANNING_REMINDER_KEY = 'cadence:planningReminder';
 /** A quiet in-app prompt when a week has passed since the last session. Off unless switched on. */
 export function getPlanningReminder(): boolean { return read(PLANNING_REMINDER_KEY) === 'true'; }
 export function setPlanningReminder(on: boolean): void { write(PLANNING_REMINDER_KEY, String(on)); }
+
+const REWARD_KEYS: Record<keyof RewardPrefs, string> = { lines: 'cadence:rewardLines', tally: 'cadence:rewardTally', sound: 'cadence:rewardSound' };
+/** Which reward pieces to show: coach lines, the weekly tally and the soft tone. Each on unless switched off (per device). */
+export function getRewardPrefs(): RewardPrefs {
+  return { lines: read(REWARD_KEYS.lines) !== 'false', tally: read(REWARD_KEYS.tally) !== 'false', sound: read(REWARD_KEYS.sound) !== 'false' };
+}
+export function setRewardPref(key: keyof RewardPrefs, on: boolean): void { write(REWARD_KEYS[key], String(on)); }
+
+const EOD_KEY = 'cadence:endOfDayLine';
+/** The end-of-day "here is what you kept" line on Home is opt-in: off until switched on. */
+export function getEndOfDayOn(): boolean { return read(EOD_KEY) === 'true'; }
+export function setEndOfDayOn(on: boolean): void { write(EOD_KEY, String(on)); }
+
+const DELIGHT_KEY = 'cadence:rewardDelight';
+/** The day the last rare delight showed and how many showed that day (the cap is one a day). */
+export function getDelightState(): DelightState | null {
+  try {
+    const v = JSON.parse(read(DELIGHT_KEY) ?? 'null');
+    return v && typeof v.day === 'string' && Number.isInteger(v.shown) ? { day: v.day, shown: v.shown } : null;
+  } catch { return null; }
+}
+export function setDelightState(s: DelightState): void { write(DELIGHT_KEY, JSON.stringify(s)); }
+
+const SLOG_DISMISSED_KEY = 'cadence:slogDismissed';
+/** Items the user said "no thanks" to when offered the slog tag, so it is not offered again. */
+export function getSlogDismissed(): string[] {
+  try { const v = JSON.parse(read(SLOG_DISMISSED_KEY) ?? '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch { return []; }
+}
+export function addSlogDismissed(id: string): void { write(SLOG_DISMISSED_KEY, JSON.stringify([...new Set([...getSlogDismissed(), id])].slice(-200))); }

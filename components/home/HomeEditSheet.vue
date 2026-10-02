@@ -113,6 +113,12 @@
         <span class="text-sm"><span class="font-medium">Private</span><br /><span class="text-slate-600 dark:text-slate-400">Never sent to the AI and never shared with an assistant.</span></span>
       </label>
 
+      <!-- Slog (if commitment) -->
+      <label v-if="node.kind === 'commitment'" class="mt-4 flex min-h-[44px] items-start gap-3">
+        <input v-model="draft.slog" type="checkbox" class="mt-1 size-5 shrink-0" />
+        <span class="text-sm"><span class="font-medium">A slog</span><br /><span class="text-slate-600 dark:text-slate-400">Draining or boring. A bigger reward when it is done, and a two-minute "just start".</span></span>
+      </label>
+
       <!-- Dependency (if commitment) -->
       <div v-if="node.kind === 'commitment'" class="mt-4">
         <label class="text-sm font-medium">Depends on</label>
@@ -213,6 +219,7 @@ const draft = reactive({
   period: 'day' as Period,
   weekdays: [] as number[],
   private: false,
+  slog: false,
 });
 const linkError = ref('');
 
@@ -229,6 +236,7 @@ watch(
     const c = node.value as Commitment | Idea;
     draft.title = c.title;
     draft.private = node.value.private;
+    draft.slog = node.value.kind === 'commitment' && node.value.slog;
     linkError.value = '';
     draft.link = node.value.kind === 'commitment' || node.value.kind === 'habit' ? node.value.link ?? '' : '';
     if (node.value.kind === 'habit') {
@@ -310,6 +318,7 @@ function save() {
     input.fixedTime = draft.fixedTime ? new Date(draft.fixedTime).toISOString() : null;
     input.deadline = draft.deadline ? new Date(draft.deadline).toISOString() : null;
     input.durationMinutes = draft.durationMinutes;
+    input.slog = draft.slog;
     input.location = draft.location.trim() || null;
     input.locationCoords = draft.locationCoords;
     input.dependencyId = draft.dependencyId || null;

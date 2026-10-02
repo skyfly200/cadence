@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_VOLUME, addPlanningReviewed, finishPlanning, getDiscussDisclosed, getPlanningFinished, setDiscussDisclosed, getPlanningReminder, getPlanningReviewed, getRecapOn, getSoundOn, getVolume,
   greeting, setPlanningReminder, setRecapOn, setVolume, speechLevel, speechVolume, toneGain, toneLevel,
+  addSlogDismissed, getDelightState, getEndOfDayOn, getRewardPrefs, getSlogDismissed, setDelightState, setEndOfDayOn, setRewardPref,
 } from './prefs';
 
 describe('volume', () => {
@@ -100,5 +101,41 @@ describe('greeting', () => {
     expect(greeting(false, at(13))).toBe('Good afternoon.');
     expect(greeting(false, at(19))).toBe('Good evening.');
     expect(greeting(false, at(2))).toBe('Good evening.');
+  });
+});
+
+describe('reward preferences', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const stub = () => {
+    const map = new Map<string, string>();
+    vi.stubGlobal('window', { localStorage: { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => void map.set(k, v) } });
+  };
+
+  it('has coach lines, the tally and the tone on, and the end-of-day line off, when storage is unavailable', () => {
+    expect(getRewardPrefs()).toEqual({ lines: true, tally: true, sound: true });
+    expect(getEndOfDayOn()).toBe(false);
+    expect(getDelightState()).toBeNull();
+    expect(getSlogDismissed()).toEqual([]);
+    expect(() => { setRewardPref('lines', false); setEndOfDayOn(true); addSlogDismissed('a'); }).not.toThrow();
+  });
+
+  it('remembers each toggle on its own', () => {
+    stub();
+    setRewardPref('tally', false);
+    expect(getRewardPrefs()).toEqual({ lines: true, tally: false, sound: true });
+    setRewardPref('sound', false);
+    expect(getRewardPrefs()).toEqual({ lines: true, tally: false, sound: false });
+    setEndOfDayOn(true);
+    expect(getEndOfDayOn()).toBe(true);
+  });
+
+  it('keeps the delight state and the dismissed slog offers', () => {
+    stub();
+    setDelightState({ day: '2026-10-02', shown: 1 });
+    expect(getDelightState()).toEqual({ day: '2026-10-02', shown: 1 });
+    addSlogDismissed('a');
+    addSlogDismissed('b');
+    addSlogDismissed('a');
+    expect(getSlogDismissed()).toEqual(['a', 'b']);
   });
 });

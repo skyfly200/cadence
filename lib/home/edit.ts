@@ -108,6 +108,7 @@ export interface EditInput {
   weekdays?: number[] | null;  // a Habit: pin to these weekdays (0 = Sunday), or null to clear
   link?: string | null;  // an https link to open for a Commitment or Habit, or null to clear
   private?: boolean;  // Private nodes are never sent to the AI or returned to an assistant
+  slog?: boolean;  // a Commitment tagged as a slog: a bigger reward and a two-minute "just start" ritual
 }
 
 export interface EditResult {
@@ -143,6 +144,7 @@ export function applyEdit(
     if (input.fixedTime !== undefined) c.fixedTime = input.fixedTime;
     if (input.deadline !== undefined) c.deadline = input.deadline;
     if (input.durationMinutes !== undefined) c.durationMinutes = input.durationMinutes;
+    if (input.slog !== undefined) c.slog = input.slog;
   }
 
   if (input.link !== undefined && (node.kind === 'commitment' || node.kind === 'habit')) {

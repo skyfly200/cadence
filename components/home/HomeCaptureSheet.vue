@@ -56,6 +56,7 @@
 import { nextTick, ref, watch, onMounted, onUnmounted } from 'vue';
 import { Mic, Square, X } from 'lucide-vue-next';
 import { useGraphStore } from '~/stores/graph';
+import { useRewards } from '~/composables/useRewards';
 import { loadState } from '~/lib/home/nudge-state';
 import { checkCrisis, type Resource } from '~/lib/domain/crisis';
 import { currentResources, markCardShown, shouldShowCard } from '~/lib/home/crisis-state';
@@ -67,6 +68,7 @@ import { getRecognitionCtor, joinTranscript, messageFor, initialState, setListen
 const props = defineProps<{ open: boolean; listen?: boolean }>();
 const emit = defineEmits<{ (e: 'close'): void; (e: 'said', msg: string): void }>();
 const graph = useGraphStore();
+const { reward } = useRewards();
 const app = useAppStore();
 const draft = ref('');
 /** form: the usual box. disclose: the one-line note on what Discuss sends. discuss: the conversation. */
@@ -239,6 +241,7 @@ async function add() {
     return;
   }
   emit('close');
-  emit('said', r.reply);
+  // No coach voice or tone after a crisis match: just the plain acknowledgement.
+  emit('said', heavy ? r.reply : reward('capture', { ack: r.reply }));
 }
 </script>

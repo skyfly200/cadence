@@ -92,6 +92,7 @@ import {
 import { connectionProposals, type LinkProposal } from '~/lib/home/proposals';
 import { useAppStore } from '~/stores/app';
 import { useGraphStore } from '~/stores/graph';
+import { useRewards } from '~/composables/useRewards';
 
 type Step = 'triage' | 'connections' | 'conflicts' | 'recap' | 'done';
 const ORDER: Step[] = ['triage', 'connections', 'conflicts', 'recap'];
@@ -106,6 +107,7 @@ const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ (e: 'close'): void; (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void }>();
 const app = useAppStore();
 const graph = useGraphStore();
+const { reward } = useRewards();
 
 const step = ref<Step>('done');
 const nothingToSee = ref(false);
@@ -204,8 +206,7 @@ function stop() { emit('said', 'Stopped for now. Where you got to is kept.'); em
 /** Finishing is the reward moment: one warm line and the week's tally, nothing to lose. */
 function finish() {
   finishPlanning();
-  const kept = graph.weeklyTally;
-  emit('said', kept > 0 ? `Planning done. ${kept} kept this week.` : 'Planning done. Nicely kept.');
+  emit('said', reward('planning'));
   emit('close');
 }
 </script>

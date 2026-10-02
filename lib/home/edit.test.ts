@@ -321,6 +321,19 @@ describe('dependencyOptions', () => {
   });
 });
 
+describe('applyEdit: slog', () => {
+  it('tags and untags a Commitment as a slog, and leaves it alone when not mentioned', () => {
+    const tagged = applyEdit('c1', { slog: true }, [commitment('c1')], [], () => {}, () => {});
+    expect((tagged.nodes[0] as Commitment).slog).toBe(true);
+    expect((applyEdit('c1', { title: 'x' }, tagged.nodes, [], () => {}, () => {}).nodes[0] as Commitment).slog).toBe(true);
+    expect((applyEdit('c1', { slog: false }, tagged.nodes, [], () => {}, () => {}).nodes[0] as Commitment).slog).toBe(false);
+  });
+
+  it('ignores slog on an Idea', () => {
+    expect((applyEdit('i1', { slog: true }, [idea('i1')], [], () => {}, () => {}).nodes[0] as any).slog).toBeUndefined();
+  });
+});
+
 describe('applyEdit: link', () => {
   const habitNode: any = { id: 'h1', kind: 'habit', title: 'Lesson', private: false, quiet: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', recurrence: { period: 'day', target: 1 } };
 

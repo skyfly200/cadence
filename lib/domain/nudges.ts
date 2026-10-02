@@ -125,7 +125,7 @@ function clock(ms: number, tz: string, format: TimeFormat): string {
   return formatClock(p.h, p.mi, format);
 }
 
-function inQuiet(ms: number, s: NudgeSettings, tz: string): boolean {
+export function inQuiet(ms: number, s: NudgeSettings, tz: string): boolean {
   const sleep = minutesOfDay(s.sleepTime);
   const wake = minutesOfDay(s.wakeTime);
   if (sleep === wake) return false;
