@@ -1,5 +1,5 @@
 -- ============================================================================
--- DRAFT, not applied. Review, then run in the Supabase SQL editor.
+-- APPLIED 2026-10-01 to the cadence project as migration "cadence_ai_layer" (via the Supabase MCP).
 --
 -- The AI layer's server-side state: the per-user AI switch and the usage log
 -- behind the daily call cap. Written only by the server (service role); a

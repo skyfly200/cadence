@@ -1,5 +1,5 @@
 -- ============================================================================
--- DRAFT, not applied. Review, then run in the Supabase SQL editor.
+-- APPLIED 2026-10-01 to the cadence project as migration "cadence_privacy_deletion" (via the Supabase MCP).
 -- Needs 0004_ai_layer.sql first (the AI switch lives in its ai_settings table).
 --
 -- Delete everything with a 7-day undo window.
