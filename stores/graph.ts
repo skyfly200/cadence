@@ -308,8 +308,8 @@ export const useGraphStore = defineStore('graph', () => {
     return true;
   }
 
-  /** One tap on a habit: logs one, or (at or past the target) undoes back to zero. Returns whether it is now met. */
-  function tapHabit(id: string): { met: boolean } | null {
+  /** One tap on a habit: logs one, or (at or past the target) undoes back to zero. Returns whether it is now met, and whether the tap logged (an undo is not a reward moment). */
+  function tapHabit(id: string): { met: boolean; logged: boolean } | null {
     const habit = habits.value.find((h) => h.id === id);
     if (!habit) return null;
     const now = new Date();
@@ -317,7 +317,7 @@ export const useGraphStore = defineStore('graph', () => {
     append(added);
     asOf.value = now;
     lastAction.value = { label: 'Habit', occurrences: added, addedNodeIds: [] };
-    return { met: habitProgress(habit, occurrences.value, now).met };
+    return { met: habitProgress(habit, occurrences.value, now).met, logged: added.some((o) => o.type === 'logged') };
   }
 
   function refresh() { asOf.value = new Date(); }

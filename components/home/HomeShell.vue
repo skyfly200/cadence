@@ -46,6 +46,7 @@
         <button class="grid size-11 shrink-0 place-items-center rounded-lg border border-teal-900/10 bg-white text-lg dark:border-white/10 dark:bg-[#2A2645]" aria-label="Menu" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">☰</button>
       </div>
       <p v-if="mounted" class="mt-1 truncate text-[15px] font-medium">{{ greeting(away) }}</p>
+      <p v-if="eodLine" class="mt-1 text-[13px] text-teal-800 dark:text-[#FFB59F]">{{ eodLine }}</p>
       <div v-if="density >= 1" class="mt-2 flex flex-wrap items-center gap-2">
         <span v-if="graph.kept.length" class="text-[12px] font-semibold text-teal-800 dark:text-[#FFB59F]">{{ graph.kept.length }} accomplished today</span>
         <button
@@ -114,11 +115,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { NudgeKind } from '~/lib/domain';
 import { useAppStore } from '~/stores/app';
 import { useGraphStore } from '~/stores/graph';
-import { getDensity, getTimeFormat, greeting, markOpened, setDensity, setTimeFormat, wasAway, type Density } from '~/lib/home/prefs';
+import { getDensity, getEndOfDayOn, getTimeFormat, greeting, markOpened, setDensity, setTimeFormat, wasAway, type Density } from '~/lib/home/prefs';
+import { endOfDayLine } from '~/lib/home/rewards';
 import type { TimeFormat } from '~/lib/domain';
 import { useNudges } from '~/composables/useNudges';
 import { useNudgeUrlAction } from '~/composables/useNudgeUrlAction';
@@ -169,6 +171,12 @@ const tab = (k: Lens) => [
 
 // Client-only: the server's date and locale differ from the browser's, which would cause a hydration mismatch.
 const mounted = ref(false);
+// The opt-in end-of-day line ("Today you kept 5 things"); re-read when Settings closes, where it is switched on.
+const eodOn = ref(false);
+watch(settingsOpen, (open) => { if (!open) eodOn.value = getEndOfDayOn(); });
+const eodLine = computed(() => (mounted.value ? endOfDayLine({
+  on: eodOn.value, occurrences: graph.occurrences, now: graph.asOf, habitsDone: graph.habitsPiece.done, habitsTotal: graph.habitsPiece.total,
+}) : null));
 const dateLabel = computed(() => (mounted.value ? graph.asOf.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }) : ''));
 
 function say(msg: string) {
@@ -209,6 +217,7 @@ onMounted(() => {
     const qs = params.toString();
     window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`);
   }
+  eodOn.value = getEndOfDayOn();
   density.value = getDensity();
   graph.timeFormat = getTimeFormat();
   graph.density = density.value;

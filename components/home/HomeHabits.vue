@@ -53,9 +53,11 @@ import { PERIODS, finalStretchMention } from '~/lib/domain';
 import { addMentioned, getMentioned } from '~/lib/home/prefs';
 import type { Period } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
+import { useRewards } from '~/composables/useRewards';
 
 const emit = defineEmits<{ (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void }>();
 const graph = useGraphStore();
+const { reward } = useRewards();
 
 const HEADING: Record<Period, string> = { day: 'Every day', week: 'Each week', month: 'Each month', quarter: 'Each quarter', four_months: 'Every 4 months', six_months: 'Every 6 months', year: 'Each year' };
 const LABEL: Record<Period, string> = { day: 'day', week: 'week', month: 'month', quarter: 'quarter', four_months: '4 months', six_months: '6 months', year: 'year' };
@@ -94,7 +96,6 @@ function add() {
 }
 function tap(id: string) {
   const r = graph.tapHabit(id);
-  if (r?.met) emit('said', 'Well kept.');
-  else if (r) emit('said', 'Logged.');
+  if (r) emit('said', r.logged ? reward('habit', { habitId: id }) : 'Undone.');
 }
 </script>

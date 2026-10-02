@@ -44,6 +44,20 @@
               </div>
             </div>
 
+            <div v-if="offerSlog" class="mt-4 rounded-2xl bg-amber-50 p-3 text-center text-sm dark:bg-white/10">
+              <p>This one keeps getting put off. Is it a slog? A slog gets a bigger reward and a two-minute "just start".</p>
+              <div class="mt-2 flex justify-center gap-2">
+                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-[#1D1A2F]" @click="onTagSlog">Yes, a slog</button>
+                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-[#1D1A2F]" @click="onDismissSlog">No thanks</button>
+              </div>
+            </div>
+
+            <div v-if="started && ritual" class="mt-4 rounded-2xl bg-stone-50 p-4 text-center text-sm dark:bg-white/10">
+              <p v-if="!ritual.over">{{ RITUAL_INTRO }}</p>
+              <p v-if="!ritual.over" class="mt-1 font-serif text-2xl">{{ ritualClock(ritual.remainingSec) }}</p>
+              <p v-else>{{ RITUAL_OVER }}</p>
+            </div>
+
             <div v-if="!started && !stayWithMeActive" class="mt-5 grid grid-cols-3 gap-2">
               <button class="col-span-3 min-h-[44px] rounded-2xl bg-[#E07A45] py-3.5 text-base font-semibold text-white shadow-sm active:scale-[.99]" @click="onStart">Start</button>
               <button class="col-span-2 min-h-[44px] rounded-2xl bg-stone-100 py-3 text-sm font-medium dark:bg-white/10" @click="onNotNow">Not now</button>
@@ -123,7 +137,9 @@ import { useGraphStore } from '~/stores/graph';
 import type { Commitment, Habit } from '~/lib/domain';
 import { useAppStore } from '~/stores/app';
 import { createWhyNowCache, fetchWhyNow, shownLine, whyNowKey } from '~/lib/home/why-now';
-import { getMusic, setMusic, speechLevel, toneLevel, type Density } from '~/lib/home/prefs';
+import { addSlogDismissed, getMusic, getSlogDismissed, setMusic, speechLevel, toneLevel, type Density } from '~/lib/home/prefs';
+import { RITUAL_INTRO, RITUAL_OVER, ritualClock, ritualState, shouldOfferSlog } from '~/lib/home/slog';
+import { useRewards } from '~/composables/useRewards';
 import {
   start as startStayWithMeSession,
   checkInDue,
@@ -200,13 +216,65 @@ function onStop() {
   graph.stop(current.value.node.id);
 }
 
-function onStart() { if (current.value) graph.start(current.value.node.id); }
+const { reward } = useRewards();
+const isSlog = (n: { kind: string }) => n.kind === 'commitment' && (n as Commitment).slog;
+
+// A slog gets a two-minute "just start" ritual, from the moment Start is pressed.
+const ritualStart = ref<number | null>(null);
+const ritualNow = ref(Date.now());
+let ritualTimer: ReturnType<typeof setInterval> | null = null;
+function stopRitual() {
+  ritualStart.value = null;
+  if (ritualTimer) { clearInterval(ritualTimer); ritualTimer = null; }
+}
+const ritual = computed(() => (ritualStart.value === null ? null : ritualState(ritualStart.value, ritualNow.value)));
+watch(() => [current.value?.node.id, started.value], () => { if (!started.value) stopRitual(); });
+onBeforeUnmount(stopRitual);
+
+function onStart() {
+  const node = current.value?.node;
+  if (!node) return;
+  graph.start(node.id);
+  if (isSlog(node)) {
+    ritualStart.value = Date.now();
+    ritualNow.value = Date.now();
+    if (!ritualTimer) ritualTimer = setInterval(() => { ritualNow.value = Date.now(); }, 1000);
+  }
+  emit('said', reward('start', { slog: isSlog(node) }));
+}
 function onDone() {
   const node = current.value?.node;
   if (!node) return;
+  stopRitual();
   // A habit is logged (and counts toward its period); a Commitment is finished.
-  if (node.kind === 'habit') graph.tapHabit(node.id); else graph.complete(node.id);
-  emit('said', `Nice. ${graph.kept.length} accomplished today.`);
+  if (node.kind === 'habit') {
+    const r = graph.tapHabit(node.id);
+    emit('said', r?.logged ? reward('habit', { habitId: node.id }) : 'Undone.');
+  } else {
+    graph.complete(node.id);
+    emit('said', reward('done', { slog: isSlog(node) }));
+  }
+}
+
+// After a few postponements, offer the slog tag once; "No thanks" is remembered on this device.
+const slogDismissed = ref<string[]>(getSlogDismissed());
+const offerSlog = computed(() => {
+  const n = current.value?.node;
+  if (!n || n.kind !== 'commitment') return false;
+  if (graph.rank.offerShrinkParkKeep && !keepDismissed.value) return false;
+  return shouldOfferSlog(n.id, n.slog, graph.occurrences, slogDismissed.value);
+});
+function onTagSlog() {
+  const id = current.value?.node.id;
+  if (!id) return;
+  graph.edit(id, { slog: true });
+  emit('said', 'Tagged as a slog.');
+}
+function onDismissSlog() {
+  const id = current.value?.node.id;
+  if (!id) return;
+  addSlogDismissed(id);
+  slogDismissed.value = getSlogDismissed();
 }
 function onNotNow() { if (current.value) { graph.notNow(current.value.node.id); emit('said', 'Moved to later today.'); } }
 function onPark() { if (current.value) { graph.park(current.value.node.id); emit('said', 'Sent to the heap.'); } }

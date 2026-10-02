@@ -105,6 +105,17 @@
         <NuxtLink to="/classic" class="grid min-h-[44px] place-items-center rounded-xl border border-slate-200 text-sm dark:border-white/10">Classic view (the old app)</NuxtLink>
       </div>
 
+      <p class="mt-5 font-serif text-xl">Rewards</p>
+      <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">A warm word when you start, finish, log or capture something. Switch off whatever you do not want.</p>
+      <label v-for="r in REWARD_TOGGLES" :key="r.key" class="mt-2 flex items-center gap-3">
+        <input type="checkbox" v-model="rewards[r.key]" class="h-5 w-5 rounded" @change="setRewardPref(r.key, rewards[r.key])" />
+        <span class="text-sm">{{ r.label }}</span>
+      </label>
+      <label class="mt-2 flex items-center gap-3">
+        <input type="checkbox" v-model="endOfDay" class="h-5 w-5 rounded" @change="setEndOfDayOn(endOfDay)" />
+        <span class="text-sm">An end-of-day line on Home, "here is what you kept"</span>
+      </label>
+
       <p class="mt-5 font-serif text-xl">Help lines</p>
       <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">If something you write sounds heavy, Cadence shows local help lines. Which country?</p>
       <select v-model="helpCountry" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Country for help lines" @change="saveHelpCountry">
@@ -124,7 +135,8 @@ import type { TimeFormat } from '~/lib/domain';
 import { MUSIC_PROVIDERS, parsePlaylist } from '~/lib/home/music';
 import { COUNTRY_CHOICES } from '~/lib/domain/crisis';
 import { getCountryOverride, setCountryOverride } from '~/lib/home/crisis-state';
-import { getMusic, getSoundOn, getVolume, setMusic, setSoundOn, setVolume, speechVolume, toneGain, type Density, type SoundKind } from '~/lib/home/prefs';
+import { getEndOfDayOn, getMusic, getRewardPrefs, getSoundOn, getVolume, setEndOfDayOn, setMusic, setRewardPref, setSoundOn, setVolume, speechVolume, toneGain, type Density, type SoundKind } from '~/lib/home/prefs';
+import { DEFAULT_REWARD_PREFS, type RewardPrefs } from '~/lib/home/rewards';
 import type { NudgeKind } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
 import { useAppStore } from '~/stores/app';
@@ -200,6 +212,15 @@ function onToggleKind(kind: NudgeKind, enabled: boolean): void {
 const music = reactive(getMusic());
 const playlistNote = ref('');
 function saveMusic(): void { setMusic({ ...music }); }
+const REWARD_TOGGLES: { key: keyof RewardPrefs; label: string }[] = [
+  { key: 'lines', label: 'Coach lines' },
+  { key: 'tally', label: 'The weekly tally ("14 things kept this week")' },
+  { key: 'sound', label: 'A soft tone' },
+];
+const rewards = reactive<RewardPrefs>({ ...DEFAULT_REWARD_PREFS });
+const endOfDay = ref(false);
+onMounted(() => { Object.assign(rewards, getRewardPrefs()); endOfDay.value = getEndOfDayOn(); });
+
 const helpCountry = ref(getCountryOverride() ?? '');
 function saveHelpCountry(): void { setCountryOverride(helpCountry.value || null); }
 /** A pasted link picks its own app; one that is not a known player is not kept. */
