@@ -41,8 +41,8 @@
 
     <HomeCaptureSheet :open="captureOpen" @close="captureOpen = false" @said="say" />
     <HomeSettingsSheet
-      :open="settingsOpen" :density="density" :signed-in="app.signedIn" :nudge-state="nudges.state.value" :muted="nudges.state.value.muted"
-      @close="settingsOpen = false" @update:density="setDensityValue" @account="settingsOpen = false; authOpen = true"
+      :open="settingsOpen" :density="density" :time-format="graph.timeFormat" :signed-in="app.signedIn" :nudge-state="nudges.state.value" :muted="nudges.state.value.muted"
+      @close="settingsOpen = false" @update:density="setDensityValue" @update:time-format="setTimeFormatValue" @account="settingsOpen = false; authOpen = true"
       @toggle-kind="onToggleNudgeKind" @toggle-mute="onToggleNudgeMute" @restore-node="nudges.onRestoreNode" @restore-kind="nudges.onRestoreKind"
     />
     <NudgeToast
@@ -63,7 +63,8 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import type { NudgeKind } from '~/lib/domain';
 import { useAppStore } from '~/stores/app';
 import { useGraphStore } from '~/stores/graph';
-import { getDensity, markOpened, setDensity, wasAway, type Density } from '~/lib/home/prefs';
+import { getDensity, getTimeFormat, markOpened, setDensity, setTimeFormat, wasAway, type Density } from '~/lib/home/prefs';
+import type { TimeFormat } from '~/lib/domain';
 import { useNudges } from '~/composables/useNudges';
 import { useNudgeUrlAction } from '~/composables/useNudgeUrlAction';
 
@@ -103,6 +104,7 @@ function undo() {
   say(label ? `${label} undone.` : 'Nothing to undo.');
 }
 function setDensityValue(d: Density) { density.value = d; graph.density = d; setDensity(d); }
+function setTimeFormatValue(f: TimeFormat) { graph.timeFormat = f; setTimeFormat(f); }
 
 function onToggleNudgeKind(kind: NudgeKind, enabled: boolean): void {
   if (enabled) {
@@ -123,6 +125,7 @@ onMounted(() => {
   }
   mounted.value = true;
   density.value = getDensity();
+  graph.timeFormat = getTimeFormat();
   graph.density = density.value;
   away.value = wasAway();
   markOpened();

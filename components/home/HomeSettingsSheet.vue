@@ -12,6 +12,15 @@
         >{{ n }}</button>
       </div>
 
+      <p class="mt-4 text-sm font-medium">Clock</p>
+      <div class="mt-1.5 grid grid-cols-2 gap-2">
+        <button
+          v-for="f in [{ v: '12', l: '12-hour' }, { v: '24', l: '24-hour' }]" :key="f.v"
+          :class="['min-h-[44px] rounded-xl border text-sm', timeFormat === f.v ? 'border-[#E07A45] bg-amber-50 font-semibold text-amber-900 dark:bg-white/10 dark:text-[#FFB59F]' : 'border-slate-200 dark:border-white/10']"
+          @click="$emit('update:timeFormat', f.v as TimeFormat)"
+        >{{ f.l }}</button>
+      </div>
+
       <p class="mt-4 text-sm font-medium">Colours</p>
       <ClientOnly>
         <div class="mt-1.5 grid grid-cols-3 gap-2">
@@ -91,6 +100,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
+import type { TimeFormat } from '~/lib/domain';
 import { getVolume, setVolume, toneGain, type Density } from '~/lib/home/prefs';
 import type { NudgeKind } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
@@ -105,10 +115,11 @@ interface StoppedItem {
   kind?: NudgeKind;
 }
 
-const props = defineProps<{ open: boolean; density: Density; signedIn: boolean; nudgeState: any; muted: boolean }>();
+const props = defineProps<{ open: boolean; density: Density; timeFormat: TimeFormat; signedIn: boolean; nudgeState: any; muted: boolean }>();
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'update:density', d: Density): void;
+  (e: 'update:timeFormat', f: TimeFormat): void;
   (e: 'account'): void;
   (e: 'toggle-kind', kind: NudgeKind, enabled: boolean): void;
   (e: 'toggle-mute', muted: boolean): void;

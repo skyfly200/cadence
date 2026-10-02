@@ -28,7 +28,7 @@ describe('tier 1: time-critical', () => {
     expect(r.tier).toBe(1);
     // 20:00 minus 15 minutes minus 25 minutes of travel = 19:20
     expect(r.now?.startBy?.toISOString()).toBe('2026-03-14T19:20:00.000Z');
-    expect(r.reason).toBe('Leave by 7:20, so this comes first');
+    expect(r.reason).toBe('Leave by 7:20 pm, so this comes first');
   });
 
   it('uses injected duration and travel for the start-by', () => {
@@ -36,7 +36,7 @@ describe('tier 1: time-critical', () => {
     expect(r.now?.startBy?.toISOString()).toBe('2026-03-14T19:10:00.000Z');
     expect(r.now?.minutes).toBe(30);
     expect(r.now?.travelMinutes).toBe(20);
-    expect(r.reason).toBe('Leave by 7:10, so this comes first');
+    expect(r.reason).toBe('Leave by 7:10 pm, so this comes first');
   });
 
   it('is not time-critical while the start-by is more than an hour away: it waits in the strip as scheduled', () => {
@@ -44,7 +44,7 @@ describe('tier 1: time-critical', () => {
     expect(r.now?.node.id).toBe('x');
     const sched = r.strip.find((s) => s.node.id === 'gig');
     expect(sched?.scheduled).toBe(true);
-    expect(sched?.reason).toBe('At 8:00');
+    expect(sched?.reason).toBe('At 8:00 pm');
   });
 
   it('stops being time-critical an hour after its fixed time and becomes an ordinary item', () => {

@@ -18,6 +18,7 @@
  */
 import type { Commitment, Habit, Node, Occurrence } from './types';
 import { activeOccurrences } from './estimates';
+import { formatClock, type TimeFormat } from './clock';
 import { finalStretchMention, homeHabitsPiece } from './habits';
 import { localParts, periodWindow, type PeriodOptions } from './periods';
 import { isParked } from './shelf';
@@ -108,6 +109,8 @@ export interface PlanInput {
   /** Quiet (Background) items that are slipping. Default: none. */
   atRisk?: (n: Commitment | Habit) => boolean;
   opts?: PeriodOptions;
+  /** How clock times in the wording read. Default '12'. */
+  timeFormat?: TimeFormat;
 }
 
 // ── time helpers ────────────────────────────────────────────────────────
@@ -117,11 +120,9 @@ const minutesOfDay = (hhmm: string): number => {
   return (h || 0) * 60 + (m || 0);
 };
 
-const pad = (n: number) => String(n).padStart(2, '0');
-
-function clock(ms: number, tz: string): string {
+function clock(ms: number, tz: string, format: TimeFormat): string {
   const p = localParts(new Date(ms), tz);
-  return `${p.h}:${pad(p.mi)}`;
+  return formatClock(p.h, p.mi, format);
 }
 
 function inQuiet(ms: number, s: NudgeSettings, tz: string): boolean {
@@ -160,6 +161,7 @@ export function planNudges(input: PlanInput): Nudge[] {
   const { now, settings } = input;
   const opts = input.opts ?? {};
   const tz = opts.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const tf = input.timeFormat ?? '12';
   const fb = input.feedback ?? NO_FEEDBACK;
   const nowMs = now.getTime();
   const today = periodWindow('day', now, opts);
@@ -201,8 +203,8 @@ export function planNudges(input: PlanInput): Nudge[] {
       drafts.push({
         kind: 'leave_by', nodeId: c.id, group: `leave_by|${c.id}`, suffix: '',
         fireMs: leaveMs - LEAVE_LEAD_MIN * MIN, dropMs: travel > 0 ? leaveMs : fixed,
-        title: travel > 0 ? `Leave by ${clock(leaveMs, tz)}` : `${c.title} is at ${clock(fixed, tz)}`,
-        body: travel > 0 ? `${c.title} is at ${clock(fixed, tz)}.` : '',
+        title: travel > 0 ? `Leave by ${clock(leaveMs, tz, tf)}` : `${c.title} is at ${clock(fixed, tz, tf)}`,
+        body: travel > 0 ? `${c.title} is at ${clock(fixed, tz, tf)}.` : '',
       });
       if (duration > 0) {
         const endMs = fixed + duration * MIN;
@@ -225,7 +227,7 @@ export function planNudges(input: PlanInput): Nudge[] {
       drafts.push({
         kind: 'leave_by', nodeId: c.id, group: `leave_by|${c.id}`, suffix: '',
         fireMs: startBy - LEAVE_LEAD_MIN * MIN, dropMs: deadline,
-        title: `${c.title}: start by ${clock(startBy, tz)}`, body: `It is due at ${clock(deadline, tz)}.`,
+        title: `${c.title}: start by ${clock(startBy, tz, tf)}`, body: `It is due at ${clock(deadline, tz, tf)}.`,
       });
     }
   }

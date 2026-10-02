@@ -3,6 +3,8 @@
  * time the app was opened (to show the warm "welcome back" greeting after a
  * break). Plain localStorage, wrapped so a blocked store never breaks Home.
  */
+import type { TimeFormat } from '~/lib/domain/clock';
+
 export type Density = 0 | 1 | 2; // Simple, Balanced (default), Rich
 
 const DENSITY_KEY = 'cadence:homeDensity';
@@ -49,3 +51,12 @@ export function setVolume(v: number): void { write(VOLUME_KEY, String(Math.min(1
 export function toneGain(volume: number): number { return 0.4 * (volume / 100) ** 2; }
 /** SpeechSynthesisUtterance.volume (0 to 1). */
 export function speechVolume(volume: number): number { return volume / 100; }
+
+const TIME_FORMAT_KEY = 'cadence:timeFormat';
+/** 12 or 24 hour clock; until chosen, whatever this device's locale uses. */
+export function getTimeFormat(): TimeFormat {
+  const v = read(TIME_FORMAT_KEY);
+  if (v === '12' || v === '24') return v;
+  try { return new Intl.DateTimeFormat([], { hour: 'numeric' }).resolvedOptions().hour12 === false ? '24' : '12'; } catch { return '12'; }
+}
+export function setTimeFormat(f: TimeFormat): void { write(TIME_FORMAT_KEY, f); }

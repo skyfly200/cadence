@@ -75,7 +75,7 @@ function label(day: StackDay, i: number, short = false) {
   if (i === 1) return 'Tomorrow';
   return day.date.toLocaleDateString([], short ? { weekday: 'short' } : { weekday: 'long', month: 'short', day: 'numeric' });
 }
-const timeLabel = (iso: string) => new Date(iso).toLocaleString([], { hour: 'numeric', minute: '2-digit' });
+const timeLabel = (iso: string) => new Date(iso).toLocaleString([], { hour: 'numeric', minute: '2-digit', hour12: graph.timeFormat === '12' });
 
 const current = computed(() => graph.heap.find((h) => h.id === queue.value[0]) ?? null);
 

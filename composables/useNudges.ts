@@ -164,6 +164,7 @@ export function useNudges() {
       mentioned: getMentioned(),
       disabledKinds: Array.from(state.value.disabledKinds),
       opts: { timeZone: tz },
+      timeFormat: graph.timeFormat,
     });
 
     // Queue them for Web Push so they also arrive when the app is closed (signed-in only)

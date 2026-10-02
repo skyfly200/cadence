@@ -130,7 +130,7 @@ const started = computed(() => !!graph.currentState?.started);
 // A new card gets a fresh prompt.
 watch(() => current.value?.node.id, () => { keepDismissed.value = false; });
 
-const fmt = (iso: string) => new Date(iso).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+const fmt = (iso: string) => new Date(iso).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit', hour12: graph.timeFormat === '12' });
 const timeOf = (n: Commitment | Habit) => {
   if (n.kind !== 'commitment') return '';
   return n.fixedTime ? fmt(n.fixedTime) : n.deadline ? `by ${fmt(n.deadline)}` : '';

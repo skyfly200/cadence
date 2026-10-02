@@ -11,7 +11,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrences, saveGraphNodes, saveGraphOccurrences } from '~/lib/graph-storage';
 import { habitProgress, habitTap, homeHabitsPiece, parseCapture, rankNow, weeklyKept } from '~/lib/domain';
-import type { ParsedCapture } from '~/lib/domain';
+import type { ParsedCapture, TimeFormat } from '~/lib/domain';
 import { postCapture } from '~/lib/capture-client';
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/lib/domain';
 import { heapItems, keptToday, nodeState, stackDays } from '~/lib/home/derive';
@@ -31,6 +31,8 @@ export const useGraphStore = defineStore('graph', () => {
   const loaded = ref(false);
   /** How much Home shows (the strip length); set by the Home screen from its preference. */
   const density = ref<Density>(1);
+  /** 12 or 24 hour clock for every time shown or spoken. */
+  const timeFormat = ref<TimeFormat>('12');
   /** What the last action appended, so it can be undone (every action is undoable). */
   const lastAction = ref<{ label: string; occurrences: Occurrence[]; addedNodeIds: string[] } | null>(null);
 
@@ -74,7 +76,7 @@ export const useGraphStore = defineStore('graph', () => {
     ({ id: uid(), nodeId, type, at: now.toISOString(), source: 'app', ...extra });
 
   // ── derived ──────────────────────────────────────────
-  const rankInput = (d: Density) => ({ now: asOf.value, nodes: nodes.value, links: links.value, occurrences: occurrences.value, density: d });
+  const rankInput = (d: Density) => ({ now: asOf.value, nodes: nodes.value, links: links.value, occurrences: occurrences.value, density: d, timeFormat: timeFormat.value });
   /** The Now card and strip (ticket 23). */
   const rank = computed(() => rankNow(rankInput(density.value)));
   /** The Today lens list: always the fullest strip. */
@@ -90,7 +92,7 @@ export const useGraphStore = defineStore('graph', () => {
   const currentState = computed(() => (rank.value.now ? nodeState(rank.value.now.node.id, occurrences.value) : null));
 
   // ── actions ──────────────────────────────────────────
-  const when = (iso: string) => new Date(iso).toLocaleString([], { weekday: 'long', hour: 'numeric', minute: '2-digit' });
+  const when = (iso: string) => new Date(iso).toLocaleString([], { weekday: 'long', hour: 'numeric', minute: '2-digit', hour12: timeFormat.value === '12' });
 
   function nodeFromCapture(id: string, p: ParsedCapture, now: Date): Node {
     const t = now.toISOString();
@@ -239,7 +241,7 @@ export const useGraphStore = defineStore('graph', () => {
   function refresh() { asOf.value = new Date(); }
 
   return {
-    nodes, links, occurrences, asOf, loaded, lastAction, density,
+    nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat,
     rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState,
     load, refresh, capture, promote, plan, start, complete, park, notNow, bringBack, undoLast, createHabit, tapHabit,
   };

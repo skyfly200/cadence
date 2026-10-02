@@ -32,6 +32,7 @@
  */
 import type { Commitment, Habit, Link, Node, Occurrence } from './types';
 import { FINAL_STRETCH_FROM, habitProgress } from './habits';
+import { formatClock, type TimeFormat } from './clock';
 import { dayKey, localParts, localWeekday, periodProgress, periodWindow, type PeriodOptions } from './periods';
 import { DEFAULT_DURATION_MIN, activeOccurrences, learnedDuration } from './estimates';
 import { SHRINK_PARK_KEEP_AT, isParked, notNowCount, shelvedSince } from './shelf';
@@ -60,6 +61,8 @@ export interface RankInput {
   sleepTime?: string;
   opts?: PeriodOptions;
   providers?: RankProviders;
+  /** How clock times in the reason lines read. Default '12'. */
+  timeFormat?: TimeFormat;
 }
 
 export interface RankedItem {
@@ -138,7 +141,7 @@ export function rankNow(input: RankInput): RankResult {
   const day = periodWindow('day', now, opts);
   const fmt = (ms: number) => {
     const p = localParts(new Date(ms), tz);
-    return `${p.h % 12 || 12}:${String(p.mi).padStart(2, '0')}`;
+    return formatClock(p.h, p.mi, input.timeFormat);
   };
 
   const doneIds = new Set(activeOccurrences(rawOccs).filter((o) => o.type === 'done').map((o) => o.nodeId));

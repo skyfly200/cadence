@@ -6,7 +6,7 @@ const SETTINGS = { wakeTime: '07:00', sleepTime: '23:00' };
 const NOON = at('2026-03-08T12:00:00Z'); // a Sunday
 
 function plan(over: Partial<PlanInput> = {}) {
-  return planNudges(deepFreeze({ now: NOON, nodes: [], occurrences: [], settings: SETTINGS, opts: UTC, ...over }));
+  return planNudges(deepFreeze({ now: NOON, nodes: [], occurrences: [], settings: SETTINGS, opts: UTC, timeFormat: '24', ...over }));
 }
 
 const meeting = (id: string, hhmm: string, extra = {}) =>
@@ -176,5 +176,13 @@ describe('wording', () => {
     const ns = plan({ nodes, travel: () => 15, atRisk: (n) => n.quiet });
     expect(ns.length).toBeGreaterThan(4);
     for (const n of ns) expect(`${n.title} ${n.body}`).not.toMatch(/behind|overdue|failed|lazy|should|late|missed|urgent/i);
+  });
+});
+
+describe('time format', () => {
+  it('reads in 12-hour by default and in 24-hour when asked', () => {
+    const nodes = [meeting('dentist', '15:00')];
+    expect(planNudges({ now: NOON, nodes, occurrences: [], settings: SETTINGS, opts: UTC, travel: () => 20 })[0]!.title).toBe('Leave by 2:40 pm');
+    expect(plan({ nodes, travel: () => 20 })[0]!.title).toBe('Leave by 14:40');
   });
 });

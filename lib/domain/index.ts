@@ -8,3 +8,4 @@ export * from './shelf';
 export * from './ranking';
 export * from './parse-capture';
 export * from './nudges';
+export * from './clock';
