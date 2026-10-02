@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Commitment, Idea, Link, Thing } from '../domain';
-import { applyEdit, deleteNode, getOrCreatePlace, wouldCreateCycle } from './edit';
+import { applyEdit, dependencyOptions, deleteNode, getOrCreatePlace, wouldCreateCycle } from './edit';
 
 const NOW = '2026-10-03T15:00:00.000Z';
 
@@ -259,6 +259,29 @@ describe('applyEdit', () => {
     expect(() => {
       applyEdit('missing', { title: 'New' }, [], [], () => {}, () => {});
     }).toThrow('not found');
+  });
+});
+
+describe('dependencyOptions', () => {
+  const c = (id: string, title = id): any => ({ id, kind: 'commitment', title, private: false, slog: false, quiet: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' });
+  const done = (nodeId: string, id = `o-${nodeId}`): any => ({ id, nodeId, type: 'done', at: '2026-01-02T00:00:00.000Z', source: 'app' });
+
+  it('lists open ones first and finished ones last, each in its own order', () => {
+    const nodes = [c('me'), c('a'), c('b'), c('c'), c('d')];
+    const opts = dependencyOptions('me', nodes, [], [done('a'), done('c')]);
+    expect(opts.map((o) => [o.id, o.done])).toEqual([['b', false], ['d', false], ['a', true], ['c', true]]);
+  });
+
+  it('leaves out itself and anything that would make a loop, but not finished items', () => {
+    const nodes = [c('me'), c('a'), c('b')];
+    const link: any = { id: 'l', type: 'requires', fromId: 'a', toId: 'me', origin: 'stated', confidence: 1, evidence: [], createdAt: '', updatedAt: '' };
+    expect(dependencyOptions('me', nodes, [link], [done('b')]).map((o) => o.id)).toEqual(['b']);
+  });
+
+  it('a finished item whose done was undone counts as open', () => {
+    const d = done('a');
+    const undone: any = { id: 'u', nodeId: 'a', type: 'undone', at: '2026-01-03T00:00:00.000Z', source: 'app', undoes: d.id };
+    expect(dependencyOptions('me', [c('me'), c('a')], [], [d, undone])).toEqual([{ id: 'a', title: 'a', done: false }]);
   });
 });
 

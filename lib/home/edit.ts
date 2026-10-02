@@ -2,7 +2,8 @@
  * Pure functions for editing and deleting Commitments and Ideas.
  * No Vue, no Pinia, no side effects.
  */
-import type { Commitment, Habit, Idea, Link, Node, Period, Thing } from '../domain';
+import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period, Thing } from '../domain';
+import { nodeState } from './derive';
 
 // ── Cycle detection ──────────────────────────────────────────────
 
@@ -27,6 +28,22 @@ export function wouldCreateCycle(links: readonly Link[], fromId: string, toId: s
     }
   }
   return false;
+}
+
+// ── Dependency options ───────────────────────────────────────────
+
+export interface DependencyOption { id: string; title: string; done: boolean }
+
+/**
+ * The Commitments this one could depend on: not itself and not one that would
+ * make a loop. Open ones come first in their own order; finished ones come last
+ * (they can still be picked, e.g. to keep a record of what came before).
+ */
+export function dependencyOptions(nodeId: string, nodes: readonly Node[], links: readonly Link[], occs: readonly Occurrence[]): DependencyOption[] {
+  const all = nodes
+    .filter((n): n is Commitment => n.kind === 'commitment' && n.id !== nodeId && !wouldCreateCycle(links, nodeId, n.id))
+    .map((n) => ({ id: n.id, title: n.title, done: nodeState(n.id, occs).done }));
+  return [...all.filter((o) => !o.done), ...all.filter((o) => o.done)];
 }
 
 // ── Place reuse ──────────────────────────────────────────────────

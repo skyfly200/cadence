@@ -132,8 +132,8 @@
             class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
           >
             <option value="">None</option>
-            <option v-for="other in availableDependencies" :key="other.id" :value="other.id">
-              {{ other.title }}
+            <option v-for="other in availableDependencies" :key="other.id" :value="other.id" :class="other.done ? 'text-slate-400' : ''">
+              {{ other.done ? `✓ ${other.title} (done)` : other.title }}
             </option>
           </select>
           <p v-if="dependencyError" class="text-xs text-red-600 dark:text-red-400">{{ dependencyError }}</p>
@@ -198,7 +198,7 @@ import { computed, ref, watch, reactive } from 'vue';
 import { X } from 'lucide-vue-next';
 import { useGraphStore } from '~/stores/graph';
 import { PERIODS, type Commitment, type Idea, type Node, type Period } from '~/lib/domain';
-import { wouldCreateCycle } from '~/lib/home/edit';
+import { dependencyOptions, wouldCreateCycle } from '~/lib/home/edit';
 import { cleanLink } from '~/lib/home/apps';
 
 const props = defineProps<{ open: boolean; nodeId: string | null }>();
@@ -225,15 +225,7 @@ const draft = reactive({
 const linkError = ref('');
 
 // Available commitments for dependency (excluding self, ideas, and those that would create cycles)
-const availableDependencies = computed(() => {
-  if (!node.value || node.value.kind !== 'commitment') return [];
-  return graph.nodes.filter(
-    (n) =>
-      n.kind === 'commitment' &&
-      n.id !== node.value!.id &&
-      !wouldCreateCycle(graph.links, node.value!.id, n.id),
-  );
-});
+const availableDependencies = computed(() => (node.value && node.value.kind === 'commitment' ? dependencyOptions(node.value.id, graph.nodes, graph.links, graph.occurrences) : []));
 
 watch(
   () => [props.open, node.value],
