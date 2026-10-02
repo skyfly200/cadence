@@ -8,6 +8,7 @@ export * from './shelf';
 export * from './ranking';
 export * from './goals';
 export * from './planning';
+export * from './garden';
 export * from './parse-capture';
 export * from './nudges';
 export * from './clock';

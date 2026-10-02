@@ -105,6 +105,12 @@
         <NuxtLink to="/classic" class="grid min-h-[44px] place-items-center rounded-xl border border-slate-200 text-sm dark:border-white/10">Classic view (the old app)</NuxtLink>
       </div>
 
+      <p class="mt-5 font-serif text-xl">Garden</p>
+      <label class="mt-1.5 flex min-h-[44px] items-start gap-3">
+        <input v-model="gardenMotion" type="checkbox" class="mt-1 size-5 shrink-0" @change="setGardenMotion(gardenMotion)">
+        <span class="text-sm text-slate-600 dark:text-slate-300"><span class="font-medium text-slate-800 dark:text-slate-100">Gentle shimmer</span><br>A slow glow on the garden's flowers. Off by default, and never if your device asks for less motion.</span>
+      </label>
+
       <p class="mt-5 font-serif text-xl">Help lines</p>
       <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">If something you write sounds heavy, Cadence shows local help lines. Which country?</p>
       <select v-model="helpCountry" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Country for help lines" @change="saveHelpCountry">
@@ -124,6 +130,7 @@ import type { TimeFormat } from '~/lib/domain';
 import { MUSIC_PROVIDERS, parsePlaylist } from '~/lib/home/music';
 import { COUNTRY_CHOICES } from '~/lib/domain/crisis';
 import { getCountryOverride, setCountryOverride } from '~/lib/home/crisis-state';
+import { getGardenMotion, setGardenMotion } from '~/lib/home/garden-state';
 import { getMusic, getSoundOn, getVolume, setMusic, setSoundOn, setVolume, speechVolume, toneGain, type Density, type SoundKind } from '~/lib/home/prefs';
 import type { NudgeKind } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
@@ -199,6 +206,7 @@ function onToggleKind(kind: NudgeKind, enabled: boolean): void {
 const music = reactive(getMusic());
 const playlistNote = ref('');
 function saveMusic(): void { setMusic({ ...music }); }
+const gardenMotion = ref(getGardenMotion());
 const helpCountry = ref(getCountryOverride() ?? '');
 function saveHelpCountry(): void { setCountryOverride(helpCountry.value || null); }
 /** A pasted link picks its own app; one that is not a known player is not kept. */

@@ -1,6 +1,7 @@
 <template>
   <section class="px-4 pt-4">
     <h1 class="text-xl font-semibold">Habits</h1>
+    <GardenStrip @open="emit('open-garden')" />
 
     <p v-if="nearEnd.length" class="mt-3 rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-stone-700 dark:bg-white/10 dark:text-slate-200">
       Near the end of their period, still open: {{ nearEnd.join(', ') }}. Only if you want to.
@@ -54,7 +55,7 @@ import { addMentioned, getMentioned } from '~/lib/home/prefs';
 import type { Period } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
 
-const emit = defineEmits<{ (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void }>();
+const emit = defineEmits<{ (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void; (e: 'open-garden'): void }>();
 const graph = useGraphStore();
 
 const HEADING: Record<Period, string> = { day: 'Every day', week: 'Each week', month: 'Each month', quarter: 'Each quarter', four_months: 'Every 4 months', six_months: 'Every 6 months', year: 'Each year' };
