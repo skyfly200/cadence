@@ -60,13 +60,14 @@ An unnamed voice with one consistent style (the user may name it). Default regis
 
 ## 6. Nudges and audio [09]
 
-Default nudge kinds: **Leave-by / start-by** (time-critical Commitments with derived travel time), **At-risk Background**, **Transition**, and a **daily habit summary** (a list of open day-period habit names, no count). A **morning briefing** exists but is opt-in and off by default.
+Default nudge kinds: **Leave-by / start-by** (time-critical Commitments with derived travel time), **At-risk Background**, **Transition**, and a **daily habit summary** (a list of open day-period habit names, no count). A **morning briefing** (opt-in, off by default) is postponed and not built.
 - Caps: at most five a day for the first three; the habit summary is outside the cap, once a day; quiet hours follow the sleep window; one nudge per Node per day; "Not now" reschedules once and a second dismissal silences that Node. Nothing is logged as a failure.
 - Every nudge has **Not now** and **Stop these** (per type or per Node, reversible in settings).
 - Default sound: a short soft tone with text at low volume plus **spoken voice from the browser's built-in voices while the app is open**; a first-run disclosure; plays only after the first interaction; none in quiet hours. When the app is closed the OS notification tone plays. Cloud voices, music-as-timer and in-car nudges are later opt-in modules.
 - **Wording:** templates filled from the graph, rendered on the device; the AI is never on the delivery path.
 - **Transition ritual:** the same short cue every time (soft tone, light vibration on Android, the Now card changes to "Next: X" with one line of why); one heads-up five minutes before a block over 30 minutes ends, then one transition.
-- **"Stay with me":** an opt-in body-double mode (quiet unless talked to, optional soft ambient sound, one half-way check-in); an experiment, not a claim.
+- **"Focus together"** (built as "Stay with me" in the research): an opt-in body-double mode on the Now card (15, 25 or 45 minutes; a plain spoken start, one "Halfway." check-in and a "Time is up." end; quiet otherwise); an experiment, not a claim. Ambient sound is dropped. It can open **music** on start: YouTube Music by default, Spotify and SoundCloud supported, an optional playlist link, set in Settings; a web app cannot play audio itself, so it opens the player's app or site.
+- **Sound controls:** one mute silences everything including the mic; the tone and the speech each have their own on/off and volume (per device), with a Test button.
 - **Late or missing pushes:** never escalate or resend; drop if no longer useful; one gentle notice if notifications are blocked. No email or SMS fallback.
 
 ## 7. Reinforcement [17]
@@ -114,7 +115,7 @@ Computed on the device from the log and the settings history; a **Signals** scre
 Replace the Nuxt app slice by slice; tag `pre-pivot` (created locally at `ba0ed13`); delete an old screen only when its replacement ships.
 - **Keep and extend:** Nuxt/PWA/Tailwind setup, Supabase auth and passkeys, the sync engine, local storage (with export and import), Google Calendar (with the token fix), time utilities, notifications, geo, the resilient timer engine, confetti (scaled down and motion-gated), the UI primitives, the settings panel (extended).
 - **Keep as optional or on demand:** Trips and Map (module, off by default assumed), the simplified timeline (Rich density), the Eisenhower matrix (derived quadrants).
-- **Transform:** Capacity into a one-tap energy check plus a gentle workload guard; timers behind Start and "Stay with me"; the task form into a Commitment detail view; reminders into the nudge system.
+- **Transform:** Capacity into a one-tap energy check plus a gentle workload guard; timers behind Start and "Focus together"; the task form into a Commitment detail view; reminders into the nudge system.
 - **Replace when the replacement ships:** the tab shell, Dashboard, Triage, Stats, Gamification, Habits, Brain Dump, the task, project and habit logic; the three z-ai routes and the importer stay until their replacements exist.
 - **Cut:** points, XP and streak data; `netlify.toml` once Vercel is live.
 
@@ -123,7 +124,8 @@ Replace the Nuxt app slice by slice; tag `pre-pivot` (created locally at `ba0ed1
 - **Phase 0 Groundwork: DONE (2026-09-30).** The two code branches are reviewed and merged to `main`; both SQL migrations are applied to the cadence Supabase project; the Vercel project builds and serves `cadence.skylerfly.com` with its environment variables set; `netlify.toml` is removed; the `pre-pivot` tag is pushed; Google Calendar connects end to end. Found and fixed on the way: the Google token endpoint the app had always used returned 404 (now `oauth2.googleapis.com/token`, pinned by a test).
 - **Phase 1 Capture-first core: DONE (2026-10-01), start living in it here:** new tables and sync; the capture endpoint; Home with simple Now-card ordering; bottom bar and capture sheet (Add); the Plan lens (a week Stack and the Heap, with a sort flow); Habits with periods; dark toggle, density, basic settings; the weekly tally. A "Classic view" switch keeps the old app until after Phase 3.
 - **Desktop layout (soon, before Phase 3):** the Home is a single phone-width column today; add a wide-screen mode (side-by-side lenses, a persistent capture box, Plan as a full week board) that uses the whole screen.
-- **Phase 2 Nudges and voice.**
+- **Phase 2 Nudges and voice: DONE (2026-10-01):** the nudge planner (four kinds, caps, quiet hours, "Not now" and "Stop these", templates; pure and on the device); in-app delivery (notification, soft tone, optional speech, mute, volume); Web Push (`nudge_queue` and `push_subscriptions`, a cron job every minute calling `/api/nudges/dispatch`, a service-worker handler with "Not now" and "Stop these" buttons, a Settings switch to subscribe); tap-to-talk from the bottom bar (typed add lives on the Plan page); "Focus together" with music; "Stop for now" on a started item. Verified on a real phone by the author. Not built: the morning briefing (postponed) and ambient sound (dropped).
+- **Also built with Phase 2:** edit and delete entries (title, time, location, duration, dependency; habits: frequency, weekdays, link); links and **open-app buttons** (a known app named in a title, or an https link you attach, opens the installed app on Android or the website; GitHub, Netlify, Google Docs, Notion, Trello and more); a 12 or 24 hour clock setting; a header menu with room for more pages.
 - **Phase 3 Understanding:** AI layer, extraction (after the spike), Goals, Discuss, Planning session, "why this one", AI-off, Private, transparency, export and delete.
 - **Phase 4 Reinforcement and signals:** Garden and Pressed book, reward lines, slog tag, recaps, Signals screen, weekly check, Experiment, checkpoints.
 - **Phase 5 Reach:** connectors, Go deeper, Trips and Map module, onboarding for others, later audio modules.
