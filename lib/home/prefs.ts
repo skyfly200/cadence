@@ -10,7 +10,7 @@ export type Density = 0 | 1 | 2; // Simple, Balanced (default), Rich
 
 const DENSITY_KEY = 'cadence:homeDensity';
 const OPENED_KEY = 'cadence:homeLastOpened';
-const AWAY_AFTER_MS = 24 * 60 * 60 * 1000;
+const AWAY_AFTER_MS = 2 * 24 * 60 * 60 * 1000;
 
 function read(key: string): string | null {
   try { return typeof window === 'undefined' ? null : window.localStorage.getItem(key); } catch { return null; }
@@ -25,10 +25,16 @@ export function getDensity(): Density {
 }
 export function setDensity(d: Density): void { write(DENSITY_KEY, String(d)); }
 
-/** True if the app has not been opened for a day or more (never on the very first open). */
+/** True if the app has not been opened for two days or more (never on the very first open). */
 export function wasAway(now: Date = new Date()): boolean {
   const last = Number(read(OPENED_KEY));
   return Number.isFinite(last) && last > 0 && now.getTime() - last >= AWAY_AFTER_MS;
+}
+/** The header greeting: "Welcome back." after days away, otherwise by the hour of the day. */
+export function greeting(away: boolean, now: Date = new Date()): string {
+  if (away) return 'Welcome back.';
+  const h = now.getHours();
+  return h >= 5 && h < 12 ? 'Good morning.' : h >= 12 && h < 17 ? 'Good afternoon.' : 'Good evening.';
 }
 export function markOpened(now: Date = new Date()): void { write(OPENED_KEY, String(now.getTime())); }
 

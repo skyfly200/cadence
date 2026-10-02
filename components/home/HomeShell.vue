@@ -2,9 +2,12 @@
   <div class="relative mx-auto min-h-dvh w-full max-w-md bg-[#EEF5F3] pb-32 text-slate-800 md:max-w-xl lg:flex lg:max-w-none lg:pb-0 dark:bg-[#1D1A2F] dark:text-slate-100">
     <!-- desktop rail: lenses, a capture box that is always there, and the menu -->
     <aside class="sticky top-0 hidden h-dvh w-72 shrink-0 flex-col gap-5 overflow-y-auto border-r border-teal-900/5 px-5 py-6 lg:flex dark:border-white/5" aria-label="Cadence">
-      <div>
-        <p class="font-serif text-2xl font-semibold leading-tight">Cadence</p>
-        <p class="text-[11px] font-semibold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">{{ dateLabel }}</p>
+      <div class="flex items-center gap-3">
+        <img src="/logo.svg" alt="" class="size-10 shrink-0" />
+        <div>
+          <p class="font-serif text-2xl font-semibold leading-tight">Cadence</p>
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">{{ dateLabel }}</p>
+        </div>
       </div>
       <nav class="flex flex-col gap-1" aria-label="Lenses">
         <button v-for="l in [...LEFT, ...RIGHT]" :key="l.k" :aria-current="lens === l.k ? 'page' : undefined" :class="['flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-left text-[15px] font-medium', lens === l.k ? 'bg-teal-100 text-teal-900 dark:bg-[#3A3560] dark:text-[#FFB59F]' : 'text-slate-600 hover:bg-white/60 dark:text-slate-300 dark:hover:bg-white/5']" @click="lens = l.k">
@@ -34,12 +37,13 @@
     <header class="sticky top-0 z-20 border-b lg:static lg:mx-auto lg:w-full lg:max-w-6xl lg:border-0 lg:bg-transparent lg:px-6 lg:pb-0 lg:pt-4 lg:backdrop-blur-none dark:lg:border-0 dark:lg:bg-transparent border-teal-900/5 bg-[#EEF5F3]/95 px-4 pb-2 pt-3 backdrop-blur dark:border-white/5 dark:bg-[#1D1A2F]/95">
       <div class="flex items-center gap-2 lg:hidden">
         <button class="grid size-11 shrink-0 place-items-center rounded-lg border border-teal-900/10 bg-white text-lg dark:border-white/10 dark:bg-[#2A2645]" aria-label="Menu" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">☰</button>
+        <img src="/logo.svg" alt="" class="size-9 shrink-0" />
         <div class="min-w-0">
           <p class="font-serif text-xl font-semibold leading-tight">Cadence</p>
           <p class="text-[11px] font-semibold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">{{ dateLabel }}</p>
         </div>
       </div>
-      <p v-if="away" class="mt-1 truncate text-[15px] font-medium">Welcome back. Nothing is on fire.</p>
+      <p v-if="mounted" class="mt-1 truncate text-[15px] font-medium">{{ greeting(away) }}</p>
       <div v-if="density >= 1" class="mt-2 flex flex-wrap items-center gap-2">
         <span v-if="graph.kept.length" class="text-[12px] font-semibold text-teal-800 dark:text-[#FFB59F]">{{ graph.kept.length }} accomplished today</span>
         <button
@@ -109,7 +113,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import type { NudgeKind } from '~/lib/domain';
 import { useAppStore } from '~/stores/app';
 import { useGraphStore } from '~/stores/graph';
-import { getDensity, getTimeFormat, markOpened, setDensity, setTimeFormat, wasAway, type Density } from '~/lib/home/prefs';
+import { getDensity, getTimeFormat, greeting, markOpened, setDensity, setTimeFormat, wasAway, type Density } from '~/lib/home/prefs';
 import type { TimeFormat } from '~/lib/domain';
 import { useNudges } from '~/composables/useNudges';
 import { useNudgeUrlAction } from '~/composables/useNudgeUrlAction';

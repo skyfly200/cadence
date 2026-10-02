@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_VOLUME, getSoundOn, getVolume, setVolume, speechLevel, speechVolume, toneGain, toneLevel } from './prefs';
+import { DEFAULT_VOLUME, getSoundOn, greeting, getVolume, setVolume, speechLevel, speechVolume, toneGain, toneLevel } from './prefs';
 
 describe('volume', () => {
   it('defaults when storage is unavailable', () => {
@@ -23,5 +23,19 @@ describe('volume', () => {
     expect(speechVolume(0)).toBe(0);
     expect(speechVolume(70)).toBeCloseTo(0.7);
     expect(speechVolume(100)).toBe(1);
+  });
+});
+
+describe('greeting', () => {
+  const at = (h: number) => new Date(2026, 9, 3, h, 0);
+  it('welcomes you back after days away, at any hour', () => {
+    expect(greeting(true, at(9))).toBe('Welcome back.');
+    expect(greeting(true, at(21))).toBe('Welcome back.');
+  });
+  it('otherwise greets by the time of day', () => {
+    expect(greeting(false, at(8))).toBe('Good morning.');
+    expect(greeting(false, at(13))).toBe('Good afternoon.');
+    expect(greeting(false, at(19))).toBe('Good evening.');
+    expect(greeting(false, at(2))).toBe('Good evening.');
   });
 });
