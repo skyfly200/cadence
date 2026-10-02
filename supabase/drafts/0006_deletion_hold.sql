@@ -1,5 +1,5 @@
 -- ============================================================================
--- DRAFT, not applied. Review, then run in the Supabase SQL editor.
+-- APPLIED 2026-10-01 to the cadence project as migration "cadence_deletion_hold" (via the Supabase MCP).
 -- Needs 0003 (pg_cron, pg_net and the nudge_cron_secret Vault secret), 0004 and 0005 first.
 --
 -- 1. A server-side hold on "Delete everything". While a user's deletion request is
@@ -73,6 +73,7 @@ $$;
 -- ─────────────────────────────────────────────────────────────────────────
 -- The purge job: every minute, same shared secret as the nudge job.
 -- ─────────────────────────────────────────────────────────────────────────
+select cron.unschedule('account_purge') where exists (select 1 from cron.job where jobname = 'account_purge');
 select cron.schedule(
   'account_purge',
   '* * * * *',
