@@ -31,8 +31,8 @@
     </aside>
     <div class="min-w-0 flex-1">
     <!-- header -->
-    <header class="sticky top-0 z-20 border-b lg:hidden border-teal-900/5 bg-[#EEF5F3]/95 px-4 pb-2 pt-3 backdrop-blur dark:border-white/5 dark:bg-[#1D1A2F]/95">
-      <div class="flex items-center gap-2">
+    <header class="sticky top-0 z-20 border-b lg:static lg:mx-auto lg:w-full lg:max-w-6xl lg:border-0 lg:bg-transparent lg:px-6 lg:pb-0 lg:pt-4 lg:backdrop-blur-none dark:lg:border-0 dark:lg:bg-transparent border-teal-900/5 bg-[#EEF5F3]/95 px-4 pb-2 pt-3 backdrop-blur dark:border-white/5 dark:bg-[#1D1A2F]/95">
+      <div class="flex items-center gap-2 lg:hidden">
         <button class="grid size-11 shrink-0 place-items-center rounded-lg border border-teal-900/10 bg-white text-lg dark:border-white/10 dark:bg-[#2A2645]" aria-label="Menu" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">☰</button>
         <div class="min-w-0">
           <p class="font-serif text-xl font-semibold leading-tight">Cadence</p>
