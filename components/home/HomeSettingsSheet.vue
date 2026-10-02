@@ -77,6 +77,16 @@
         <button class="text-xs text-blue-600 dark:text-blue-400 disabled:opacity-40" :disabled="!sound[k.kind].on" @click="preview(k.kind)">Test</button>
       </div>
 
+      <p class="mt-4 text-sm font-medium">Music for focus</p>
+      <select v-model="music.provider" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Music app" @change="saveMusic">
+        <option v-for="p in MUSIC_PROVIDERS" :key="p.id" :value="p.id">{{ p.name }}</option>
+      </select>
+      <input
+        v-model="music.playlist" type="url" inputmode="url" placeholder="Playlist link (optional)" aria-label="Playlist link"
+        class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]" @change="savePlaylist"
+      />
+      <p v-if="playlistNote" class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ playlistNote }}</p>
+
       <div v-if="stoppedOrSilenced.length > 0" class="mt-3">
         <p class="text-sm font-medium">Muted items</p>
         <div class="mt-1.5 space-y-1">
@@ -102,7 +112,8 @@
 <script setup lang="ts">
 import { computed, reactive, ref, onMounted } from 'vue';
 import type { TimeFormat } from '~/lib/domain';
-import { getSoundOn, getVolume, setSoundOn, setVolume, speechVolume, toneGain, type Density, type SoundKind } from '~/lib/home/prefs';
+import { MUSIC_PROVIDERS, parsePlaylist } from '~/lib/home/music';
+import { getMusic, getSoundOn, getVolume, setMusic, setSoundOn, setVolume, speechVolume, toneGain, type Density, type SoundKind } from '~/lib/home/prefs';
 import type { NudgeKind } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
 import { useAppStore } from '~/stores/app';
@@ -172,6 +183,21 @@ const stoppedOrSilenced = computed(() => {
 
 function onToggleKind(kind: NudgeKind, enabled: boolean): void {
   emit('toggle-kind', kind, enabled);
+}
+
+const music = reactive(getMusic());
+const playlistNote = ref('');
+function saveMusic(): void { setMusic({ ...music }); }
+/** A pasted link picks its own app; one that is not a known player is not kept. */
+function savePlaylist(): void {
+  const text = music.playlist.trim();
+  if (!text) { music.playlist = ''; playlistNote.value = 'Opens the app itself.'; saveMusic(); return; }
+  const parsed = parsePlaylist(text);
+  if (!parsed) { playlistNote.value = 'That is not a YouTube Music, Spotify or SoundCloud link.'; music.playlist = ''; saveMusic(); return; }
+  music.playlist = parsed.url;
+  music.provider = parsed.provider.id;
+  playlistNote.value = `Opens this playlist in ${parsed.provider.name}.`;
+  saveMusic();
 }
 
 const SOUNDS: { kind: SoundKind; label: string }[] = [{ kind: 'tone', label: 'Tone' }, { kind: 'speech', label: 'Speech' }];

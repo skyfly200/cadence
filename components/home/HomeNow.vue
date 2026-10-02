@@ -57,7 +57,11 @@
             </div>
 
             <div v-if="!started && showStayOptions" class="mt-4 rounded-2xl bg-stone-50 p-4 dark:bg-white/10">
-              <p class="text-sm font-medium text-slate-700 dark:text-slate-200">How long?</p>
+              <label class="flex items-center gap-3">
+                <input v-model="music.onFocus" type="checkbox" class="h-5 w-5 rounded" @change="setMusic(music)" />
+                <span class="text-sm">Open {{ musicTarget(music).name }}</span>
+              </label>
+              <p class="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">How long?</p>
               <div class="mt-2 grid grid-cols-3 gap-2">
                 <button
                   v-for="dur in [15, 25, 45]"
@@ -73,6 +77,9 @@
             <div v-if="stayWithMeActive && stayWithMeState" class="mt-4 rounded-2xl bg-stone-50 p-4 dark:bg-white/10">
               <p class="text-center text-sm text-slate-700 dark:text-slate-200">{{ stayWithMeStatus }}</p>
               <div class="mt-3 flex justify-center">
+                <button class="mr-2 min-h-[44px] rounded-xl bg-white px-4 text-sm font-medium dark:bg-[#1D1A2F]" @click="launchMusic">
+                  {{ musicTarget(music).name }} ↗
+                </button>
                 <button class="min-h-[44px] rounded-xl bg-white px-4 text-sm font-medium dark:bg-[#1D1A2F]" @click="endStayWithMe">
                   End
                 </button>
@@ -111,9 +118,10 @@
 <script setup lang="ts">
 import { computed, ref, watch, onBeforeUnmount, onMounted } from 'vue';
 import { isAndroidUa, matchApp, openLink } from '~/lib/home/apps';
+import { musicTarget } from '~/lib/home/music';
 import { useGraphStore } from '~/stores/graph';
 import type { Commitment, Habit } from '~/lib/domain';
-import { speechLevel, toneLevel, type Density } from '~/lib/home/prefs';
+import { getMusic, setMusic, speechLevel, toneLevel, type Density } from '~/lib/home/prefs';
 import {
   start as startStayWithMeSession,
   checkInDue,
@@ -142,7 +150,16 @@ let audioContext: AudioContext | null = null;
 
 const current = computed(() => graph.rank.now);
 const android = ref(false);
-onMounted(() => { android.value = isAndroidUa(navigator.userAgent); });
+onMounted(() => { android.value = isAndroidUa(navigator.userAgent); music.value = getMusic(); });
+const music = ref(getMusic());
+
+/** Open the music app or playlist. Called from a tap, so the browser allows it. */
+function launchMusic() {
+  const a = document.createElement('a');
+  a.href = openLink(musicTarget(music.value), android.value);
+  if (!android.value) { a.target = '_blank'; a.rel = 'noopener'; }
+  a.click();
+}
 const openApp = computed(() => (current.value ? matchApp(current.value.node.title) : null));
 const started = computed(() => !!graph.currentState?.started);
 // A new card gets a fresh prompt.
@@ -177,6 +194,7 @@ function startStayWithMe(minutes: number) {
   stayWithMeState.value = startStayWithMeSession(now, minutes * 60 * 1000);
   stayWithMeActive.value = true;
   showStayOptions.value = false;
+  if (music.value.onFocus) launchMusic();
 
   // Try to get mute state from nudge-state (using localStorage directly as fallback)
   const muted = typeof window !== 'undefined' ? (window.localStorage?.getItem('cadence:nudgeMuted') === 'true') : false;

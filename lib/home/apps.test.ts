@@ -37,4 +37,9 @@ describe('openLink', () => {
     const l = openLink(duo, true);
     expect(l).toBe(`intent://www.duolingo.com/learn#Intent;scheme=https;package=com.duolingo;S.browser_fallback_url=${encodeURIComponent('https://www.duolingo.com/learn')};end`);
   });
+
+  it('keeps the query string, so a playlist link opens that playlist', () => {
+    const yt = { id: 'x', name: 'X', words: [], url: 'https://music.youtube.com/playlist?list=PL123', androidPackage: 'com.google.android.apps.youtube.music' };
+    expect(openLink(yt, true)).toContain('intent://music.youtube.com/playlist?list=PL123#Intent;');
+  });
 });

@@ -48,7 +48,7 @@ export function openLink(app: KnownApp, android: boolean): string {
   if (!android || !app.androidPackage) return app.url;
   const u = new URL(app.url);
   const fallback = encodeURIComponent(app.url);
-  return `intent://${u.host}${u.pathname}#Intent;scheme=${u.protocol.slice(0, -1)};package=${app.androidPackage};S.browser_fallback_url=${fallback};end`;
+  return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=${u.protocol.slice(0, -1)};package=${app.androidPackage};S.browser_fallback_url=${fallback};end`;
 }
 
 export const isAndroidUa = (ua: string): boolean => /Android/i.test(ua);

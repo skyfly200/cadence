@@ -4,6 +4,7 @@
  * break). Plain localStorage, wrapped so a blocked store never breaks Home.
  */
 import type { TimeFormat } from '~/lib/domain/clock';
+import { DEFAULT_MUSIC, providerById, type MusicConfig } from './music';
 
 export type Density = 0 | 1 | 2; // Simple, Balanced (default), Rich
 
@@ -70,3 +71,20 @@ export function setTimeFormat(f: TimeFormat): void { write(TIME_FORMAT_KEY, f); 
 /** What to play right now: the tone's peak gain and the speech volume, each 0 when switched off. */
 export function toneLevel(): number { return getSoundOn('tone') ? toneGain(getVolume('tone')) : 0; }
 export function speechLevel(): number { return getSoundOn('speech') ? speechVolume(getVolume('speech')) : 0; }
+
+const MUSIC_KEY = 'cadence:music';
+/** Music for focus sessions: provider, playlist link and whether to open it on start (per device). */
+export function getMusic(): MusicConfig {
+  try {
+    const v = JSON.parse(read(MUSIC_KEY) ?? 'null');
+    if (v && typeof v === 'object') {
+      return {
+        provider: providerById(String(v.provider)).id,
+        playlist: typeof v.playlist === 'string' ? v.playlist : '',
+        onFocus: v.onFocus === true,
+      };
+    }
+  } catch { /* fall through */ }
+  return { ...DEFAULT_MUSIC };
+}
+export function setMusic(m: MusicConfig): void { write(MUSIC_KEY, JSON.stringify(m)); }
