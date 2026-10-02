@@ -30,6 +30,10 @@
               </button>
             </div>
             <p v-if="density >= 1 && graph.rank.reason" class="mt-2 text-center text-[15px] text-stone-600 dark:text-slate-300">{{ graph.rank.reason }}</p>
+            <a
+              v-if="openApp" :href="openLink(openApp, android)" :target="android ? undefined : '_blank'" rel="noopener"
+              class="mx-auto mt-3 flex min-h-[44px] w-fit items-center gap-1 rounded-2xl bg-stone-100 px-4 text-sm font-medium dark:bg-white/10"
+            >Open {{ openApp.name }} ↗</a>
             <p v-if="density >= 2 && graph.rank.chain.length" class="mt-1 text-center text-xs text-stone-500 dark:text-slate-400">{{ graph.rank.chain.join(' · ') }}</p>
 
             <div v-if="graph.rank.offerShrinkParkKeep && !keepDismissed" class="mt-4 rounded-2xl bg-amber-50 p-3 text-center text-sm dark:bg-white/10">
@@ -105,7 +109,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onBeforeUnmount } from 'vue';
+import { computed, ref, watch, onBeforeUnmount, onMounted } from 'vue';
+import { isAndroidUa, matchApp, openLink } from '~/lib/home/apps';
 import { useGraphStore } from '~/stores/graph';
 import type { Commitment, Habit } from '~/lib/domain';
 import { speechLevel, toneLevel, type Density } from '~/lib/home/prefs';
@@ -136,6 +141,9 @@ let stayWithMeTimer: ReturnType<typeof setInterval> | null = null;
 let audioContext: AudioContext | null = null;
 
 const current = computed(() => graph.rank.now);
+const android = ref(false);
+onMounted(() => { android.value = isAndroidUa(navigator.userAgent); });
+const openApp = computed(() => (current.value ? matchApp(current.value.node.title) : null));
 const started = computed(() => !!graph.currentState?.started);
 // A new card gets a fresh prompt.
 watch(() => current.value?.node.id, () => { keepDismissed.value = false; });

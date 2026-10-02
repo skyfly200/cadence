@@ -9,8 +9,8 @@
     <div v-for="g in groups" :key="g.period" class="mt-4">
       <h2 class="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{{ HEADING[g.period] }}</h2>
       <div class="mt-1.5 grid grid-cols-2 gap-3">
+        <div v-for="row in g.rows" :key="row.habit.id" class="flex flex-col gap-1">
         <button
-          v-for="row in g.rows" :key="row.habit.id"
           :class="['min-h-[44px] rounded-xl border p-3 text-left shadow-sm', row.progress.met ? 'border-teal-300 bg-teal-50 dark:border-emerald-300/50 dark:bg-emerald-400/90 dark:text-emerald-950' : 'border-slate-200 bg-white dark:border-white/10 dark:bg-[#2A2645]']"
           @click="tap(row.habit.id)"
         >
@@ -20,6 +20,11 @@
           </span>
           <span class="mt-1 block text-[11px] opacity-70">{{ row.progress.count }} of {{ row.progress.target }} {{ WORD[g.period] }}</span>
         </button>
+          <a
+            v-if="appFor(row.habit.title)" :href="openLink(appFor(row.habit.title)!, android)" :target="android ? undefined : '_blank'" rel="noopener"
+            class="flex min-h-[44px] items-center justify-center rounded-xl bg-stone-100 text-xs font-medium dark:bg-white/10"
+          >Open {{ appFor(row.habit.title)!.name }} ↗</a>
+        </div>
       </div>
     </div>
 
@@ -42,6 +47,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { isAndroidUa, matchApp, openLink } from '~/lib/home/apps';
 import { PERIODS, finalStretchMention } from '~/lib/domain';
 import { addMentioned, getMentioned } from '~/lib/home/prefs';
 import type { Period } from '~/lib/domain';
@@ -60,7 +66,11 @@ const groups = computed(() =>
 
 // Each longer-period habit gets one gentle mention near the end of its period, shown once.
 const nearEnd = ref<string[]>([]);
+const android = ref(false);
+const appFor = (title: string) => matchApp(title);
+
 onMounted(() => {
+  android.value = isAndroidUa(navigator.userAgent);
   const seen = getMentioned();
   const hits = graph.habits.flatMap((h) => {
     const key = finalStretchMention(h, graph.occurrences, graph.asOf, seen.filter((m) => m.startsWith(`${h.id}|`)).map((m) => m.split('|')[1]));
