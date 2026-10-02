@@ -55,7 +55,7 @@ An unnamed voice with one consistent style (the user may name it). Default regis
 - Speaks first only when something is about to slip, or when a Planning session is wanted; everything regular is opt-in.
 - Names patterns neutrally and offers choices ("This has moved four times. Shrink it, park it, or keep it?"); never uses *behind, overdue, failed, lazy* or *should*.
 - Learns goals one small question at a time; no long interview. Career coaching means career direction (goals, skills, next steps), shown in the Goals lens.
-- **Limits:** not therapy; no diagnosis; no medication or medical advice; no manipulation; says when it does not know; honest that it is an app (no claimed feelings); on crisis language drops the coaching voice and points to real help (detection detail is open, section 16).
+- **Limits:** not therapy; no diagnosis; no medication or medical advice; no manipulation; says when it does not know; honest that it is an app (no claimed feelings); on crisis language drops the coaching voice and points to real help (on-device rules only, a calm card with local help lines and no AI check; ticket 24).
 - **Tone settings:** a dial (gentle, plain, direct), a literal-only switch, an opt-in playful switch.
 
 ## 6. Nudges and audio [09]
@@ -140,7 +140,7 @@ Deep ingestion of Gmail, texts, Drive and Maps timeline; Notion, Trello and Keep
 
 ## 16. Open items
 
-- **Design tickets open:** Now card selection logic [23] (needed by Phase 1), crisis-language handling [24] and the Planning session and Discuss flow [25] (both before Phase 3); the extraction spike [21] (needs 20 to 30 of the author's real captures; decides which model does extraction).
+- **Design tickets open:** the extraction spike [21] (needs 20 to 30 of the author's real captures; decides which model does extraction).
 - **Design questions left for their phase:** the Garden's art and the Pressed book layout; the "Go deeper" entry and the look of the optional views; how the Eisenhower view derives quadrants; whether Trips and Map is on by default; body-double presence beyond audio; the Google Calendar approach (including mirroring leave-by nudges); onboarding for other people; conditions on Things; later audio modules; the assistant-connectors rollout.
 - **Assumptions to confirm on real screens:** the warm Now card accent on the cool base; Balanced as the default density; whether Calendar sync should work signed-out (currently requires sign-in).
 - **Unverified in the research:** voice mode with a custom connector for Claude, Gemini and Grok; Grok in the car; whether free Supabase pg_cron activity prevents pausing; several Web Push and Android details (all flagged in `.scratch/cadence-adhd-pivot/research/`).
