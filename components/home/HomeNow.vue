@@ -23,7 +23,16 @@
 
           <template v-if="current">
             <p class="text-center text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-[#FFB59F]">{{ started ? 'You are on it' : 'Right now' }}</p>
-            <h1 class="mt-1 break-words text-center font-serif text-[1.7rem] leading-tight">{{ current.node.title }}</h1>
+            <div class="mt-1 flex items-center justify-center gap-2">
+              <h1 class="break-words text-center font-serif text-[1.7rem] leading-tight">{{ current.node.title }}</h1>
+              <button
+                v-if="current.node.kind !== 'habit'"
+                class="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 whitespace-nowrap"
+                @click="$emit('edit', current.node.id)"
+              >
+                Edit
+              </button>
+            </div>
             <p v-if="density >= 1 && graph.rank.reason" class="mt-2 text-center text-[15px] text-stone-600 dark:text-slate-300">{{ graph.rank.reason }}</p>
             <p v-if="density >= 2 && graph.rank.chain.length" class="mt-1 text-center text-xs text-stone-500 dark:text-slate-400">{{ graph.rank.chain.join(' · ') }}</p>
 
@@ -116,7 +125,7 @@ import {
 } from '~/lib/home/stay-with-me';
 
 defineProps<{ density: Density }>();
-const emit = defineEmits<{ (e: 'open-plan'): void; (e: 'said', msg: string): void }>();
+const emit = defineEmits<{ (e: 'open-plan'): void; (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void }>();
 
 const graph = useGraphStore();
 const showPast = ref(false);

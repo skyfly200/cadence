@@ -16,7 +16,8 @@
             <span v-if="it.time" class="grid size-11 shrink-0 place-items-center text-slate-300" title="Has its own time">⏱</span>
             <button v-else :class="grip" aria-label="Drag to another day" @pointerdown.prevent="drag($event, it.id, it.title)">⠿</button>
             <span class="min-w-0 flex-1 break-words text-[15px]">{{ it.title }}</span>
-            <span v-if="it.time" class="shrink-0 pr-1 text-xs text-slate-400">{{ timeLabel(it.time) }}</span>
+            <span v-if="it.time" class="shrink-0 text-xs text-slate-400">{{ timeLabel(it.time) }}</span>
+            <button class="min-h-[32px] rounded-lg px-2 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30" @click="$emit('edit', it.id)">Edit</button>
           </li>
         </ul>
       </div>
@@ -47,6 +48,7 @@
           <li v-for="h in graph.heap" :key="h.id" class="flex items-center gap-2 rounded-lg bg-white px-2 py-1 shadow-sm dark:bg-[#2A2645]">
             <button :class="grip" aria-label="Drag onto a day" @pointerdown.prevent="drag($event, h.id, h.title)">⠿</button>
             <span class="min-w-0 flex-1 break-words text-[15px]">{{ h.title }}</span>
+            <button class="min-h-[32px] rounded-lg px-2 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30" @click="$emit('edit', h.id)">Edit</button>
           </li>
         </ul>
         <p v-else class="px-2 py-3 text-[15px] text-slate-500 dark:text-slate-400">The heap is empty. Anything you add with + lands here first.</p>
@@ -61,7 +63,7 @@ import { useGraphStore } from '~/stores/graph';
 import { startDrag } from '~/lib/home/drag';
 import type { StackDay } from '~/lib/home/derive';
 
-const emit = defineEmits<{ (e: 'said', msg: string): void }>();
+const emit = defineEmits<{ (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void }>();
 const graph = useGraphStore();
 
 const chip = 'min-h-[44px] rounded-xl bg-stone-100 px-3 text-sm font-medium dark:bg-white/10';

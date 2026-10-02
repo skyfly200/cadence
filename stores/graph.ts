@@ -9,13 +9,14 @@
  */
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrences, saveGraphNodes, saveGraphOccurrences } from '~/lib/graph-storage';
+import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrences, saveGraphNodes, saveGraphOccurrences, saveGraphLinks } from '~/lib/graph-storage';
 import { habitProgress, habitTap, homeHabitsPiece, parseCapture, rankNow, weeklyKept } from '~/lib/domain';
 import type { ParsedCapture } from '~/lib/domain';
 import { postCapture } from '~/lib/capture-client';
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/lib/domain';
 import { heapItems, keptToday, nodeState, stackDays } from '~/lib/home/derive';
 import type { Density } from '~/lib/home/prefs';
+import { applyEdit, deleteNode, type EditInput } from '~/lib/home/edit';
 import { useAppStore } from './app';
 
 const MAX_CAPTURE = 4000; // same limit as the server route
@@ -238,9 +239,37 @@ export const useGraphStore = defineStore('graph', () => {
 
   function refresh() { asOf.value = new Date(); }
 
+  function persistLinks() {
+    saveGraphLinks(links.value);
+    app.queuePush();
+  }
+
+  function edit(nodeId: string, input: EditInput) {
+    const createdNodes: Node[] = [];
+    const createdLinks: Link[] = [];
+
+    const result = applyEdit(nodeId, input, nodes.value, links.value, (n) => createdNodes.push(n), (l) => createdLinks.push(l));
+
+    nodes.value = result.nodes;
+    links.value = result.links;
+    persistNodes();
+    persistLinks();
+    asOf.value = new Date();
+  }
+
+  function removeNode(nodeId: string) {
+    const result = deleteNode(nodeId, nodes.value, links.value);
+    nodes.value = result.nodes;
+    links.value = result.links;
+    persistNodes();
+    persistLinks();
+    lastAction.value = null;
+    asOf.value = new Date();
+  }
+
   return {
-    nodes, links, occurrences, asOf, loaded, lastAction, density,
+    nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat,
     rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState,
-    load, refresh, capture, promote, plan, start, complete, park, notNow, bringBack, undoLast, createHabit, tapHabit,
+    load, refresh, capture, promote, plan, start, complete, park, notNow, bringBack, undoLast, createHabit, tapHabit, edit, removeNode,
   };
 });
