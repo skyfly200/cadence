@@ -245,6 +245,10 @@ describe('nudge state', () => {
   });
 
   describe('parseNudgeId', () => {
+    it('knows the planning invitation', () => {
+      expect(parseNudgeId('planning|-|2026-09-28')).toEqual({ kind: 'planning', nodeId: null, day: '2026-09-28' });
+    });
+
     it('parses leave_by nudges with a node', () => {
       const parsed = parseNudgeId('leave_by|node1|2026-03-08');
       expect(parsed).toEqual({ kind: 'leave_by', nodeId: 'node1', day: '2026-03-08' });
@@ -342,6 +346,21 @@ describe('consumeNudgeUrl', () => {
     expect(node.state.feedback.stoppedNodes).toContain('dentist');
     const kind = consumeNudgeUrl('https://x.example/?nudge=habit_summary%7C-%7C2026-10-03&action=stop', fresh(), NOW)!;
     expect(kind.state.feedback.stoppedKinds).toContain('habit_summary');
+  });
+
+  it('tapping the weekly planning invitation opens the Planning session', () => {
+    const r = consumeNudgeUrl('https://x.example/?nudge=planning%7C-%7C2026-09-28', fresh(), NOW)!;
+    expect(r.href).toBe('https://x.example/?open=planning');
+    expect(r.state.feedback.stoppedKinds).toEqual([]);
+  });
+
+  it('Stop these on the planning invitation silences the kind and does not open the session; Not now does nothing', () => {
+    const stop = consumeNudgeUrl('https://x.example/?nudge=planning%7C-%7C2026-09-28&action=stop', fresh(), NOW)!;
+    expect(stop.state.feedback.stoppedKinds).toContain('planning');
+    expect(stop.href).toBe('https://x.example/');
+    const notNow = consumeNudgeUrl('https://x.example/?nudge=planning%7C-%7C2026-09-28&action=notnow', fresh(), NOW)!;
+    expect(notNow.state.feedback).toEqual(fresh().feedback);
+    expect(notNow.href).toBe('https://x.example/');
   });
 
   it('keeps other params and the hash, and does not change state for an unknown action or a bad id', () => {

@@ -164,13 +164,14 @@ const MODES = [
   { value: 'dark', label: 'Dark' },
 ];
 
-const NUDGE_KINDS: NudgeKind[] = ['leave_by', 'at_risk', 'transition', 'habit_summary'];
+const NUDGE_KINDS: NudgeKind[] = ['leave_by', 'at_risk', 'transition', 'habit_summary', 'planning'];
 
 function kindLabel(kind: NudgeKind): string {
   if (kind === 'leave_by') return 'Time reminders';
   if (kind === 'at_risk') return 'At-risk alerts';
   if (kind === 'transition') return 'Transition cues';
   if (kind === 'habit_summary') return 'Habit summary';
+  if (kind === 'planning') return 'Planning invitation';
   return kind;
 }
 

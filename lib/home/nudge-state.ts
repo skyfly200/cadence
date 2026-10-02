@@ -211,7 +211,7 @@ export function setDisclosed(state: NudgeState, disclosed: boolean): NudgeState 
 /**
  * Parse a nudge id and extract the node kind and nodeId from its format:
  * `kind|nodeId|day[|suffix]` or `kind|-|day[|suffix]` for nodeId-less nudges.
- * For habit_summary: `habit_summary|-|day|...`.
+ * For habit_summary: `habit_summary|-|day|...`; for planning the third part is the week's first day.
  */
 export function parseNudgeId(id: string): {
   kind: NudgeKind | null;
@@ -225,7 +225,7 @@ export function parseNudgeId(id: string): {
   const nodeId = parts[1] === '-' ? null : parts[1];
   const day = parts[2];
 
-  if (!['leave_by', 'at_risk', 'transition', 'habit_summary'].includes(kind)) {
+  if (!['leave_by', 'at_risk', 'transition', 'habit_summary', 'planning'].includes(kind)) {
     return { kind: null, nodeId: null, day: null };
   }
 
@@ -292,5 +292,7 @@ export function consumeNudgeUrl(href: string, state: NudgeState, now: Date = new
   const action = url.searchParams.get('action') ?? '';
   url.searchParams.delete('nudge');
   url.searchParams.delete('action');
+  // Tapping the weekly Planning invitation opens the Planning session (Home reads and clears `open`).
+  if (action === '' && parseNudgeId(id).kind === 'planning') url.searchParams.set('open', 'planning');
   return { state: applyNotificationAction(state, id, action, now), href: url.toString() };
 }

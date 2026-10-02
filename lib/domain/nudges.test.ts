@@ -92,6 +92,53 @@ describe('habit_summary', () => {
   });
 });
 
+describe('planning', () => {
+  const dueAt = (iso: string, over: Partial<PlanInput> = {}) => plan({ now: at(iso), planningDue: true, ...over }).filter((n) => n.kind === 'planning');
+
+  it('invites to a Planning session once when one is due, in warm plain words', () => {
+    const [n, ...rest] = dueAt('2026-03-08T10:30:00Z');
+    expect(rest).toEqual([]);
+    expect(n).toMatchObject({ kind: 'planning', nodeId: null, title: 'A five-minute plan for the week', fireAt: '2026-03-08T10:30:00.000Z', dropAfter: '2026-03-08T13:00:00.000Z' });
+    expect(`${n!.title} ${n!.body}`).not.toMatch(/behind|overdue|failed|lazy|should|late|missed|urgent|streak/i);
+  });
+
+  it('sends nothing unless the weekly reminder is due', () => {
+    expect(plan({ planningDue: false }).filter((n) => n.kind === 'planning')).toEqual([]);
+    expect(plan().filter((n) => n.kind === 'planning')).toEqual([]);
+  });
+
+  it('waits for its time, which settings can change', () => {
+    const [n] = dueAt('2026-03-08T08:00:00Z', { settings: { ...SETTINGS, planningTime: '09:30' } });
+    expect(n!.fireAt).toBe('2026-03-08T09:30:00.000Z');
+  });
+
+  it('is dropped once its useful hours have passed, never sent late', () => {
+    expect(dueAt('2026-03-08T14:00:00Z')).toEqual([]);
+  });
+
+  it('has the same id for every day of the week, so push queues it once, and a new id the next week', () => {
+    const ids = ['2026-03-09T10:30:00Z', '2026-03-11T10:30:00Z', '2026-03-13T10:30:00Z'].map((d) => dueAt(d)[0]!.id);
+    expect(new Set(ids).size).toBe(1);
+    expect(dueAt('2026-03-16T10:30:00Z')[0]!.id).not.toBe(ids[0]);
+    expect(ids[0]).toMatch(/^planning\|-\|\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('sits outside the daily cap', () => {
+    const nodes = Array.from({ length: 6 }, (_, i) => meeting(`m${i}`, `${13 + i}:00`));
+    const ns = plan({ now: at('2026-03-08T10:30:00Z'), nodes, planningDue: true, settings: { ...SETTINGS, dailyCap: 0 } });
+    expect(ns.map((n) => n.kind)).toEqual(['planning']);
+  });
+
+  it('respects quiet hours, Stop these and an already issued copy', () => {
+    const [moved] = dueAt('2026-03-08T10:30:00Z', { settings: { wakeTime: '11:00', sleepTime: '09:00' } });
+    expect(moved!.fireAt).toBe('2026-03-08T11:00:00.000Z');
+    expect(dueAt('2026-03-08T10:30:00Z', { feedback: { ...NO_FEEDBACK, stoppedKinds: ['planning'] } })).toEqual([]);
+    expect(dueAt('2026-03-08T10:30:00Z', { disabledKinds: ['planning'] })).toEqual([]);
+    const issued = [{ id: dueAt('2026-03-08T10:30:00Z')[0]!.id, kind: 'planning' as const, nodeId: null, day: '2026-03-08' }];
+    expect(dueAt('2026-03-08T10:30:00Z', { issued })).toEqual([]);
+  });
+});
+
 describe('quiet hours', () => {
   it('a nudge inside them moves to the wake time if still useful', () => {
     const now = at('2026-03-08T04:00:00Z');

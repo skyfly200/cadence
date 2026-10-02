@@ -94,6 +94,7 @@ const kindLabel = computed(() => {
   if (kind === 'at_risk') return 'at-risk alerts';
   if (kind === 'transition') return 'transition cues';
   if (kind === 'habit_summary') return 'habit summaries';
+  if (kind === 'planning') return 'planning invitations';
   return kind;
 });
 

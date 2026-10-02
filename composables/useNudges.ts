@@ -6,8 +6,8 @@
 import { onMounted, onBeforeUnmount, ref } from 'vue';
 import { getSupabase } from '~/lib/supabase';
 import { syncNudgesToQueue } from '~/lib/home/nudge-queue-sync';
-import { planNudges, type Nudge, type NudgeSettings } from '~/lib/domain';
-import { addMentioned, getMentioned, speechLevel, toneLevel } from '~/lib/home/prefs';
+import { planNudges, planningDue, type Nudge, type NudgeSettings } from '~/lib/domain';
+import { addMentioned, getMentioned, getPlanningFinished, getPlanningNudged, getPlanningReminder, setPlanningNudged, speechLevel, toneLevel } from '~/lib/home/prefs';
 import { showNotification } from '~/lib/notifications';
 import {
   loadState,
@@ -155,7 +155,7 @@ export function useNudges() {
     const settings = app.settings ?? { wakeTime: '07:00', sleepTime: '23:00' };
 
     // Plan nudges
-    const planned = planNudges({
+    const allPlanned = planNudges({
       now,
       nodes: graph.nodes,
       occurrences: graph.occurrences,
@@ -164,9 +164,14 @@ export function useNudges() {
       issued: prunedIssued(state.value.issued, now.toISOString().split('T')[0]!),
       mentioned: getMentioned(),
       disabledKinds: Array.from(state.value.disabledKinds),
+      planningDue: planningDue(getPlanningFinished(), now, getPlanningReminder()),
       opts: { timeZone: tz },
       timeFormat: graph.timeFormat,
     });
+
+    // The weekly Planning invitation is shown on this device once a week (its id carries the week).
+    const nudgedPlanning = getPlanningNudged();
+    const planned = allPlanned.filter((n) => !(n.kind === 'planning' && n.id === nudgedPlanning));
 
     // Queue them for Web Push so they also arrive when the app is closed (signed-in only)
     const ids = new Set(planned.map((n) => n.id));
@@ -182,6 +187,7 @@ export function useNudges() {
         notifyNudge(nudge);
         const newState = markIssued(state.value, [nudge]);
         updateState(newState);
+        if (nudge.kind === 'planning') setPlanningNudged(nudge.id);
         // Record habit mentions
         if (nudge.mentions?.length) {
           addMentioned(nudge.mentions);

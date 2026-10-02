@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  DEFAULT_VOLUME, addPlanningReviewed, finishPlanning, getDiscussDisclosed, getPlanningFinished, setDiscussDisclosed, getPlanningReminder, getPlanningReviewed, getRecapOn, getSoundOn, getVolume,
+  DEFAULT_VOLUME, addPlanningReviewed, finishPlanning, getDiscussDisclosed, getPlanningFinished, setDiscussDisclosed, getPlanningNudged, setPlanningNudged, getPlanningReminder, getPlanningReviewed, getRecapOn, getSoundOn, getVolume,
   greeting, setPlanningReminder, setRecapOn, setVolume, speechLevel, speechVolume, toneGain, toneLevel,
 } from './prefs';
 
@@ -71,6 +71,13 @@ describe('planning prefs', () => {
     finishPlanning(new Date('2026-10-02T12:00:00.000Z'));
     expect(getPlanningFinished()).toBe('2026-10-02T12:00:00.000Z');
     expect(getPlanningReviewed()).toEqual([]);
+  });
+
+  it('remembers the last planning invitation it showed', () => {
+    stubStorage();
+    expect(getPlanningNudged()).toBeNull();
+    setPlanningNudged('planning|-|2026-09-28');
+    expect(getPlanningNudged()).toBe('planning|-|2026-09-28');
   });
 
   it('remembers each recap and the reminder on their own', () => {

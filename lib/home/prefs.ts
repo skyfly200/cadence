@@ -130,3 +130,7 @@ const PLANNING_REMINDER_KEY = 'cadence:planningReminder';
 /** A quiet in-app prompt when a week has passed since the last session. Off unless switched on. */
 export function getPlanningReminder(): boolean { return read(PLANNING_REMINDER_KEY) === 'true'; }
 export function setPlanningReminder(on: boolean): void { write(PLANNING_REMINDER_KEY, String(on)); }
+const PLANNING_NUDGED_KEY = 'cadence:planningNudged';
+/** The id of the last weekly Planning invitation this device showed (ids carry the week, so it is once a week). */
+export function getPlanningNudged(): string | null { return read(PLANNING_NUDGED_KEY); }
+export function setPlanningNudged(id: string): void { write(PLANNING_NUDGED_KEY, id); }

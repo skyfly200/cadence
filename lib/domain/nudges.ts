@@ -8,7 +8,9 @@
  * item the caller says is slipping), transition (heads-up five minutes before
  * a block over 30 minutes ends, then one cue at the end) and habit_summary
  * (open day-period habits, with at most one final-stretch mention of a longer
- * one). The first three share a daily cap; the summary sits outside it.
+ * one) and planning (the opt-in weekly invitation to a Planning session, sent
+ * once a week while one is due). The first three share a daily cap; the summary
+ * and the planning invitation sit outside it.
  *
  * Rules applied here: quiet hours (a nudge inside them moves to the wake time
  * if still useful, else is dropped); one nudge per Node per day (a transition's
@@ -23,11 +25,11 @@ import { finalStretchMention, homeHabitsPiece } from './habits';
 import { localParts, periodWindow, type PeriodOptions } from './periods';
 import { isParked } from './shelf';
 
-export type NudgeKind = 'leave_by' | 'at_risk' | 'transition' | 'habit_summary';
+export type NudgeKind = 'leave_by' | 'at_risk' | 'transition' | 'habit_summary' | 'planning';
 
-export const NUDGE_KINDS: readonly NudgeKind[] = ['leave_by', 'at_risk', 'transition', 'habit_summary'];
+export const NUDGE_KINDS: readonly NudgeKind[] = ['leave_by', 'at_risk', 'transition', 'habit_summary', 'planning'];
 
-/** The cap counts these; the habit summary is outside it. */
+/** The cap counts these; the habit summary and the planning invitation are outside it. */
 const CAPPED: readonly NudgeKind[] = ['leave_by', 'at_risk', 'transition'];
 
 export const DEFAULT_DAILY_CAP = 5;
@@ -40,6 +42,8 @@ export const HEADS_UP_BLOCK_OVER_MIN = 30;
 export const NOT_NOW_RESCHEDULE_MIN = 30;
 /** The habit summary is dropped this long after its time. */
 const SUMMARY_USEFUL_MIN = 180;
+/** The planning invitation is dropped this long after its time. */
+const PLANNING_USEFUL_MIN = 180;
 /** A transition cue stays useful this long after the block ends. */
 const TRANSITION_USEFUL_MIN = 15;
 const AT_RISK_USEFUL_MIN = 120;
@@ -54,6 +58,8 @@ export interface NudgeSettings {
   dailyCap?: number;
   /** 'HH:mm' the habit summary is sent. Default '18:00'. */
   habitSummaryTime?: string;
+  /** 'HH:mm' the planning invitation is sent. Default '10:00'. */
+  planningTime?: string;
 }
 
 /** What the user told us with "Not now" and "Stop these". Synced, so every device agrees. */
@@ -102,6 +108,8 @@ export interface PlanInput {
   issued?: readonly IssuedNudge[];
   /** `habitId|windowKey` pairs already given their one final-stretch mention (as lib/home/prefs stores them). */
   mentioned?: readonly string[];
+  /** True when the opt-in weekly Planning session invitation is due (see planningDue in planning.ts). */
+  planningDue?: boolean;
   /** Kinds the user has switched off in settings. */
   disabledKinds?: readonly NudgeKind[];
   /** Travel minutes before a Commitment (the same provider the Now card uses). Default 0. */
@@ -155,6 +163,8 @@ interface Draft {
   title: string;
   body: string;
   mentions?: string[];
+  /** Overrides the day part of the id, so a nudge can be unique per week instead of per day. */
+  idDay?: string;
 }
 
 export function planNudges(input: PlanInput): Nudge[] {
@@ -260,6 +270,20 @@ export function planNudges(input: PlanInput): Nudge[] {
     });
   }
 
+  // ── the weekly Planning session invitation ──────────────────────────
+  // Its id carries the week, not the day: the queue is idempotent by id, so the same week's
+  // invitation is sent once however many days it stays due.
+  if (input.planningDue === true) {
+    const week = periodWindow('week', now, opts);
+    const at = today.start.getTime() + minutesOfDay(settings.planningTime ?? '10:00') * MIN;
+    drafts.push({
+      kind: 'planning', nodeId: null, group: 'planning|', suffix: '',
+      fireMs: at, dropMs: at + PLANNING_USEFUL_MIN * MIN,
+      title: 'A five-minute plan for the week', body: 'When you want it. Nothing is waiting on you.',
+      idDay: week.key.slice(week.key.indexOf(':') + 1),
+    });
+  }
+
   // ── filters, in order of fire time ──────────────────────────────────
   drafts.sort((a, b) => a.fireMs - b.fireMs || (a.group + a.suffix < b.group + b.suffix ? -1 : 1));
 
@@ -293,7 +317,7 @@ export function planNudges(input: PlanInput): Nudge[] {
     if (fireMs > d.dropMs || fireMs >= dayEndMs) continue;
 
     // A "Not now" copy has its own id, so it is queued for push as a new nudge instead of colliding with the one already sent.
-    const id = `${d.kind}|${d.nodeId ?? '-'}|${day}${d.suffix ? `|${d.suffix}` : ''}${again ? '|again' : ''}`;
+    const id = `${d.kind}|${d.nodeId ?? '-'}|${d.idDay ?? day}${d.suffix ? `|${d.suffix}` : ''}${again ? '|again' : ''}`;
     if (issuedIds.has(id)) continue;
 
     if (!usedGroups.has(d.group)) {

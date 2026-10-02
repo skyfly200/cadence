@@ -75,7 +75,7 @@
         </label>
         <label class="flex min-h-[44px] items-center gap-3">
           <input type="checkbox" :checked="reminder" @change="toggleReminder(($event.target as HTMLInputElement).checked)" />
-          Remind me here once a week
+          Invite me once a week (a notification)
         </label>
       </details>
     </div>

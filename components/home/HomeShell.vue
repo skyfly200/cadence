@@ -201,6 +201,14 @@ onMounted(() => {
     return;
   }
   mounted.value = true;
+  // Tapping the weekly Planning notification lands here with ?open=planning (see consumeNudgeUrl).
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('open') === 'planning') {
+    planningOpen.value = true;
+    params.delete('open');
+    const qs = params.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`);
+  }
   density.value = getDensity();
   graph.timeFormat = getTimeFormat();
   graph.density = density.value;

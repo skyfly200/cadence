@@ -70,6 +70,15 @@ describe('syncNudgesToQueue', () => {
     );
   });
 
+  it('queues the weekly planning invitation under its own kind and week id', async () => {
+    const planning: Nudge = { ...nudge('planning|-|2026-09-28', futureTime), kind: 'planning', nodeId: null, title: 'A five-minute plan for the week' };
+    expect(await syncNudgesToQueue([planning], mockSupabase, now)).toBe(true);
+    expect(mockUpsert).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: 'planning|-|2026-09-28', kind: 'planning' })],
+      expect.objectContaining({ onConflict: 'user_id,id', ignoreDuplicates: true }),
+    );
+  });
+
   it('filters out past nudges', async () => {
     const nudges = [nudge('n1', futureTime), nudge('n2', pastTime)];
     await syncNudgesToQueue(nudges, mockSupabase, now);
