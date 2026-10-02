@@ -10,7 +10,9 @@
  *  - Callers build the prompt from `buildSlice`, which drops Private nodes, so a
  *    Private node never appears in a provider payload.
  */
-import Anthropic from '@anthropic-ai/sdk';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { generateText, type LanguageModel } from 'ai';
 import type { Node } from '../../lib/domain/types';
 
 // ── providers ─────────────────────────────────────────────────
@@ -33,44 +35,34 @@ export interface AiProvider {
 export interface ModelNames { fast: string; strong: string }
 export const DEFAULT_ANTHROPIC_MODELS: ModelNames = { fast: 'claude-haiku-4-5', strong: 'claude-sonnet-5-5' };
 
-/** Anthropic (the default), through the official SDK. */
-export function createAnthropicProvider(opts: { apiKey: string; models?: Partial<ModelNames> }): AiProvider {
-  const client = new Anthropic({ apiKey: opts.apiKey });
-  const models = { ...DEFAULT_ANTHROPIC_MODELS, ...opts.models };
+/** One adapter for any Vercel AI SDK language model, picked per tier. */
+function fromModels(models: Record<ModelTier, LanguageModel>): AiProvider {
   return {
     async complete(req) {
-      const res = await client.messages.create({
+      const { text } = await generateText({
         model: models[req.tier],
-        max_tokens: req.maxTokens,
         system: req.system,
-        messages: [{ role: 'user', content: req.prompt }],
+        prompt: req.prompt,
+        maxOutputTokens: req.maxTokens,
       });
-      return res.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('');
+      return text;
     },
   };
+}
+
+/** Anthropic (the default). */
+export function createAnthropicProvider(opts: { apiKey: string; models?: Partial<ModelNames> }): AiProvider {
+  const anthropic = createAnthropic({ apiKey: opts.apiKey });
+  const names = { ...DEFAULT_ANTHROPIC_MODELS, ...opts.models };
+  return fromModels({ fast: anthropic(names.fast), strong: anthropic(names.strong) });
 }
 
 /** Any OpenAI-compatible chat endpoint, which also reaches local models (Ollama, LM Studio). */
 export function createOpenAiCompatProvider(opts: {
   baseUrl: string; apiKey?: string; models: ModelNames; fetch?: typeof fetch;
 }): AiProvider {
-  const doFetch = opts.fetch ?? fetch;
-  return {
-    async complete(req) {
-      const res = await doFetch(`${opts.baseUrl.replace(/\/$/, '')}/chat/completions`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', ...(opts.apiKey ? { authorization: `Bearer ${opts.apiKey}` } : {}) },
-        body: JSON.stringify({
-          model: opts.models[req.tier],
-          max_tokens: req.maxTokens,
-          messages: [{ role: 'system', content: req.system }, { role: 'user', content: req.prompt }],
-        }),
-      });
-      if (!res.ok) throw new Error(`AI provider answered ${res.status}`);
-      const json = await res.json() as { choices?: { message?: { content?: string } }[] };
-      return json.choices?.[0]?.message?.content ?? '';
-    },
-  };
+  const compat = createOpenAICompatible({ name: 'openai-compatible', baseURL: opts.baseUrl.replace(/\/$/, ''), apiKey: opts.apiKey, fetch: opts.fetch });
+  return fromModels({ fast: compat.chatModel(opts.models.fast), strong: compat.chatModel(opts.models.strong) });
 }
 
 // ── what may be sent ──────────────────────────────────────────

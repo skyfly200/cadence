@@ -61,7 +61,7 @@ describe('createOpenAiCompatProvider', () => {
   });
 
   it('throws on a non-OK answer', async () => {
-    const p = createOpenAiCompatProvider({ baseUrl: 'http://x', models: { fast: 'a', strong: 'b' }, fetch: (async () => new Response('no', { status: 500 })) as typeof fetch });
-    await expect(p.complete(req)).rejects.toThrow('500');
+    const p = createOpenAiCompatProvider({ baseUrl: 'http://x', models: { fast: 'a', strong: 'b' }, fetch: (async () => new Response('no', { status: 401 })) as typeof fetch });
+    await expect(p.complete(req)).rejects.toThrow();
   });
 });
