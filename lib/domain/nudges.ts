@@ -202,7 +202,7 @@ export function planNudges(input: PlanInput): Nudge[] {
         kind: 'leave_by', nodeId: c.id, group: `leave_by|${c.id}`, suffix: '',
         fireMs: leaveMs - LEAVE_LEAD_MIN * MIN, dropMs: travel > 0 ? leaveMs : fixed,
         title: travel > 0 ? `Leave by ${clock(leaveMs, tz)}` : `${c.title} is at ${clock(fixed, tz)}`,
-        body: travel > 0 ? `${c.title} is at ${clock(fixed, tz)}.` : 'A heads-up, nothing more.',
+        body: travel > 0 ? `${c.title} is at ${clock(fixed, tz)}.` : '',
       });
       if (duration > 0) {
         const endMs = fixed + duration * MIN;

@@ -20,7 +20,7 @@ describe('leave_by', () => {
 
   it('without travel it is a plain heads-up before the time', () => {
     const [n] = plan({ nodes: [meeting('call', '15:00')] });
-    expect(n).toMatchObject({ title: 'call is at 15:00', fireAt: '2026-03-08T14:50:00.000Z' });
+    expect(n).toMatchObject({ title: 'call is at 15:00', body: '', fireAt: '2026-03-08T14:50:00.000Z' });
   });
 
   it('is dropped once the leave time has passed, never sent late', () => {

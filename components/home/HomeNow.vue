@@ -15,11 +15,7 @@
         <span class="absolute -left-[38px] top-9 size-6 rounded-full bg-[#E07A45] ring-4 ring-[#EEF5F3] dark:ring-[#1D1A2F]" />
         <!-- The Now card -->
         <div class="relative mt-8 rounded-[2rem] bg-white p-5 pt-9 shadow-[0_10px_30px_-12px_rgba(180,110,40,0.35)] dark:bg-[#2A2645] dark:shadow-none">
-          <svg viewBox="0 0 80 80" class="absolute -top-8 left-1/2 size-16 -translate-x-1/2" aria-hidden="true">
-            <circle cx="40" cy="40" r="30" fill="#FBBF24" /><circle cx="40" cy="40" r="22" fill="#FCD34D" />
-            <circle cx="32" cy="36" r="2.5" fill="#78350F" /><circle cx="48" cy="36" r="2.5" fill="#78350F" />
-            <path d="M31 46 Q40 54 49 46" stroke="#78350F" stroke-width="2.5" fill="none" stroke-linecap="round" />
-          </svg>
+          <span class="absolute -top-8 left-1/2 -translate-x-1/2 text-[3.5rem] leading-none" aria-hidden="true">🌱</span>
 
           <template v-if="current">
             <p class="text-center text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-[#FFB59F]">{{ started ? 'You are on it' : 'Right now' }}</p>
