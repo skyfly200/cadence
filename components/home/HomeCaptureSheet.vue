@@ -46,7 +46,8 @@ import { useGraphStore } from '~/stores/graph';
 import { loadState } from '~/lib/home/nudge-state';
 import { getRecognitionCtor, joinTranscript, messageFor, initialState, setListening, setMessage } from '~/lib/home/speech-input';
 
-const props = defineProps<{ open: boolean }>();
+/** `listen`: the sheet was opened from the mic button, so start listening right away. */
+const props = defineProps<{ open: boolean; listen?: boolean }>();
 const emit = defineEmits<{ (e: 'close'): void; (e: 'said', msg: string): void }>();
 const graph = useGraphStore();
 const draft = ref('');
@@ -112,7 +113,8 @@ watch(() => props.open, async (o) => {
     ignoreResults = false;
     speechState.value = initialState();
     await nextTick();
-    box.value?.focus();
+    if (props.listen && recognition) toggleSpeech(); // still inside the tap that opened it
+    else box.value?.focus();
   } else {
     ignoreResults = true;
     if (recognition) {

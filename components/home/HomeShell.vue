@@ -34,12 +34,12 @@
     <nav class="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-md md:max-w-xl" aria-label="Lenses">
       <div class="relative mx-3 mb-3 flex items-end justify-between rounded-[1.75rem] bg-white px-3 pb-2 pt-2 shadow-[0_-4px_24px_rgba(20,60,60,0.15)] dark:bg-[#2A2645]">
         <button v-for="l in LEFT" :key="l.k" :class="tab(l.k)" @click="lens = l.k"><span class="text-xl">{{ l.i }}</span>{{ l.n }}</button>
-        <button class="-mt-8 grid size-16 place-items-center rounded-full bg-[#E07A45] text-3xl text-white shadow-lg ring-4 ring-[#EEF5F3] dark:ring-[#1D1A2F]" aria-label="Capture" @click="captureOpen = true">＋</button>
+        <button class="-mt-8 grid size-16 place-items-center rounded-full bg-[#E07A45] text-3xl text-white shadow-lg ring-4 ring-[#EEF5F3] dark:ring-[#1D1A2F]" aria-label="Talk to capture" @click="captureOpen = true">🎤</button>
         <button v-for="l in RIGHT" :key="l.k" :class="tab(l.k)" @click="lens = l.k"><span class="text-xl">{{ l.i }}</span>{{ l.n }}</button>
       </div>
     </nav>
 
-    <HomeCaptureSheet :open="captureOpen" @close="captureOpen = false" @said="say" />
+    <HomeCaptureSheet :open="captureOpen" listen @close="captureOpen = false" @said="say" />
     <HomeSettingsSheet
       :open="settingsOpen" :density="density" :time-format="graph.timeFormat" :signed-in="app.signedIn" :nudge-state="nudges.state.value" :muted="nudges.state.value.muted"
       @close="settingsOpen = false" @update:density="setDensityValue" @update:time-format="setTimeFormatValue" @account="settingsOpen = false; authOpen = true"

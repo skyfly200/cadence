@@ -3,6 +3,15 @@
     <h1 class="text-xl font-semibold">Plan</h1>
     <p class="text-sm text-slate-500 dark:text-slate-400">Drag to a day or the heap.</p>
 
+    <form class="mt-3 flex gap-2" @submit.prevent="addEntry">
+      <input
+        v-model="newText" type="text" maxlength="4000" placeholder="Add something"
+        class="min-h-[44px] min-w-0 flex-1 rounded-2xl border border-stone-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#2A2645]"
+      />
+      <button type="submit" class="min-h-[44px] rounded-2xl bg-[#E07A45] px-5 font-semibold text-white disabled:opacity-50" :disabled="!newText.trim() || adding">Add</button>
+    </form>
+    <p v-if="addError" class="mt-1 text-sm text-amber-700 dark:text-amber-300">{{ addError }}</p>
+
     <template v-if="graph.loaded">
       <!-- The Stack: every day, always there; empty days stay slim -->
       <h2 class="mt-4 text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">Your stack</h2>
@@ -69,6 +78,20 @@ const grip = 'grid size-11 shrink-0 touch-none cursor-grab place-items-center te
 const dragging = ref(false);
 const sorting = ref(false);
 const queue = ref<string[]>([]);
+
+const newText = ref('');
+const adding = ref(false);
+const addError = ref('');
+async function addEntry() {
+  if (adding.value || !newText.value.trim()) return;
+  adding.value = true;
+  addError.value = '';
+  const r = await graph.capture(newText.value);
+  adding.value = false;
+  if (!r.ok) { addError.value = r.message; return; }
+  newText.value = '';
+  emit('said', r.reply);
+}
 
 function label(day: StackDay, i: number, short = false) {
   if (i === 0) return 'Today';
