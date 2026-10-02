@@ -87,7 +87,7 @@ import { useAppStore } from '~/stores/app';
 import { exportAllData } from '~/lib/local-storage';
 import { buildExport, exportFilename } from '~/lib/export';
 import { getAiOn, setAiOn } from '~/lib/home/prefs';
-import { setAiEnabledOnServer, sendDeletionAction, type DeletionState } from '~/lib/account-client';
+import { getAiEnabledFromServer, setAiEnabledOnServer, sendDeletionAction, type DeletionState } from '~/lib/account-client';
 import { wipeLocalCache } from '~/lib/deletion';
 
 useHead({ title: 'What Cadence knows and does' });
@@ -164,8 +164,9 @@ onMounted(async () => {
   aiOn.value = getAiOn();
   await app.initAuth();
   if (app.signedIn) {
-    const r = await sendDeletionAction('status', token());
+    const [r, ai] = await Promise.all([sendDeletionAction('status', token()), getAiEnabledFromServer(token())]);
     if (r.status === 'ok') apply(r.data);
+    if (ai.status === 'ok') { aiOn.value = ai.data.enabled; setAiOn(ai.data.enabled); } // show what the server will enforce
   }
 });
 </script>

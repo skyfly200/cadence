@@ -62,6 +62,22 @@ export function localParts(at: Date, timeZone: string): LocalParts {
   return { y: out.year, m: out.month, d: out.day, h: out.hour, mi: out.minute, s: out.second };
 }
 
+/** Minutes since midnight for an 'HH:mm' string. */
+export const minutesOfDay = (hhmm: string): number => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+};
+
+/** Whether the local time at `now` falls inside an optional 'HH:mm' window (it may wrap past midnight). No window means always. */
+export function inTimeWindow(windowStart: string | null | undefined, windowEnd: string | null | undefined, now: Date, timeZone: string): boolean {
+  if (!windowStart && !windowEnd) return true;
+  const p = localParts(now, timeZone);
+  const cur = p.h * 60 + p.mi;
+  const a = windowStart ? minutesOfDay(windowStart) : 0;
+  const b = windowEnd ? minutesOfDay(windowEnd) : 24 * 60;
+  return a <= b ? cur >= a && cur <= b : cur >= a || cur <= b;
+}
+
 /** The local calendar day of an instant as 'YYYY-MM-DD'. */
 export function dayKey(at: Date, timeZone: string): string {
   const p = localParts(at, timeZone);

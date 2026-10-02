@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   DELETION_WINDOW_MS, USER_DATA_TABLES, createMemoryPrivacyStore, createSupabasePrivacyStore,
-  handleDeletion, handleSetAi, purgeDueDeletions,
+  PURGE_BATCH, handleDeletion, handleGetAi, handlePurgeRun, handleSetAi, purgeDueDeletions,
 } from './privacy';
 
 const T0 = Date.UTC(2026, 9, 1, 12, 0, 0);
@@ -113,5 +113,54 @@ describe('createSupabasePrivacyStore.purgeUser', () => {
       }),
     };
     await expect(createSupabasePrivacyStore(db).purgeUser('u1', 'x')).rejects.toThrow('nudge_queue');
+  });
+});
+
+describe('handleGetAi', () => {
+  it('reads the server switch: on by default, off after it was turned off', async () => {
+    const d = deps();
+    expect(await handleGetAi(d, { userId: 'u1' })).toEqual({ status: 200, body: { ok: true, enabled: true } });
+    await handleSetAi(d, { userId: 'u1', body: { enabled: false } });
+    expect(await handleGetAi(d, { userId: 'u1' })).toEqual({ status: 200, body: { ok: true, enabled: false } });
+    expect(await handleGetAi(d, { userId: 'u2' })).toEqual({ status: 200, body: { ok: true, enabled: true } });
+  });
+  it('answers 503 when the store fails', async () => {
+    const store = createMemoryPrivacyStore();
+    store.getAiEnabled = async () => { throw new Error('x'); };
+    expect((await handleGetAi(deps(store), { userId: 'u1' })).status).toBe(503);
+  });
+});
+
+describe('purge batching and handlePurgeRun', () => {
+  const due = (n: number) => {
+    const store = createMemoryPrivacyStore();
+    for (let i = 0; i < n; i++) store.deletions.set(`u${i}`, { requestedAt: new Date(T0 + i).toISOString(), purgedAt: null });
+    return store;
+  };
+  it('purges at most one batch per call, oldest first, and the rest on the next call', async () => {
+    const store = due(PURGE_BATCH + 2);
+    const later = T0 + DELETION_WINDOW_MS + 1000;
+    expect(await purgeDueDeletions(deps(store, later))).toEqual({ purged: PURGE_BATCH });
+    expect(store.deletions.get('u0')?.purgedAt).not.toBeNull();
+    expect(store.deletions.get(`u${PURGE_BATCH}`)?.purgedAt).toBeNull();
+    expect(await purgeDueDeletions(deps(store, later))).toEqual({ purged: 2 });
+  });
+  it('rejects a wrong, missing or unconfigured secret without purging anything', async () => {
+    const store = due(1);
+    const d = { ...deps(store, T0 + DELETION_WINDOW_MS + 1000), cronSecret: 's3cret' };
+    expect((await handlePurgeRun(d, { secret: 'nope' })).status).toBe(401);
+    expect((await handlePurgeRun(d, { secret: null })).status).toBe(401);
+    expect((await handlePurgeRun({ ...d, cronSecret: '' }, { secret: '' })).status).toBe(401);
+    expect(store.deletions.get('u0')?.purgedAt).toBeNull();
+  });
+  it('purges with the right secret, with no web push configuration involved', async () => {
+    const store = due(1);
+    const d = { ...deps(store, T0 + DELETION_WINDOW_MS + 1000), cronSecret: 's3cret' };
+    expect(await handlePurgeRun(d, { secret: 's3cret' })).toEqual({ status: 200, body: { ok: true, purged: 1 } });
+  });
+  it('answers 503 when the store cannot list what is due', async () => {
+    const store = due(1);
+    store.dueDeletions = async () => { throw new Error('x'); };
+    expect((await handlePurgeRun({ ...deps(store), cronSecret: 's' }, { secret: 's' })).status).toBe(503);
   });
 });

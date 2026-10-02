@@ -33,7 +33,7 @@
 import type { Commitment, Habit, Link, Node, Occurrence } from './types';
 import { FINAL_STRETCH_FROM, habitProgress } from './habits';
 import { formatClock, type TimeFormat } from './clock';
-import { dayKey, localParts, localWeekday, periodProgress, periodWindow, type PeriodOptions } from './periods';
+import { dayKey, inTimeWindow, localParts, localWeekday, minutesOfDay, periodProgress, periodWindow, type PeriodOptions } from './periods';
 import { DEFAULT_DURATION_MIN, activeOccurrences, learnedDuration } from './estimates';
 import { goalNextSteps } from './goals';
 import { SHRINK_PARK_KEEP_AT, isParked, notNowCount, shelvedSince } from './shelf';
@@ -112,10 +112,6 @@ const PERIOD_WORD: Record<string, string> = {
 };
 
 const short = (title: string, words = 5) => title.trim().split(/\s+/).slice(0, words).join(' ');
-const minutesOfDay = (hhmm: string): number => {
-  const [h, m] = hhmm.split(':').map(Number);
-  return (h ?? 0) * 60 + (m ?? 0);
-};
 
 interface Cand {
   node: Commitment | Habit;
@@ -196,14 +192,7 @@ export function rankNow(input: RankInput): RankResult {
     return best;
   };
 
-  const inWindowNow = (c: Commitment): boolean => {
-    if (!c.windowStart && !c.windowEnd) return true;
-    const p = localParts(now, tz);
-    const cur = p.h * 60 + p.mi;
-    const a = c.windowStart ? minutesOfDay(c.windowStart) : 0;
-    const b = c.windowEnd ? minutesOfDay(c.windowEnd) : 24 * 60;
-    return a <= b ? cur >= a && cur <= b : cur >= a || cur <= b;
-  };
+  const inWindowNow = (c: Commitment): boolean => inTimeWindow(c.windowStart, c.windowEnd, now, tz);
 
   // ── candidate set ─────────────────────────────────────────────────────
   const eligible: Commitment[] = [];

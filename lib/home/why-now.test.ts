@@ -32,7 +32,7 @@ describe('fetchWhyNow', () => {
     expect(await fetchWhyNow(item, cache, o)).toBe('Head out by 6:40');
     expect(await fetchWhyNow(item, cache, o)).toBe('Head out by 6:40');
     expect(f).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(String((f.mock.calls[0] as unknown as [string, RequestInit])[1].body))).toEqual({ title: item.title, template: item.template });
+    expect(JSON.parse(String((f.mock.calls[0] as unknown as [string, RequestInit])[1].body))).toEqual({ nodeId: item.nodeId, template: item.template });
   });
   it('remembers a null answer so it is not asked again', async () => {
     const f = vi.fn(async () => json({ ok: true, line: null }));

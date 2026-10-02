@@ -9,7 +9,6 @@
 import webpush from 'web-push';
 import { handleDispatch } from '../../utils/nudges';
 import { createSupabaseDispatchStore, createServiceClient } from '../../utils/nudges';
-import { purgeDueDeletions, createSupabasePrivacyStore } from '../../utils/privacy';
 
 export default defineEventHandler(async (event) => {
   const cfg = useRuntimeConfig(event);
@@ -37,10 +36,6 @@ export default defineEventHandler(async (event) => {
     },
     { secret },
   );
-  // The same every-minute call also purges accounts whose 7-day delete-everything window is up (rare, so it adds no cost most minutes).
-  if (result.status === 202) {
-    try { await purgeDueDeletions({ store: createSupabasePrivacyStore(createServiceClient(supabaseUrl, serviceRoleKey)) }); } catch { /* retried next minute */ }
-  }
   setResponseStatus(event, result.status);
   return result.body;
 });

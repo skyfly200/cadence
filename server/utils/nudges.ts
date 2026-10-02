@@ -56,7 +56,7 @@ const fail = (status: 401 | 503, error: DispatchError, message: string): Dispatc
 });
 
 /** Constant-time secret comparison. */
-function secretEquals(provided: string | null, expected: string): boolean {
+export function secretEquals(provided: string | null, expected: string): boolean {
   if (!provided || !expected) return false;
   try {
     const pBuf = Buffer.from(provided, 'utf8');

@@ -73,3 +73,12 @@ describe('next step', () => {
     expect(rows.map((r) => [r.goal.id, r.next?.id])).toEqual([['old', 'a'], ['new', 'b']]);
   });
 });
+
+describe('goalRows time windows', () => {
+  it('skips a step outside its time-of-day window, like the Now card does', () => {
+    const nodes = [goal('g'), commitment('night', { windowStart: '22:00', windowEnd: '23:00', createdAt: '2026-02-01T00:00:00.000Z' }), commitment('any', { createdAt: '2026-02-02T00:00:00.000Z' })];
+    const links = [link('part_of', 'night', 'g'), link('part_of', 'any', 'g')];
+    expect(goalRows(nodes, links, [], NOW, 'UTC')[0]!.next?.id).toBe('any'); // 18:30 UTC is outside 22:00-23:00
+    expect(goalRows(nodes, links, [], at('2026-03-14T22:30:00.000Z'), 'UTC')[0]!.next?.id).toBe('night');
+  });
+});

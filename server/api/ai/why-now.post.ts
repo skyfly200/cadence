@@ -1,14 +1,14 @@
 /**
  * POST /api/ai/why-now  (Authorization: Bearer <supabase access token>)
- * Body: { title: string, template: string, private?: boolean }
+ * Body: { nodeId: string, template: string }
  *
  * Answers { ok: true, line } where line is an AI-polished version of the Now card's
  * reason, or null when the caller should keep its own line. The logic is in
  * server/utils/why-now.ts.
  */
-import { aiDeps } from '../../utils/ai-context';
+import { aiDeps, aiServiceClient } from '../../utils/ai-context';
 import { requireUser } from '../../utils/gcal-context';
-import { handleWhyNow } from '../../utils/why-now';
+import { createSupabaseNodeLookup, handleWhyNow } from '../../utils/why-now';
 
 export default defineEventHandler(async (event) => {
   const userId = await requireUser(event);
@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     return { ok: false, error: 'unavailable', message: 'The AI is not available right now.' };
   }
   const body = await readBody(event).catch(() => null);
-  const result = await handleWhyNow(d.deps, { userId, body });
+  const result = await handleWhyNow({ ai: d.deps, nodes: createSupabaseNodeLookup(aiServiceClient(event)) }, { userId, body });
   setResponseStatus(event, result.status);
   return result.body;
 });

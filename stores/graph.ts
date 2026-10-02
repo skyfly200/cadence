@@ -91,7 +91,7 @@ export const useGraphStore = defineStore('graph', () => {
   const habitsPiece = computed(() => homeHabitsPiece(habits.value, occurrences.value, asOf.value));
   const weeklyTally = computed(() => weeklyKept(occurrences.value, asOf.value));
   const habitRows = computed(() => habits.value.map((habit) => ({ habit, progress: habitProgress(habit, occurrences.value, asOf.value) })));
-  const goalList = computed(() => goalRows(nodes.value, links.value, occurrences.value));
+  const goalList = computed(() => goalRows(nodes.value, links.value, occurrences.value, asOf.value));
   /** Open Commitments that could still be attached under a Goal or milestone. */
   const attachableTo = (parentId: string) => attachable(nodes.value, links.value, parentId, new Set(activeOccurrences(occurrences.value).filter((o) => o.type === 'done').map((o) => o.nodeId)));
   const currentState = computed(() => (rank.value.now ? nodeState(rank.value.now.node.id, occurrences.value) : null));

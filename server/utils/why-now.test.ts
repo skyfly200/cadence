@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createMemoryAiStore, type AiProvider } from './ai';
-import { facts, handleWhyNow, validatePolish } from './why-now';
+import { createSupabaseNodeLookup, facts, handleWhyNow, validatePolish, type NodeLookup, type WhyNowNode } from './why-now';
 
 const T0 = Date.UTC(2026, 9, 1, 12, 0, 0);
 const provider = (text: string) => ({ complete: vi.fn(async () => text) }) satisfies AiProvider;
-const send = (p: AiProvider | null, body: unknown, store = createMemoryAiStore(), dailyCap?: number) =>
-  handleWhyNow({ provider: p, store, now: () => T0, dailyCap }, { userId: 'u1', body });
-const body = { title: 'Pack the cooler', template: 'Leave by 6:40, so this comes first' };
+const NODE: WhyNowNode = { title: 'Pack the cooler', private: false };
+const lookup = (node: WhyNowNode | null = NODE): NodeLookup & { find: ReturnType<typeof vi.fn> } => ({ find: vi.fn(async () => node) });
+const send = (p: AiProvider | null, body: unknown, store = createMemoryAiStore(), dailyCap?: number, nodes: NodeLookup = lookup()) =>
+  handleWhyNow({ ai: { provider: p, store, now: () => T0, dailyCap }, nodes }, { userId: 'u1', body });
+const body = { nodeId: 'n1', template: 'Leave by 6:40, so this comes first' };
 
 describe('validatePolish', () => {
   const t = 'Leave by 6:40, so this comes first';
@@ -42,10 +44,20 @@ describe('handleWhyNow', () => {
   it('answers line null (keep the template) when the reply fails validation', async () => {
     expect(await send(provider('Head out by 7:15'), body)).toEqual({ status: 200, body: { ok: true, line: null } });
   });
-  it('never reaches the provider for a Private item', async () => {
+  it('never reaches the provider for a Private item, whatever the client claims', async () => {
     const p = provider('x');
-    expect(await send(p, { ...body, private: true })).toEqual({ status: 200, body: { ok: true, line: null } });
+    expect(await send(p, { ...body, private: false }, createMemoryAiStore(), undefined, lookup({ title: 'Secret', private: true }))).toEqual({ status: 200, body: { ok: true, line: null } });
     expect(p.complete).not.toHaveBeenCalled();
+  });
+  it('never reaches the provider for a node the server cannot find, and looks it up for this user', async () => {
+    const p = provider('x');
+    const nodes = lookup(null);
+    expect(await send(p, body, createMemoryAiStore(), undefined, nodes)).toEqual({ status: 200, body: { ok: true, line: null } });
+    expect(p.complete).not.toHaveBeenCalled();
+    expect(nodes.find).toHaveBeenCalledWith('u1', 'n1');
+  });
+  it('answers 503 when the lookup fails', async () => {
+    expect((await send(provider('x'), body, createMemoryAiStore(), undefined, { find: async () => { throw new Error('x'); } })).status).toBe(503);
   });
   it('never reaches the provider when AI is off (403) or over the cap (429)', async () => {
     const p = provider('x');
@@ -61,16 +73,36 @@ describe('handleWhyNow', () => {
   });
   it('rejects a missing, empty or oversized body without calling the provider', async () => {
     const p = provider('x');
-    for (const b of [null, 'x', {}, { title: '', template: 't' }, { title: 't', template: 'y'.repeat(201) }]) {
+    for (const b of [null, 'x', {}, { nodeId: '', template: 't' }, { nodeId: 'n', template: 'y'.repeat(201) }]) {
       expect((await send(p, b)).status).toBe(400);
     }
     expect(p.complete).not.toHaveBeenCalled();
   });
-  it('sends only the title and the template, as data', async () => {
+  it('sends only the stored title and the template, as data', async () => {
     const p = provider('Head out by 6:40');
-    await send(p, { ...body, extra: 'secret', id: 'n1' });
+    await send(p, { ...body, title: 'client title', extra: 'secret' });
     const req = (p.complete.mock.calls[0] as unknown as [{ prompt: string; tier: string }])[0];
     expect(req.tier).toBe('fast');
     expect(req.prompt).toBe('Task: Pack the cooler\nCurrent line: Leave by 6:40, so this comes first');
+  });
+});
+
+describe('createSupabaseNodeLookup', () => {
+  const db = (row: unknown, error: unknown = null) => {
+    const calls: [string, string][] = [];
+    const q: any = { select: () => q, eq: (c: string, v: string) => { calls.push([c, v]); return q; }, maybeSingle: async () => ({ data: row, error }) };
+    return { calls, from: (t: string) => { calls.push(['from', t]); return q; } };
+  };
+  it('reads the stored title and Private flag for this user only', async () => {
+    const d = db({ data: { title: 'Pack', private: false } });
+    expect(await createSupabaseNodeLookup(d).find('u1', 'n1')).toEqual({ title: 'Pack', private: false });
+    expect(d.calls).toEqual([['from', 'cadence_nodes'], ['user_id', 'u1'], ['id', 'n1']]);
+  });
+  it('treats a missing flag as Private (fails closed) and a missing node as null', async () => {
+    expect(await createSupabaseNodeLookup(db({ data: { title: 'Pack' } })).find('u1', 'n1')).toEqual({ title: 'Pack', private: true });
+    expect(await createSupabaseNodeLookup(db(null)).find('u1', 'n1')).toBeNull();
+  });
+  it('throws on a database error', async () => {
+    await expect(createSupabaseNodeLookup(db(null, { message: 'x' })).find('u1', 'n1')).rejects.toThrow();
   });
 });

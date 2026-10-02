@@ -61,7 +61,7 @@ export async function fetchWhyNow(
   if (item.private || !item.template) return null;
   const key = whyNowKey(item.nodeId, item.template);
   if (cache.get(key) !== undefined) return cache.get(key) || null;
-  const r = await aiFetch<{ ok: true; line: string | null }>('/api/ai/why-now', { title: item.title, template: item.template }, opts);
+  const r = await aiFetch<{ ok: true; line: string | null }>('/api/ai/why-now', { nodeId: item.nodeId, template: item.template }, opts);
   if (r.status !== 'ok') return null; // off, signed out or failed: keep the template, ask again another time
   cache.set(key, r.data.line ?? '');
   return r.data.line;

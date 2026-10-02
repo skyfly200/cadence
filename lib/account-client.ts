@@ -2,13 +2,13 @@
 export interface DeletionState { pending: boolean; requestedAt: string | null; purgeAt: string | null }
 export type AccountOutcome<T> = { status: 'ok'; data: T } | { status: 'signed_out' } | { status: 'failed'; message: string };
 
-async function post<T>(path: string, body: unknown, accessToken: string | null | undefined, f?: typeof fetch): Promise<AccountOutcome<T>> {
+async function call<T>(path: string, method: 'GET' | 'POST', body: unknown, accessToken: string | null | undefined, f?: typeof fetch): Promise<AccountOutcome<T>> {
   if (!accessToken) return { status: 'signed_out' };
   try {
     const res = await (f ?? fetch)(path, {
-      method: 'POST',
+      method,
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      ...(method === 'POST' ? { body: JSON.stringify(body) } : {}),
     });
     if (res.status === 401) return { status: 'signed_out' };
     if (!res.ok) return { status: 'failed', message: 'That did not go through. Please try again.' };
@@ -17,6 +17,11 @@ async function post<T>(path: string, body: unknown, accessToken: string | null |
     return { status: 'failed', message: 'No connection right now. Please try again.' };
   }
 }
+
+const post = <T>(path: string, body: unknown, accessToken: string | null | undefined, f?: typeof fetch) => call<T>(path, 'POST', body, accessToken, f);
+
+export const getAiEnabledFromServer = (accessToken: string | null | undefined, f?: typeof fetch) =>
+  call<{ ok: true; enabled: boolean }>('/api/account/ai', 'GET', null, accessToken, f);
 
 export const setAiEnabledOnServer = (enabled: boolean, accessToken: string | null | undefined, f?: typeof fetch) =>
   post<{ ok: true; enabled: boolean }>('/api/account/ai', { enabled }, accessToken, f);

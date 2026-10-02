@@ -5,9 +5,11 @@
  * The template line (lib/domain/ranking.ts) is always the truth and always shown first;
  * the AI only rephrases it. Its answer is used only if it is short and keeps the same
  * time and day facts, otherwise the caller keeps the template. A Private item never
- * reaches the provider. Captured text is data, never instructions.
+ * reaches the provider, and whether it is Private is read from the database here, never
+ * taken from the client. Captured text is data, never instructions.
  */
 import { buildSlice, runAi, type AiDeps } from './ai';
+import type { AiSupabaseLike } from './ai';
 
 export const MAX_WORDS = 11; // "under twelve words"
 const MAX_FIELD = 200;
@@ -47,19 +49,33 @@ export type WhyNowResult =
 
 const invalid = (message: string): WhyNowResult => ({ status: 400, body: { ok: false, error: 'invalid', message } });
 
-/** Body: { title: string, template: string, private?: boolean }. */
-export async function handleWhyNow(deps: AiDeps, input: { userId: string; body: unknown }): Promise<WhyNowResult> {
-  const b = input.body as { title?: unknown; template?: unknown; private?: unknown } | null;
-  if (!b || typeof b !== 'object') return invalid('Send a title and a line.');
-  const title = typeof b.title === 'string' ? b.title.trim() : '';
+/** The user's own node as the server sees it. Null when it is not there (not synced yet, or not theirs). */
+export interface WhyNowNode { title: string; private: boolean }
+
+export interface NodeLookup {
+  find(userId: string, nodeId: string): Promise<WhyNowNode | null>;
+}
+
+export interface WhyNowDeps { ai: AiDeps; nodes: NodeLookup }
+
+/** Body: { nodeId: string, template: string }. The title and the Private flag come from the stored node. */
+export async function handleWhyNow(deps: WhyNowDeps, input: { userId: string; body: unknown }): Promise<WhyNowResult> {
+  const b = input.body as { nodeId?: unknown; template?: unknown } | null;
+  if (!b || typeof b !== 'object') return invalid('Send a node and a line.');
+  const nodeId = typeof b.nodeId === 'string' ? b.nodeId.trim() : '';
   const template = typeof b.template === 'string' ? b.template.trim() : '';
-  if (!title || !template || title.length > MAX_FIELD || template.length > MAX_FIELD) return invalid('Send a title and a line.');
+  if (!nodeId || !template || nodeId.length > MAX_FIELD || template.length > MAX_FIELD) return invalid('Send a node and a line.');
+
+  let node: WhyNowNode | null;
+  try { node = await deps.nodes.find(input.userId, nodeId); } catch { return { status: 503, body: { ok: false, error: 'unavailable', message: 'The AI is not available right now.' } }; }
+  // Fail closed: a node we cannot find, or cannot prove is not Private, is never sent.
+  if (!node) return { status: 200, body: { ok: true, line: null } };
 
   // A Private item is dropped by the same filter every AI call uses, so nothing is sent.
-  const [item] = buildSlice([{ title, template, private: b.private === true }]);
+  const [item] = buildSlice([{ title: node.title.slice(0, MAX_FIELD), template, private: node.private }]);
   if (!item) return { status: 200, body: { ok: true, line: null } };
 
-  const r = await runAi(deps, input.userId, {
+  const r = await runAi(deps.ai, input.userId, {
     tier: 'fast', system: SYSTEM, maxTokens: 60,
     prompt: `Task: ${item.title}\nCurrent line: ${item.template}`,
   });
@@ -69,4 +85,17 @@ export async function handleWhyNow(deps: AiDeps, input: { userId: string; body: 
     return { status: 503, body: { ok: false, error: 'unavailable', message: 'The AI is not available right now.' } };
   }
   return { status: 200, body: { ok: true, line: validatePolish(item.template, r.text) } };
+}
+
+/** Reads the node from `cadence_nodes` with the service role, scoped to the user. */
+export function createSupabaseNodeLookup(db: AiSupabaseLike): NodeLookup {
+  return {
+    async find(userId, nodeId) {
+      const { data, error } = await db.from('cadence_nodes').select('data').eq('user_id', userId).eq('id', nodeId).maybeSingle();
+      if (error) throw new Error('cadence_nodes read failed');
+      const d = data?.data as { title?: unknown; private?: unknown } | undefined;
+      if (!d || typeof d.title !== 'string') return null;
+      return { title: d.title, private: d.private !== false };
+    },
+  };
 }

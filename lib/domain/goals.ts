@@ -5,6 +5,7 @@
  */
 import type { Commitment, Goal, Link, Node, Occurrence } from './types';
 import { activeOccurrences } from './estimates';
+import { inTimeWindow } from './periods';
 import { isParked } from './shelf';
 
 const byAge = (a: Node, b: Node) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || (a.id < b.id ? -1 : 1);
@@ -73,14 +74,17 @@ function progressOf(id: string, byId: Map<string, Node>, children: Map<string, s
 }
 
 /** One row per Goal that is not itself a milestone of another Goal, oldest first. */
-export function goalRows(nodes: readonly Node[], links: readonly Link[], occurrences: readonly Occurrence[]): GoalRow[] {
+export function goalRows(
+  nodes: readonly Node[], links: readonly Link[], occurrences: readonly Occurrence[],
+  now: Date = new Date(), timeZone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
+): GoalRow[] {
   const byId = new Map(nodes.map((n) => [n.id, n] as const));
   const children = childrenOf(links);
   const doneIds = new Set(activeOccurrences(occurrences).filter((o) => o.type === 'done').map((o) => o.nodeId));
   const prereqs = new Map<string, string[]>();
   for (const l of links) if (l.type === 'requires') (prereqs.get(l.fromId) ?? prereqs.set(l.fromId, []).get(l.fromId)!).push(l.toId);
   const ready = (c: Commitment) => (prereqs.get(c.id) ?? []).every((id) => { const t = byId.get(id); return !t || t.kind !== 'commitment' || doneIds.has(id); });
-  const open = nodes.filter((n): n is Commitment => n.kind === 'commitment' && !doneIds.has(n.id) && !isParked(n.id, occurrences) && ready(n));
+  const open = nodes.filter((n): n is Commitment => n.kind === 'commitment' && !doneIds.has(n.id) && !isParked(n.id, occurrences) && ready(n) && inTimeWindow(n.windowStart, n.windowEnd, now, timeZone));
   const nextByGoal = new Map<string, Commitment>();
   for (const [cid, gid] of goalNextSteps(nodes, links, open)) nextByGoal.set(gid, byId.get(cid) as Commitment);
 

@@ -39,3 +39,9 @@ export function aiDeps(event: H3Event): { ok: true; deps: AiDeps } | { ok: false
     },
   };
 }
+
+/** The service-role client the AI routes read nodes with (call after aiDeps has confirmed the config). */
+export function aiServiceClient(event: H3Event) {
+  const cfg = useRuntimeConfig(event);
+  return createServiceClient(String(cfg.public.supabaseUrl || ''), String(cfg.supabaseServiceRoleKey || process.env.SUPABASE_SERVICE_ROLE_KEY || ''));
+}
