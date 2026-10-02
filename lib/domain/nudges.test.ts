@@ -155,6 +155,21 @@ describe('feedback', () => {
     expect(n.fireAt).toBe('2026-03-08T12:30:00.000Z');
   });
 
+  it('the rescheduled copy has its own id, so push queues it as a new nudge', () => {
+    const risky = [commitment('b', { quiet: true })];
+    const original = plan({ nodes: risky, atRisk: () => true })[0]!;
+    const later = at('2026-03-08T12:10:00Z'); // ten minutes after the dismissal: a later plan, not the same instant
+    const [again] = plan({ nodes: risky, atRisk: () => true, now: later, feedback: fb({ notNow: { b: { count: 1, lastAt: NOON.toISOString() } } }) });
+    expect(again.id).toBe(`${original.id}|again`);
+    expect(again.fireAt).toBe('2026-03-08T12:30:00.000Z');
+  });
+
+  it('after the thirty minutes the rescheduled at-risk nudge goes out, still as the same copy', () => {
+    const risky = [commitment('b', { quiet: true })];
+    const [n] = plan({ nodes: risky, atRisk: () => true, now: at('2026-03-08T12:45:00Z'), feedback: fb({ notNow: { b: { count: 1, lastAt: NOON.toISOString() } } }) });
+    expect(n).toMatchObject({ id: 'at_risk|b|2026-03-08|again', fireAt: '2026-03-08T12:45:00.000Z' });
+  });
+
   it('a rescheduled nudge past its useful life is dropped', () => {
     const now = at('2026-03-08T14:52:00Z');
     expect(plan({ nodes, now, feedback: fb({ notNow: { a: { count: 1, lastAt: '2026-03-08T14:51:00Z' } } }) })).toEqual([]);

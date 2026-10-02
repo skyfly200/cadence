@@ -275,18 +275,25 @@ export function planNudges(input: PlanInput): Nudge[] {
     if (d.nodeId && stoppedNodes.has(d.nodeId)) continue;
 
     let fireMs = d.fireMs;
+    let again = false;
     const nn = d.nodeId ? fb.notNow[d.nodeId] : undefined;
     if (nn && nn.count >= 2) continue; // a second "Not now" silences the Node
     if (nn && nn.count === 1) {
       const last = Date.parse(nn.lastAt);
-      if (last >= fireMs && last < dayEndMs) fireMs = Math.max(fireMs, last + NOT_NOW_RESCHEDULE_MIN * MIN);
+      // At-risk nudges fire "whenever" (their time moves with every plan), so any dismissal today counts.
+      const dismissedThis = last >= (d.kind === 'at_risk' ? today.start.getTime() : fireMs);
+      if (dismissedThis && last < dayEndMs) {
+        fireMs = Math.max(fireMs, last + NOT_NOW_RESCHEDULE_MIN * MIN);
+        again = true;
+      }
     }
     // a nudge that is due now but was planned late still goes; one past its useful life does not
     fireMs = Math.max(fireMs, nowMs);
     fireMs = afterQuiet(fireMs, settings, tz);
     if (fireMs > d.dropMs || fireMs >= dayEndMs) continue;
 
-    const id = `${d.kind}|${d.nodeId ?? '-'}|${day}${d.suffix ? `|${d.suffix}` : ''}`;
+    // A "Not now" copy has its own id, so it is queued for push as a new nudge instead of colliding with the one already sent.
+    const id = `${d.kind}|${d.nodeId ?? '-'}|${day}${d.suffix ? `|${d.suffix}` : ''}${again ? '|again' : ''}`;
     if (issuedIds.has(id)) continue;
 
     if (!usedGroups.has(d.group)) {
