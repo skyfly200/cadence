@@ -12,6 +12,7 @@ import { computed, ref } from 'vue';
 import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrences, saveGraphNodes, saveGraphOccurrences, saveGraphLinks } from '~/lib/graph-storage';
 import { activeOccurrences, goalRows, habitProgress, habitTap, homeHabitsPiece, parseCapture, rankNow, weeklyKept } from '~/lib/domain';
 import { attachable, newGoal, newStep, partOf } from '~/lib/home/goal-edit';
+import { acceptLink, type LinkProposal } from '~/lib/home/proposals';
 import type { ParsedCapture, TimeFormat } from '~/lib/domain';
 import { postCapture } from '~/lib/capture-client';
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/lib/domain';
@@ -270,6 +271,17 @@ export const useGraphStore = defineStore('graph', () => {
     return true;
   }
 
+  /** Save a connection the AI proposed and the user tapped "Connect" on (origin proposed_accepted). */
+  function acceptConnection(p: LinkProposal): boolean {
+    const now = new Date();
+    const l = acceptLink(p, links.value, now, uid());
+    if (!l) return false;
+    links.value = [...links.value, l];
+    persistLinks();
+    asOf.value = now;
+    return true;
+  }
+
   /** A new open step (Commitment) under a Goal or milestone. */
   function addStep(title: string, parentId: string): boolean {
     const now = new Date();
@@ -327,6 +339,6 @@ export const useGraphStore = defineStore('graph', () => {
   return {
     nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat,
     rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, attachableTo,
-    load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, addStep, tapHabit, edit, removeNode,
+    load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, addStep, tapHabit, edit, removeNode,
   };
 });

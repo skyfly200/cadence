@@ -28,6 +28,7 @@
         </div>
       </form>
       <div class="mt-auto flex flex-col gap-1">
+        <button class="min-h-[44px] rounded-xl px-3 text-left text-[15px] hover:bg-white/60 dark:hover:bg-white/5" @click="planningOpen = true">Planning session</button>
         <button class="min-h-[44px] rounded-xl px-3 text-left text-[15px] hover:bg-white/60 dark:hover:bg-white/5" @click="settingsOpen = true">Settings</button>
         <NuxtLink to="/privacy" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-white/60 dark:hover:bg-white/5">What Cadence knows and does</NuxtLink>
         <NuxtLink to="/classic" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-white/60 dark:hover:bg-white/5">Classic view</NuxtLink>
@@ -59,6 +60,7 @@
     <div v-if="menuOpen" class="fixed inset-0 z-40 lg:hidden" @click.self="menuOpen = false">
       <div class="mx-auto max-w-md px-4 pt-[4.25rem] md:max-w-xl">
         <ul class="ml-auto w-60 rounded-2xl bg-white p-2 shadow-lg dark:bg-[#2A2645]" role="menu">
+          <li><button class="min-h-[44px] w-full rounded-xl px-3 text-left text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem" @click="menuOpen = false; planningOpen = true">Planning session</button></li>
           <li><button class="min-h-[44px] w-full rounded-xl px-3 text-left text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem" @click="menuOpen = false; settingsOpen = true">Settings</button></li>
           <li><NuxtLink to="/privacy" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem">What Cadence knows and does</NuxtLink></li>
           <li><NuxtLink to="/classic" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem">Classic view</NuxtLink></li>
@@ -68,7 +70,7 @@
 
     <main :class="['lg:mx-auto lg:w-full lg:pb-12 lg:pt-4', lens === 'plan' ? 'lg:max-w-6xl' : 'lg:max-w-2xl']">
     <HomeNow v-if="lens === 'now'" :density="density" @open-plan="lens = 'plan'" @said="say" @edit="onEdit" />
-    <HomePlan v-else-if="lens === 'plan'" @said="say" @edit="onEdit" />
+    <HomePlan v-else-if="lens === 'plan'" @said="say" @edit="onEdit" @open-planning="planningOpen = true" />
     <HomeHabits v-else-if="lens === 'habits'" @said="say" @edit="onEdit" />
     <HomeGoals v-else @said="say" />
     </main>
@@ -90,6 +92,7 @@
 
     </div>
 
+    <HomePlanningSession :open="planningOpen" @close="planningOpen = false" @said="say" @edit="onEdit" />
     <HomeCaptureSheet :open="captureOpen" listen @close="captureOpen = false" @said="say" />
     <HomeEditSheet :open="editOpen" :node-id="editingNodeId" @close="editOpen = false" @deleted="say('Deleted.')" />
     <HomeSettingsSheet
@@ -134,6 +137,7 @@ const menuOpen = ref(false);
 const editOpen = ref(false);
 const editingNodeId = ref<string | null>(null);
 const settingsOpen = ref(false);
+const planningOpen = ref(false);
 const authOpen = ref(false);
 const railText = ref('');
 const railBusy = ref(false);
