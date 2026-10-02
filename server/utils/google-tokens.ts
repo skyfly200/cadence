@@ -16,6 +16,8 @@ export interface GoogleTokens {
   /** Epoch milliseconds when the access token expires. */
   expiresAt: number;
   email: string;
+  /** The scopes Google granted (space-separated). Absent on tokens saved before imports existed: calendar only. */
+  scope?: string;
 }
 
 /** What the store holds: an opaque ciphertext plus the (non-secret) email. */
@@ -74,6 +76,8 @@ export interface TokenVault {
   save(userId: string, tokens: GoogleTokens): Promise<void>;
   load(userId: string): Promise<GoogleTokens | null>;
   status(userId: string): Promise<{ connected: boolean; email: string | null }>;
+  /** The scopes this user's stored tokens were granted (decrypts); empty if not connected. Old tokens count as calendar only. */
+  scopes(userId: string): Promise<string[]>;
   remove(userId: string): Promise<void>;
 }
 
@@ -89,6 +93,12 @@ export function createTokenVault(store: TokenStore, key: Buffer): TokenVault {
     async status(userId) {
       const row = await store.get(userId);
       return { connected: !!row, email: row?.email ?? null };
+    },
+    async scopes(userId) {
+      const row = await store.get(userId);
+      if (!row) return [];
+      const t = decryptJson<GoogleTokens>(key, userId, row.blob);
+      return (t.scope ?? 'https://www.googleapis.com/auth/calendar.readonly').split(/\s+/).filter(Boolean);
     },
     async remove(userId) {
       await store.delete(userId);
