@@ -10,7 +10,8 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrences, saveGraphNodes, saveGraphOccurrences, saveGraphLinks } from '~/lib/graph-storage';
-import { activeOccurrences, goalRows, habitProgress, habitTap, homeHabitsPiece, parseCapture, rankNow, weeklyKept } from '~/lib/domain';
+import { activeOccurrences, gardenState, goalRows, habitProgress, habitTap, homeHabitsPiece, keepDeleted, parseCapture, pressSeason, pressedBook, rankNow, weeklyKept } from '~/lib/domain';
+import { getPressedPages, getSeasonDraft, savePressedPages, saveSeasonDraft } from '~/lib/home/garden-state';
 import { attachable, newGoal, newStep, partOf } from '~/lib/home/goal-edit';
 import { acceptLink, nodeFromProposal, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
 import type { ParsedCapture, TimeFormat } from '~/lib/domain';
@@ -46,6 +47,19 @@ export const useGraphStore = defineStore('graph', () => {
     asOf.value = new Date();
     loaded.value = true;
     adoptDated();
+    tendBook();
+  }
+
+  /**
+   * Keep the Pressed book: press any past season not yet pressed, and refresh the rolling draft of this
+   * season so a habit deleted mid-season still appears on its page when the season turns. Device-only.
+   */
+  function tendBook() {
+    const now = asOf.value;
+    const draft = getSeasonDraft();
+    savePressedPages(pressedBook(nodes.value, links.value, occurrences.value, now, getPressedPages(), {}, draft).fresh);
+    const current = gardenState(nodes.value, links.value, occurrences.value, now).season;
+    saveSeasonDraft(keepDeleted(pressSeason(nodes.value, links.value, occurrences.value, current), draft?.key === current.key ? draft : undefined, nodes.value));
   }
 
   /**
@@ -93,6 +107,10 @@ export const useGraphStore = defineStore('graph', () => {
   const weeklyTally = computed(() => weeklyKept(occurrences.value, asOf.value));
   const habitRows = computed(() => habits.value.map((habit) => ({ habit, progress: habitProgress(habit, occurrences.value, asOf.value) })));
   const goalList = computed(() => goalRows(nodes.value, links.value, occurrences.value, asOf.value));
+  /** This season's garden, grown from everything kept. */
+  const garden = computed(() => gardenState(nodes.value, links.value, occurrences.value, asOf.value));
+  /** The Pressed book: pages kept on this device, plus any past season not yet pressed. Newest first. */
+  const pressed = () => pressedBook(nodes.value, links.value, occurrences.value, asOf.value, getPressedPages(), {}, getSeasonDraft()).seasons;
   /** Open Commitments that could still be attached under a Goal or milestone. */
   const attachableTo = (parentId: string) => attachable(nodes.value, links.value, parentId, new Set(activeOccurrences(occurrences.value).filter((o) => o.type === 'done').map((o) => o.nodeId)));
   const currentState = computed(() => (rank.value.now ? nodeState(rank.value.now.node.id, occurrences.value) : null));
@@ -352,7 +370,7 @@ export const useGraphStore = defineStore('graph', () => {
 
   return {
     nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat,
-    rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, attachableTo,
+    rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, garden, pressed, attachableTo,
     load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, keepProposedNode, addStep, tapHabit, edit, removeNode,
   };
 });

@@ -1,6 +1,7 @@
 <template>
   <section class="px-4 pt-4">
     <h1 class="text-xl font-semibold">Goals</h1>
+    <GardenStrip @open="emit('open-garden')" />
 
     <p v-if="!graph.goalList.length" class="mt-3 text-[15px] text-slate-500 dark:text-slate-400">
       No goals yet. Add one below, then give it a first step. Small is fine.
@@ -55,7 +56,7 @@
 import { ref } from 'vue';
 import { useGraphStore } from '~/stores/graph';
 
-const emit = defineEmits<{ (e: 'said', msg: string): void }>();
+const emit = defineEmits<{ (e: 'said', msg: string): void; (e: 'open-garden'): void }>();
 const graph = useGraphStore();
 
 const title = ref('');

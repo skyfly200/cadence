@@ -50,6 +50,11 @@
       <div v-if="density >= 1" class="mt-2 flex flex-wrap items-center gap-2">
         <span v-if="graph.kept.length" class="text-[12px] font-semibold text-teal-800 dark:text-[#FFB59F]">{{ graph.kept.length }} accomplished today</span>
         <button
+          v-if="graph.weeklyTally > 0"
+          class="inline-flex min-h-[32px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-xs text-slate-600 dark:border-white/10 dark:bg-[#2A2645] dark:text-slate-300"
+          @click="gardenOpen = true"
+        >🌿 {{ graph.weeklyTally }} kept this week <span aria-hidden="true">›</span></button>
+        <button
           v-if="graph.habitsPiece.total > 0"
           class="inline-flex min-h-[32px] items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-xs text-slate-600 dark:border-white/10 dark:bg-[#2A2645] dark:text-slate-300"
           @click="lens = 'habits'"
@@ -72,8 +77,8 @@
     <main :class="['lg:mx-auto lg:w-full lg:pb-12 lg:pt-4', lens === 'plan' ? 'lg:max-w-6xl' : 'lg:max-w-2xl']">
     <HomeNow v-if="lens === 'now'" :density="density" @open-plan="lens = 'plan'" @said="say" @edit="onEdit" />
     <HomePlan v-else-if="lens === 'plan'" @said="say" @edit="onEdit" @open-planning="planningOpen = true" />
-    <HomeHabits v-else-if="lens === 'habits'" @said="say" @edit="onEdit" />
-    <HomeGoals v-else @said="say" />
+    <HomeHabits v-else-if="lens === 'habits'" @said="say" @edit="onEdit" @open-garden="gardenOpen = true" />
+    <HomeGoals v-else @said="say" @open-garden="gardenOpen = true" />
     </main>
 
     <!-- toast with Undo -->
@@ -94,6 +99,7 @@
     </div>
 
     <HomePlanningSession :open="planningOpen" @close="planningOpen = false" @said="say" @edit="onEdit" />
+    <HomeGarden :open="gardenOpen" @close="gardenOpen = false" />
     <HomeCaptureSheet :open="captureOpen" listen @close="captureOpen = false" @said="say" />
     <HomeEditSheet :open="editOpen" :node-id="editingNodeId" @close="editOpen = false" @deleted="say('Deleted.')" />
     <HomeSettingsSheet
@@ -140,6 +146,7 @@ const editOpen = ref(false);
 const editingNodeId = ref<string | null>(null);
 const settingsOpen = ref(false);
 const planningOpen = ref(false);
+const gardenOpen = ref(false);
 const authOpen = ref(false);
 const railText = ref('');
 const railBusy = ref(false);
