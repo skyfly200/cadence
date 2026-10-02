@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_VOLUME, getVolume, setVolume, speechVolume, toneGain } from './prefs';
+import { DEFAULT_VOLUME, getSoundOn, getVolume, setVolume, speechLevel, speechVolume, toneGain, toneLevel } from './prefs';
 
 describe('volume', () => {
   it('defaults when storage is unavailable', () => {
-    expect(getVolume()).toBe(DEFAULT_VOLUME);
-    expect(() => setVolume(30)).not.toThrow();
+    expect(getVolume('tone')).toBe(DEFAULT_VOLUME);
+    expect(getVolume('speech')).toBe(DEFAULT_VOLUME);
+    expect(() => setVolume('tone', 30)).not.toThrow();
+    expect(getSoundOn('tone')).toBe(true);
+    expect(toneLevel()).toBeGreaterThan(0);
+    expect(speechLevel()).toBeGreaterThan(0);
   });
 
   it('maps the slider to a tone gain on an even curve, louder than the old fixed 0.05 by default', () => {

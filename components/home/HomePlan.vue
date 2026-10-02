@@ -1,7 +1,7 @@
 <template>
   <section class="px-4 pt-4">
     <h1 class="text-xl font-semibold">Plan</h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400">Drag things by the grip onto a day, or back to the heap.</p>
+    <p class="text-sm text-slate-500 dark:text-slate-400">Drag to a day or the heap.</p>
 
     <template v-if="graph.loaded">
       <!-- The Stack: every day, always there; empty days stay slim -->
@@ -24,23 +24,23 @@
       <!-- The Heap: captured things not yet placed -->
       <div class="mt-6 flex items-center justify-between">
         <h2 class="text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">The heap · {{ graph.heap.length }}</h2>
-        <button v-if="graph.heap.length && !sorting" class="min-h-[44px] rounded-xl bg-stone-100 px-3 text-sm font-medium dark:bg-white/10" @click="startSort">Sort it for me</button>
+        <button v-if="graph.heap.length && !sorting" class="min-h-[44px] rounded-xl bg-stone-100 px-3 text-sm font-medium dark:bg-white/10" @click="startSort">Sort</button>
       </div>
 
       <!-- Sorting: one at a time, one tap each -->
       <div v-if="sorting && current" class="mt-2 rounded-[1.5rem] bg-white p-5 shadow-sm dark:bg-[#2A2645]">
         <p class="text-xs text-slate-400">{{ queue.length }} left</p>
         <p class="mt-1 break-words font-serif text-xl">{{ current.title }}</p>
-        <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">When could this happen?</p>
+        <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">When?</p>
         <div class="mt-2 flex flex-wrap gap-1.5">
           <button v-for="(d, j) in graph.stack" :key="d.key" :class="chip" @click="sortTo(d.key)">{{ label(d, j, true) }}</button>
         </div>
         <div class="mt-3 flex gap-2">
-          <button class="min-h-[44px] flex-1 rounded-2xl bg-stone-100 text-sm font-medium dark:bg-white/10" @click="skip">Leave in the heap</button>
+          <button class="min-h-[44px] flex-1 rounded-2xl bg-stone-100 text-sm font-medium dark:bg-white/10" @click="skip">Skip</button>
           <button class="min-h-[44px] flex-1 rounded-2xl bg-stone-100 text-sm font-medium dark:bg-white/10" @click="sorting = false">Stop sorting</button>
         </div>
       </div>
-      <p v-else-if="sorting" class="mt-2 text-[15px] text-slate-500 dark:text-slate-400">That is everything sorted for now.</p>
+      <p v-else-if="sorting" class="mt-2 text-[15px] text-slate-500 dark:text-slate-400">All sorted.</p>
 
       <div data-drop="heap" :class="['mt-2 min-h-[56px] rounded-xl border border-dashed border-transparent p-1 transition-colors data-[over]:border-[#E07A45] data-[over]:bg-amber-50 dark:data-[over]:bg-white/10', dragging && 'border-slate-300 dark:border-white/20']">
         <ul v-if="graph.heap.length" class="space-y-1.5">
@@ -49,7 +49,7 @@
             <span class="min-w-0 flex-1 break-words text-[15px]">{{ h.title }}</span>
           </li>
         </ul>
-        <p v-else class="px-2 py-3 text-[15px] text-slate-500 dark:text-slate-400">The heap is empty. Anything you add with + lands here first.</p>
+        <p v-else class="px-2 py-3 text-[15px] text-slate-500 dark:text-slate-400">Heap is empty.</p>
       </div>
     </template>
   </section>

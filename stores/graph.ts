@@ -14,7 +14,7 @@ import { habitProgress, habitTap, homeHabitsPiece, parseCapture, rankNow, weekly
 import type { ParsedCapture, TimeFormat } from '~/lib/domain';
 import { postCapture } from '~/lib/capture-client';
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/lib/domain';
-import { heapItems, keptToday, nodeState, stackDays } from '~/lib/home/derive';
+import { heapItems, keptToday, nodeState, stackDays, stopRecords } from '~/lib/home/derive';
 import type { Density } from '~/lib/home/prefs';
 import { useAppStore } from './app';
 
@@ -166,6 +166,15 @@ export const useGraphStore = defineStore('graph', () => {
     lastAction.value = { label, occurrences: [o], addedNodeIds: [] };
   }
   const start = (id: string) => act(id, 'started', 'Started');
+  /** Stop something started and not finished: cancels its 'started' records (the log itself is never edited). */
+  function stop(id: string) {
+    const now = new Date();
+    const cancels = stopRecords(id, occurrences.value, (nodeId, undoes) => occ(nodeId, 'undone', now, { undoes }));
+    if (cancels.length === 0) return;
+    append(cancels);
+    asOf.value = now;
+    lastAction.value = null;
+  }
   const complete = (id: string) => act(id, 'done', 'Done');
   const park = (id: string) => act(id, 'parked', 'Sent to the heap');
   const notNow = (id: string) => act(id, 'moved', 'Moved to later');
@@ -243,6 +252,6 @@ export const useGraphStore = defineStore('graph', () => {
   return {
     nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat,
     rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState,
-    load, refresh, capture, promote, plan, start, complete, park, notNow, bringBack, undoLast, createHabit, tapHabit,
+    load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, tapHabit,
   };
 });

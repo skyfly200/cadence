@@ -1,5 +1,5 @@
 /**
- * "Stay with me" body-double mode: timing and state logic, pure and testable.
+ * "Focus together" body-double mode: timing and state logic, pure and testable.
  * An opt-in quiet presence with an optional ambient sound and one check-in at the halfway point.
  */
 
@@ -11,7 +11,7 @@ export interface StayWithMeState {
 }
 
 /**
- * Start a "Stay with me" session.
+ * Start a "Focus together" session.
  */
 export function start(now: number, durationMs: number, ambientOn = false): StayWithMeState {
   return {
@@ -71,25 +71,25 @@ export function statusLine(state: StayWithMeState, now: number): string {
   const minRemaining = Math.max(0, Math.round(remaining / 60000));
 
   if (!state.checkedIn && checkInDue(state, now)) {
-    return `Halfway there. Keep going.`;
+    return 'Halfway.';
   }
   if (minRemaining > 0) {
-    return `${minRemaining} minutes left. You're doing well.`;
+    return `${minRemaining} minutes left.`;
   }
-  return `You're here. You're doing this.`;
+  return 'Time is up.';
 }
 
 /**
  * Initial presence cue text (spoken once when the session starts).
  */
-export const PRESENCE_CUE_TEXT = 'I am here with you. We will do this together.';
+export const PRESENCE_CUE_TEXT = 'Starting. I am here if you need me.';
 
 /**
  * Check-in cue text.
  */
-export const CHECK_IN_TEXT = 'Halfway there. Keep going.';
+export const CHECK_IN_TEXT = 'Halfway.';
 
 /**
  * End message (spoken only if not muted and after interaction).
  */
-export const END_TEXT = 'You did that. Well done.';
+export const END_TEXT = 'Time is up.';

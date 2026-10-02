@@ -23,6 +23,11 @@ export function nodeState(nodeId: string, occs: readonly Occurrence[]): NodeStat
   return s;
 }
 
+/** The 'undone' records that cancel every still-standing 'started' on a node (empty if it is not started). */
+export function stopRecords<T>(nodeId: string, occs: readonly Occurrence[], make: (nodeId: string, undoes: string) => T): T[] {
+  return activeOccurrences(occs).filter((o) => o.nodeId === nodeId && o.type === 'started').map((o) => make(nodeId, o.id));
+}
+
 const isCommitment = (n: Node): n is Commitment => n.kind === 'commitment';
 const isIdea = (n: Node): n is Idea => n.kind === 'idea';
 

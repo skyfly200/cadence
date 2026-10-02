@@ -5,7 +5,7 @@
       <div class="flex items-center justify-between gap-2">
         <div class="min-w-0">
           <p class="text-[11px] font-semibold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">{{ dateLabel }}</p>
-          <p class="truncate text-[15px] font-medium">{{ away ? 'Welcome back. Nothing is on fire.' : 'Here is your day.' }}</p>
+          <p v-if="away" class="truncate text-[15px] font-medium">Welcome back. Nothing is on fire.</p>
         </div>
         <button class="grid size-11 shrink-0 place-items-center rounded-lg border border-teal-900/10 bg-white text-base dark:border-white/10 dark:bg-[#2A2645]" aria-label="Display and account" @click="settingsOpen = true">⚙</button>
       </div>

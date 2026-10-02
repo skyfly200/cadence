@@ -38,15 +38,22 @@ export function getMentioned(): string[] {
 }
 export function addMentioned(keys: string[]): void { write(MENTIONED_KEY, JSON.stringify([...new Set([...getMentioned(), ...keys])].slice(-200))); }
 
-const VOLUME_KEY = 'cadence:nudgeVolume';
+const LEGACY_VOLUME_KEY = 'cadence:nudgeVolume';
 export const DEFAULT_VOLUME = 70;
-/** Nudge and cue loudness, 0 to 100 (per device). The mute switch is separate. */
-export function getVolume(): number {
-  const raw = read(VOLUME_KEY);
+export type SoundKind = 'tone' | 'speech';
+const volumeKey = (k: SoundKind) => `cadence:${k}Volume`;
+const onKey = (k: SoundKind) => `cadence:${k}On`;
+
+/** Loudness of the tone or the speech, 0 to 100 (per device). The mute switch is separate. */
+export function getVolume(kind: SoundKind): number {
+  const raw = read(volumeKey(kind)) ?? read(LEGACY_VOLUME_KEY);
   const v = raw === null ? NaN : Number(raw);
   return Number.isFinite(v) ? Math.min(100, Math.max(0, Math.round(v))) : DEFAULT_VOLUME;
 }
-export function setVolume(v: number): void { write(VOLUME_KEY, String(Math.min(100, Math.max(0, Math.round(v))))); }
+export function setVolume(kind: SoundKind, v: number): void { write(volumeKey(kind), String(Math.min(100, Math.max(0, Math.round(v))))); }
+/** Tone and speech can each be switched off on their own. On by default. */
+export function getSoundOn(kind: SoundKind): boolean { return read(onKey(kind)) !== 'false'; }
+export function setSoundOn(kind: SoundKind, on: boolean): void { write(onKey(kind), String(on)); }
 /** Peak gain of the soft tone: a squared curve so the slider feels even; 100 is 0.4. */
 export function toneGain(volume: number): number { return 0.4 * (volume / 100) ** 2; }
 /** SpeechSynthesisUtterance.volume (0 to 1). */
@@ -60,3 +67,6 @@ export function getTimeFormat(): TimeFormat {
   try { return new Intl.DateTimeFormat([], { hour: 'numeric' }).resolvedOptions().hour12 === false ? '24' : '12'; } catch { return '12'; }
 }
 export function setTimeFormat(f: TimeFormat): void { write(TIME_FORMAT_KEY, f); }
+/** What to play right now: the tone's peak gain and the speech volume, each 0 when switched off. */
+export function toneLevel(): number { return getSoundOn('tone') ? toneGain(getVolume('tone')) : 0; }
+export function speechLevel(): number { return getSoundOn('speech') ? speechVolume(getVolume('speech')) : 0; }

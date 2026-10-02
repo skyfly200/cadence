@@ -153,10 +153,10 @@ describe('stay-with-me', () => {
   });
 
   describe('statusLine', () => {
-    it('says "Halfway there" when check-in is due and not yet marked', () => {
+    it('says "Halfway" when check-in is due and not yet marked', () => {
       const s = start(NOW, DURATION);
       const halfway = NOW + DURATION / 2;
-      expect(statusLine(s, halfway)).toContain('Halfway there');
+      expect(statusLine(s, halfway)).toContain('Halfway');
     });
 
     it('shows minutes remaining when not at halfway', () => {
@@ -188,7 +188,7 @@ describe('stay-with-me', () => {
       const end = NOW + DURATION;
       const line = statusLine(s, end);
       expect(line).not.toContain('minutes');
-      expect(line).toContain("You're here");
+      expect(line).toContain('Time is up');
     });
   });
 

@@ -7,7 +7,7 @@ import { onMounted, onBeforeUnmount, ref } from 'vue';
 import { getSupabase } from '~/lib/supabase';
 import { syncNudgesToQueue } from '~/lib/home/nudge-queue-sync';
 import { planNudges, type Nudge, type NudgeSettings } from '~/lib/domain';
-import { addMentioned, getMentioned, getVolume, speechVolume, toneGain } from '~/lib/home/prefs';
+import { addMentioned, getMentioned, speechLevel, toneLevel } from '~/lib/home/prefs';
 import { showNotification } from '~/lib/notifications';
 import {
   loadState,
@@ -53,7 +53,8 @@ function resumeAudioContext(): void {
   }
 }
 
-function playTone(freq = 650, durationMs = 250, gainLevel = toneGain(getVolume())): void {
+function playTone(freq = 650, durationMs = 250, gainLevel = toneLevel()): void {
+  if (gainLevel <= 0) return;
   if (!audioContext) return;
   try {
     const now = audioContext.currentTime;
@@ -73,12 +74,12 @@ function playTone(freq = 650, durationMs = 250, gainLevel = toneGain(getVolume()
 }
 
 function speak(text: string): void {
-  if (!('speechSynthesis' in window)) return;
+  if (!('speechSynthesis' in window) || speechLevel() <= 0) return;
   try {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1;
     utterance.pitch = 1;
-    utterance.volume = speechVolume(getVolume());
+    utterance.volume = speechLevel();
     window.speechSynthesis.speak(utterance);
   } catch {
     /* ignore speech errors */

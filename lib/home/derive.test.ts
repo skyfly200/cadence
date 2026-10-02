@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Commitment, Idea, Node, Occurrence } from '../domain';
-import { heapItems, keptToday, nodeState, stackDays } from './derive';
+import { heapItems, keptToday, nodeState, stackDays, stopRecords } from './derive';
 
 const NOW = new Date('2026-10-03T15:00:00.000Z');
 const opts = { timeZone: 'UTC' };
@@ -84,5 +84,26 @@ describe('stackDays', () => {
     ], [p, d]);
     expect(days[0].items.map((i) => i.id)).toEqual(['late', 'noon']);
     expect(days.flatMap((x) => x.items).map((i) => i.id)).not.toContain('far');
+  });
+});
+
+describe('stopRecords', () => {
+  const make = (nodeId: string, undoes: string) => ({ nodeId, undoes });
+
+  it('cancels each standing start, so the item is no longer started and not done', () => {
+    const s1 = occ('a', 'started', '2026-10-03T11:00:00.000Z');
+    const s2 = occ('a', 'started', '2026-10-03T12:00:00.000Z');
+    const other = occ('b', 'started', '2026-10-03T12:00:00.000Z');
+    const cancels = stopRecords('a', [s1, s2, other], make);
+    expect(cancels.map((c) => c.undoes)).toEqual([s1.id, s2.id]);
+    const after = [s1, s2, other, ...cancels.map((c) => occ(c.nodeId, 'undone', '2026-10-03T13:00:00.000Z', { undoes: c.undoes }))];
+    expect(nodeState('a', after)).toEqual({ done: false, started: false });
+    expect(nodeState('b', after).started).toBe(true);
+  });
+
+  it('does nothing for an item that is not started, or already stopped', () => {
+    expect(stopRecords('a', [], make)).toEqual([]);
+    const s = occ('a', 'started', '2026-10-03T11:00:00.000Z');
+    expect(stopRecords('a', [s, occ('a', 'undone', '2026-10-03T11:30:00.000Z', { undoes: s.id })], make)).toEqual([]);
   });
 });

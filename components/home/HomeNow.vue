@@ -37,9 +37,9 @@
               <button class="min-h-[44px] rounded-2xl bg-stone-100 py-3 text-sm font-medium dark:bg-white/10" @click="onPark">To the heap</button>
             </div>
 
-            <div v-if="!started && !stayWithMeActive" class="mt-3 flex justify-center">
-              <button class="text-sm font-medium text-slate-500 underline dark:text-slate-400" @click="showStayOptions = !showStayOptions">
-                Stay with me
+            <div v-if="!started && !stayWithMeActive" class="mt-3">
+              <button class="min-h-[52px] w-full rounded-2xl border border-slate-200 bg-white py-3 text-base font-medium text-slate-700 dark:border-white/15 dark:bg-transparent dark:text-slate-200" @click="showStayOptions = !showStayOptions">
+                Focus together
               </button>
             </div>
 
@@ -67,6 +67,7 @@
             </div>
 
             <button v-if="started && !stayWithMeActive" class="mt-5 min-h-[44px] w-full rounded-2xl bg-emerald-500 py-3.5 text-base font-semibold text-white" @click="onDone">Done ✓</button>
+            <button v-if="started" class="mt-2 min-h-[44px] w-full rounded-2xl bg-stone-100 py-3 text-sm font-medium dark:bg-white/10" @click="onStop">Stop for now</button>
           </template>
 
           <template v-else>
@@ -98,7 +99,7 @@
 import { computed, ref, watch, onBeforeUnmount } from 'vue';
 import { useGraphStore } from '~/stores/graph';
 import type { Commitment, Habit } from '~/lib/domain';
-import { getVolume, speechVolume, toneGain, type Density } from '~/lib/home/prefs';
+import { speechLevel, toneLevel, type Density } from '~/lib/home/prefs';
 import {
   start as startStayWithMeSession,
   checkInDue,
@@ -135,6 +136,12 @@ const timeOf = (n: Commitment | Habit) => {
   if (n.kind !== 'commitment') return '';
   return n.fixedTime ? fmt(n.fixedTime) : n.deadline ? `by ${fmt(n.deadline)}` : '';
 };
+
+function onStop() {
+  if (!current.value) return;
+  if (stayWithMeActive.value) endStayWithMe();
+  graph.stop(current.value.node.id);
+}
 
 function onStart() { if (current.value) graph.start(current.value.node.id); }
 function onDone() {
@@ -202,7 +209,7 @@ function playPresenceCue() {
       osc.connect(gain);
       gain.connect(audioContext.destination);
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(toneGain(getVolume()), now + 0.05);
+      gain.gain.linearRampToValueAtTime(toneLevel(), now + 0.05);
       gain.gain.linearRampToValueAtTime(0, now + 0.2);
       osc.start(now);
       osc.stop(now + 0.2);
@@ -217,7 +224,7 @@ function playPresenceCue() {
       const utterance = new SpeechSynthesisUtterance(PRESENCE_CUE_TEXT);
       utterance.rate = 1;
       utterance.pitch = 1;
-      utterance.volume = speechVolume(getVolume());
+      utterance.volume = speechLevel();
       window.speechSynthesis.speak(utterance);
     } catch {
       /* ignore speech errors */
@@ -256,7 +263,7 @@ function startStayWithMeTicker() {
             const utterance = new SpeechSynthesisUtterance(END_TEXT);
             utterance.rate = 1;
             utterance.pitch = 1;
-            utterance.volume = speechVolume(getVolume());
+            utterance.volume = speechLevel();
             window.speechSynthesis.speak(utterance);
           } catch {
             /* ignore */
@@ -297,7 +304,7 @@ function playCheckInCue() {
       osc.connect(gain);
       gain.connect(audioContext.destination);
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(toneGain(getVolume()), now + 0.05);
+      gain.gain.linearRampToValueAtTime(toneLevel(), now + 0.05);
       gain.gain.linearRampToValueAtTime(0, now + 0.25);
       osc.start(now);
       osc.stop(now + 0.25);
@@ -312,7 +319,7 @@ function playCheckInCue() {
       const utterance = new SpeechSynthesisUtterance(CHECK_IN_TEXT);
       utterance.rate = 1;
       utterance.pitch = 1;
-      utterance.volume = speechVolume(getVolume());
+      utterance.volume = speechLevel();
       window.speechSynthesis.speak(utterance);
     } catch {
       /* ignore speech errors */
