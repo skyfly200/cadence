@@ -138,6 +138,8 @@
         <option value="ZZ">Somewhere else</option>
       </select>
 
+      <HomeImport :signed-in="signedIn" />
+
       <p class="mt-5 font-serif text-xl">Signals</p>
       <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">A private page for you: is Cadence helping, and which features earn their place? Worked out on this device only.</p>
       <label class="mt-2 flex items-center gap-3">

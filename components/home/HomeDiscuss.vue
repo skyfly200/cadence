@@ -26,13 +26,7 @@
     <template v-else>
       <p v-if="summarising" class="mt-3 text-[15px] text-slate-600 dark:text-slate-300">One moment…</p>
       <template v-else>
-        <ul v-if="proposalNodes.length" class="mt-3 space-y-2">
-          <li v-for="p in proposalNodes" :key="p.ref" class="flex items-center gap-2 rounded-2xl border border-slate-200 p-3 dark:border-white/10">
-            <p class="min-w-0 flex-1 break-words text-[15px]">{{ p.title }} <span class="text-xs text-slate-500 dark:text-slate-400">({{ KIND_WORD[p.kind] }})</span></p>
-            <span v-if="kept.has(p.ref)" class="text-sm text-slate-500 dark:text-slate-400">Kept</span>
-            <button v-else type="button" class="min-h-[44px] rounded-xl bg-stone-100 px-4 text-sm font-medium dark:bg-white/10" @click="keep(p)">Keep</button>
-          </li>
-        </ul>
+        <ProposalCards v-if="proposalNodes.length" class="mt-3" :proposals="proposalNodes" :kept="kept" @keep="keep" />
         <ul v-if="shownLinks.length" class="mt-3 space-y-2">
           <li v-for="p in shownLinks" :key="linkKey(p)" class="rounded-2xl border border-slate-200 p-3 dark:border-white/10">
             <p class="break-words text-[15px]">{{ sentence(p) }}</p>
@@ -53,7 +47,7 @@ import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 import { aiFetch } from '~/lib/ai-client';
 import { checkCrisis } from '~/lib/domain/crisis';
 import { MAX_TURNS, heardLine, privateLine, spoken, userText } from '~/lib/home/discuss';
-import { linksAfterKeeping, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
+import { linksAfterKeeping, type KeepChoice, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
 import { useAppStore } from '~/stores/app';
 import { useGraphStore } from '~/stores/graph';
 import type { Turn } from '~~/server/utils/discuss';
@@ -85,7 +79,6 @@ const connected = ref(new Set<string>());
 const parked = ref(false);
 const parking = ref(false);
 
-const KIND_WORD: Record<NodeProposal['kind'], string> = { goal: 'goal', habit: 'habit idea', commitment: 'to do', idea: 'idea', thing: 'thing' };
 const SAYS: Record<LinkProposal['type'], string> = { part_of: 'is part of', requires: 'needs first', needs: 'needs', at: 'happens at', with: 'goes with' };
 const linkKey = (p: LinkProposal) => `${p.type}|${p.from}|${p.to}`;
 const titleOf = (id: string) => graph.nodes.find((n) => n.id === id)?.title ?? '';
@@ -149,8 +142,8 @@ async function summarise() {
   proposalLinks.value = r.data.links;
 }
 
-function keep(p: NodeProposal) {
-  const id = graph.keepProposedNode(p);
+function keep(p: NodeProposal, choice: KeepChoice) {
+  const id = graph.keepProposedNode(p, choice);
   if (id) kept.set(p.ref, id);
 }
 

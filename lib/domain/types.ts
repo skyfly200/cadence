@@ -87,6 +87,8 @@ export interface Commitment extends NodeBase {
 /** A Capture not yet classified into another kind. */
 export interface Idea extends NodeBase {
   kind: 'idea';
+  /** Where an imported Idea came from (e.g. a Google Task), so importing again skips it. */
+  external?: { system: string; id: string } | null;
 }
 
 export type ThingType = 'person' | 'place' | 'object';
@@ -95,6 +97,8 @@ export type ThingType = 'person' | 'place' | 'object';
 export interface Thing extends NodeBase {
   kind: 'thing';
   thingType: ThingType;
+  /** A navigable street address, from a place lookup (never from the AI). */
+  address?: string | null;
   lat?: number | null;
   lon?: number | null;
 }

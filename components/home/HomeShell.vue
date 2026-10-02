@@ -204,13 +204,18 @@ function onToggleNudgeKind(kind: NudgeKind, enabled: boolean): void {
 const onHydrated = () => graph.load();
 
 onMounted(() => {
-  // Google sends the user back to "/" with ?gcal_connected / ?gcal_error. Calendar settings live in the
-  // classic view until they are rebuilt, so hand those redirects over with their query intact.
-  if (window.location.search.includes('gcal_')) {
-    void navigateTo(`/classic${window.location.search}`, { replace: true });
-    return;
-  }
   mounted.value = true;
+  // Google sends the user back to "/" with ?gcal_connected=1 or ?gcal_error=...: say how it went (never a
+  // token: those stay on the server), tidy the address bar, and open Settings, where the imports are.
+  const back = new URLSearchParams(window.location.search);
+  if (back.has('gcal_connected') || back.has('gcal_error')) {
+    say(back.get('gcal_connected') === '1' ? 'Google is connected.' : 'Google could not connect just now. Please try again from Settings.');
+    back.delete('gcal_connected');
+    back.delete('gcal_error');
+    const rest = back.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
+    settingsOpen.value = true;
+  }
   // Tapping the weekly Planning notification lands here with ?open=planning (see consumeNudgeUrl).
   const params = new URLSearchParams(window.location.search);
   if (params.get('open') === 'planning') {

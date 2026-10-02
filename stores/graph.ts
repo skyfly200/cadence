@@ -14,7 +14,8 @@ import { activeOccurrences, gardenState, goalRows, habitProgress, habitTap, home
 import { getPressedPages, getSeasonDraft, resolveHemisphere, savePressedPages, saveSeasonDraft } from '~/lib/home/garden-state';
 import type { Hemisphere } from '~/lib/domain';
 import { attachable, newGoal, newStep, partOf } from '~/lib/home/goal-edit';
-import { acceptLink, nodeFromProposal, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
+import { ideasFromTasks, type ImportedTask } from '~/lib/home/import';
+import { acceptLink, defaultChoice, nodeFromProposal, type KeepChoice, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
 import type { ParsedCapture, TimeFormat } from '~/lib/domain';
 import { postCapture } from '~/lib/capture-client';
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/lib/domain';
@@ -306,9 +307,9 @@ export const useGraphStore = defineStore('graph', () => {
   }
 
   /** Save a Node the AI proposed in Discuss and the user tapped "Keep" on. Returns its id, or null if it had no title. */
-  function keepProposedNode(p: NodeProposal): string | null {
+  function keepProposedNode(p: NodeProposal, choice: KeepChoice = defaultChoice(p)): string | null {
     const now = new Date();
-    const node = nodeFromProposal(p, now, uid());
+    const node = nodeFromProposal(p, now, uid(), choice);
     if (!node) return null;
     nodes.value = [...nodes.value, node];
     persistNodes();
@@ -316,6 +317,19 @@ export const useGraphStore = defineStore('graph', () => {
     append([o]);
     asOf.value = now;
     return node.id;
+  }
+
+  /** Add imported Google Tasks as Ideas, skipping any already imported. Returns how many were added and skipped. */
+  function importTasks(tasks: ImportedTask[]): { imported: number; skipped: number } {
+    const now = new Date();
+    const r = ideasFromTasks(tasks, nodes.value, now, uid);
+    if (r.ideas.length) {
+      nodes.value = [...nodes.value, ...r.ideas];
+      persistNodes();
+      append(r.ideas.map((i) => occ(i.id, 'captured', now)));
+      asOf.value = now;
+    }
+    return { imported: r.imported, skipped: r.skipped };
   }
 
   /** A new open step (Commitment) under a Goal or milestone. */
@@ -375,6 +389,6 @@ export const useGraphStore = defineStore('graph', () => {
   return {
     nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat, hemisphere,
     rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, garden, pressed, attachableTo,
-    load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, keepProposedNode, addStep, tapHabit, edit, removeNode,
+    load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, keepProposedNode, importTasks, addStep, tapHabit, edit, removeNode,
   };
 });
