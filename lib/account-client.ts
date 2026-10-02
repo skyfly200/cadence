@@ -26,5 +26,22 @@ export const getAiEnabledFromServer = (accessToken: string | null | undefined, f
 export const setAiEnabledOnServer = (enabled: boolean, accessToken: string | null | undefined, f?: typeof fetch) =>
   post<{ ok: true; enabled: boolean }>('/api/account/ai', { enabled }, accessToken, f);
 
+export interface AssistantConnection { id: string; name: string; scope: string; connectedAt: string; lastUsedAt: string | null }
+
+export const listAssistants = (accessToken: string | null | undefined, f?: typeof fetch) =>
+  call<{ ok: true; connections: AssistantConnection[] }>('/api/oauth/connections', 'GET', null, accessToken, f);
+
+export const revokeAssistant = (id: string, accessToken: string | null | undefined, f?: typeof fetch) =>
+  post<{ ok: true }>('/api/oauth/revoke', { id }, accessToken, f);
+
+/** The authorize request's query values, as the consent page received them. */
+export type AuthorizeQuery = Record<string, string>;
+
+export const describeAuthorize = (query: AuthorizeQuery, accessToken: string | null | undefined, f?: typeof fetch) =>
+  post<{ clientName: string; scope: ('read' | 'write')[] }>('/api/oauth/describe', query, accessToken, f);
+
+export const approveAuthorize = (query: AuthorizeQuery, scope: string, accessToken: string | null | undefined, f?: typeof fetch) =>
+  post<{ redirect: string }>('/api/oauth/approve', { request: query, scope }, accessToken, f);
+
 export const sendDeletionAction = (action: 'request' | 'cancel' | 'status', accessToken: string | null | undefined, f?: typeof fetch) =>
   post<{ ok: true } & DeletionState>('/api/account/deletion', { action }, accessToken, f);

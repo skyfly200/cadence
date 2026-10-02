@@ -20,6 +20,7 @@ export const USER_DATA_TABLES = [
   'cadence_nodes', 'cadence_links', 'cadence_occurrences',
   'cadence_google_tokens', 'push_subscriptions', 'nudge_queue',
   'ai_usage', 'ai_settings',
+  'oauth_grants', 'oauth_codes', 'oauth_tokens',
 ] as const;
 
 export interface DeletionRecord { requestedAt: string; purgedAt: string | null }

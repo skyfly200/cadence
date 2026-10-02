@@ -31,6 +31,8 @@ export default defineNuxtConfig({
     },
     workbox: {
       navigateFallback: '/',
+      // Connector endpoints are server routes, not app pages: never answer them with the app shell.
+      navigateFallbackDenylist: [/^\/mcp/, /^\/\.well-known\//, /^\/oauth\/(register|token)/, /^\/api\//],
       globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,json}'],
       importScripts: ['/push-sw.js'],
       // Cache-first for same-origin assets; app data is localStorage so it's
