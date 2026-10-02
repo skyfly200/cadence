@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Commitment, Idea, Link, Thing } from '../domain';
-import { applyEdit, dependencyOptions, deleteNode, getOrCreatePlace, wouldCreateCycle } from './edit';
+import { applyEdit, dependencyOptions, deleteNode, toDatetimeLocal, getOrCreatePlace, wouldCreateCycle } from './edit';
 
 const NOW = '2026-10-03T15:00:00.000Z';
 
@@ -259,6 +259,32 @@ describe('applyEdit', () => {
     expect(() => {
       applyEdit('missing', { title: 'New' }, [], [], () => {}, () => {});
     }).toThrow('not found');
+  });
+});
+
+describe('toDatetimeLocal', () => {
+  it('shows the time in the given zone, not UTC', () => {
+    expect(toDatetimeLocal('2026-10-03T21:30:00.000Z', 'America/Los_Angeles')).toBe('2026-10-03T14:30');
+    expect(toDatetimeLocal('2026-10-03T21:30:00.000Z', 'Asia/Tokyo')).toBe('2026-10-04T06:30');
+    expect(toDatetimeLocal('2026-10-03T21:30:00.000Z', 'UTC')).toBe('2026-10-03T21:30');
+  });
+
+  it('follows daylight saving, and keeps midnight as 00', () => {
+    expect(toDatetimeLocal('2026-01-15T20:00:00.000Z', 'America/New_York')).toBe('2026-01-15T15:00');
+    expect(toDatetimeLocal('2026-07-15T20:00:00.000Z', 'America/New_York')).toBe('2026-07-15T16:00');
+    expect(toDatetimeLocal('2026-03-08T05:00:00.000Z', 'America/New_York')).toBe('2026-03-08T00:00');
+  });
+
+  it('round-trips through what the input gives back', () => {
+    const iso = '2026-10-03T21:30:00.000Z';
+    // the sheet saves new Date(text), which reads the text in the device's zone
+    expect(new Date(toDatetimeLocal(iso)).toISOString()).toBe(iso);
+  });
+
+  it('defaults to the device zone', () => {
+    const d = new Date('2026-10-03T21:30:00.000Z');
+    const two = (n: number) => String(n).padStart(2, '0');
+    expect(toDatetimeLocal(d.toISOString())).toBe(`${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}T${two(d.getHours())}:${two(d.getMinutes())}`);
   });
 });
 

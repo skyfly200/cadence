@@ -4,6 +4,7 @@
  */
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period, Thing } from '../domain';
 import { nodeState } from './derive';
+import { localParts } from '../domain';
 
 // ── Cycle detection ──────────────────────────────────────────────
 
@@ -28,6 +29,15 @@ export function wouldCreateCycle(links: readonly Link[], fromId: string, toId: s
     }
   }
   return false;
+}
+
+// ── Date and time input ──────────────────────────────────────────
+
+/** An instant as the text a datetime-local input wants: 'YYYY-MM-DDTHH:mm' in the user's own zone (the device's unless given). */
+export function toDatetimeLocal(iso: string, timeZone?: string): string {
+  const p = localParts(new Date(iso), timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${p.y}-${two(p.m)}-${two(p.d)}T${two(p.h)}:${two(p.mi)}`;
 }
 
 // ── Dependency options ───────────────────────────────────────────

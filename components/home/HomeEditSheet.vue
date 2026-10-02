@@ -198,7 +198,7 @@ import { computed, ref, watch, reactive } from 'vue';
 import { X } from 'lucide-vue-next';
 import { useGraphStore } from '~/stores/graph';
 import { PERIODS, type Commitment, type Idea, type Node, type Period } from '~/lib/domain';
-import { dependencyOptions, wouldCreateCycle } from '~/lib/home/edit';
+import { dependencyOptions, toDatetimeLocal, wouldCreateCycle } from '~/lib/home/edit';
 import { cleanLink } from '~/lib/home/apps';
 
 const props = defineProps<{ open: boolean; nodeId: string | null }>();
@@ -261,12 +261,6 @@ watch(
   },
   { deep: false },
 );
-
-function toDatetimeLocal(iso: string): string {
-  const d = new Date(iso);
-  // Format as YYYY-MM-DDTHH:mm
-  return d.toISOString().slice(0, 16);
-}
 
 function startDelete() {
   confirming.value = true;
