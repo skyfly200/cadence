@@ -97,6 +97,8 @@
         </div>
       </div>
 
+      <ConnectedAssistants />
+
       <div class="mt-5 grid gap-2">
         <button class="min-h-[44px] rounded-xl border border-slate-200 text-sm dark:border-white/10" @click="$emit('account')">
           Account and sync <span class="text-slate-400">· {{ signedIn ? 'signed in' : 'signed out' }}</span>

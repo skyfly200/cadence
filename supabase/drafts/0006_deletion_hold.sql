@@ -17,7 +17,8 @@
 --    web push unconfigured. It purges a small batch per call (PURGE_BATCH).
 --
 -- Tables guarded = server/utils/privacy.ts USER_DATA_TABLES. Add any new user-owned
--- table to that list and to the array below.
+-- table to that list and to the array below. (0008_connectors.sql adds oauth_grants,
+-- oauth_codes and oauth_tokens to this guard with its own trigger loop.)
 -- ============================================================================
 
 create or replace function public.deletion_pending(uid uuid)
