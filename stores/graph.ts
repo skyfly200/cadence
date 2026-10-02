@@ -114,7 +114,7 @@ export const useGraphStore = defineStore('graph', () => {
    * Otherwise (signed out, offline, or the request failed): saved on this device and carried up by the normal sync.
    * Text with a date or time becomes a Commitment; everything else stays an Idea.
    */
-  async function capture(text: string): Promise<{ ok: true; reply: string } | { ok: false; message: string }> {
+  async function capture(text: string, opts: { private?: boolean } = {}): Promise<{ ok: true; reply: string } | { ok: false; message: string }> {
     const title = text.trim();
     if (!title) return { ok: false, message: 'Nothing to add yet.' };
     if (title.length > MAX_CAPTURE) return { ok: false, message: 'That is a bit long to add at once. Try splitting it.' };
@@ -125,7 +125,7 @@ export const useGraphStore = defineStore('graph', () => {
     let viaServer = false;
     const token = app.session?.access_token;
     if (token) {
-      const r = await postCapture(title, { accessToken: token });
+      const r = await postCapture(title, { accessToken: token, private: opts.private });
       if (r.status === 'saved') { id = r.id; viaServer = true; }
       else if (r.status === 'rejected') return { ok: false, message: r.message };
       // signed_out, queued or failed: fall through and keep it on this device.
@@ -137,7 +137,8 @@ export const useGraphStore = defineStore('graph', () => {
 
     if (nodes.value.some((n) => n.id === id)) return { ok: true, reply }; // a replayed or duplicate capture
 
-    nodes.value = [...nodes.value, nodeFromCapture(id, parsed, now)];
+    const node = nodeFromCapture(id, parsed, now);
+    nodes.value = [...nodes.value, opts.private ? { ...node, private: true } : node];
     persistNodes();
     if (viaServer) {
       // The server already wrote the captured record and cannot be undone from here.

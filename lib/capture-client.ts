@@ -22,6 +22,8 @@ interface Opts {
   accessToken: string | null | undefined;
   /** Reuse the key from an earlier 'queued' attempt so a retry cannot duplicate. */
   idempotencyKey?: string;
+  /** Save it as a Private Idea (set for crisis language, so it never reaches the AI). */
+  private?: boolean;
   fetch?: typeof fetch;
 }
 
@@ -34,7 +36,7 @@ export async function postCapture(text: string, opts: Opts): Promise<CaptureOutc
     res = await doFetch('/api/capture', {
       method: 'POST',
       headers: { Authorization: `Bearer ${opts.accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, idempotencyKey: key }),
+      body: JSON.stringify({ text, idempotencyKey: key, ...(opts.private ? { private: true } : {}) }),
     });
   } catch {
     return { status: 'queued', idempotencyKey: key, message: 'No connection right now. Keep it, and try again when you are back online.' };

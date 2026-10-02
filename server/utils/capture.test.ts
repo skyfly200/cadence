@@ -31,6 +31,18 @@ describe('handleCapture: success', () => {
   });
 });
 
+describe('handleCapture: private', () => {
+  it('saves a Private Idea when the client asks, and a public one otherwise', async () => {
+    const d = deps();
+    expect((await send(d, { text: 'a private thought', private: true })).status).toBe(200);
+    expect((await send(d, { text: 'an ordinary thought' })).status).toBe(200);
+    expect((await send(d, { text: 'explicitly public', private: false })).status).toBe(200);
+    expect(d.store.nodes.map((n) => [n.data.title, n.data.private])).toEqual([
+      ['a private thought', true], ['an ordinary thought', false], ['explicitly public', false],
+    ]);
+  });
+});
+
 describe('handleCapture: validation', () => {
   it('rejects empty and whitespace-only text calmly', async () => {
     const d = deps();
@@ -53,7 +65,7 @@ describe('handleCapture: validation', () => {
 
   it('rejects a missing, non-string or malformed body and a bad idempotency key', async () => {
     const d = deps();
-    for (const body of [undefined, null, 'text', { text: 42 }, {}, { text: 'ok', idempotencyKey: 'short' }, { text: 'ok', idempotencyKey: 7 }]) {
+    for (const body of [undefined, null, 'text', { text: 42 }, {}, { text: 'ok', idempotencyKey: 'short' }, { text: 'ok', idempotencyKey: 7 }, { text: 'ok', private: 'yes' }, { text: 'ok', private: 1 }]) {
       const r = await send(d, body);
       expect(r.status).toBe(400);
       expect(r.body).toMatchObject({ ok: false, error: 'bad_request' });
