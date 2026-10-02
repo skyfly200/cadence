@@ -85,6 +85,27 @@ describe('stackDays', () => {
     expect(days[0].items.map((i) => i.id)).toEqual(['late', 'noon']);
     expect(days.flatMap((x) => x.items).map((i) => i.id)).not.toContain('far');
   });
+
+});
+
+describe('orphaned occurrences safety', () => {
+  it('heapItems only lists nodes from the nodes array', () => {
+    const occs = [
+      occ('existing', 'parked', '2026-10-03T09:00:00.000Z'),
+      occ('deleted', 'parked', '2026-10-03T09:00:00.000Z'), // orphaned - not in nodes
+    ];
+    const items = heapItems([commitment('existing')], occs);
+    expect(items.map((i) => i.id)).toEqual(['existing']);
+  });
+
+  it('keptToday only lists nodes from the nodes array', () => {
+    const occs = [
+      occ('existing', 'done', '2026-10-03T12:00:00.000Z'),
+      occ('deleted', 'done', '2026-10-03T12:00:00.000Z'), // orphaned - not in nodes
+    ];
+    const kept = keptToday([commitment('existing')], occs, NOW, opts);
+    expect(kept.map((k) => k.id)).toEqual(['existing']);
+  });
 });
 
 describe('stopRecords', () => {

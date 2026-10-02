@@ -20,7 +20,7 @@
       </div>
     </header>
 
- <!-- menu: more pages go here later -->
+<!-- menu: more pages go here later -->
     <div v-if="menuOpen" class="fixed inset-0 z-40" @click.self="menuOpen = false">
       <div class="mx-auto max-w-md px-4 pt-[4.25rem] md:max-w-xl">
         <ul class="w-60 rounded-2xl bg-white p-2 shadow-lg dark:bg-[#2A2645]" role="menu">
@@ -30,8 +30,8 @@
       </div>
     </div>
 
-    <HomeNow v-if="lens === 'now'" :density="density" @open-plan="lens = 'plan'" @said="say" />
-    <HomePlan v-else-if="lens === 'plan'" @said="say" />
+    <HomeNow v-if="lens === 'now'" :density="density" @open-plan="lens = 'plan'" @said="say" @edit="onEdit" />
+    <HomePlan v-else-if="lens === 'plan'" @said="say" @edit="onEdit" />
     <HomeHabits v-else-if="lens === 'habits'" @said="say" />
     <HomeGoals v-else />
 
@@ -51,6 +51,7 @@
     </nav>
 
     <HomeCaptureSheet :open="captureOpen" listen @close="captureOpen = false" @said="say" />
+    <HomeEditSheet :open="editOpen" :node-id="editingNodeId" @close="editOpen = false" @deleted="say('Deleted.')" />
     <HomeSettingsSheet
       :open="settingsOpen" :density="density" :time-format="graph.timeFormat" :signed-in="app.signedIn" :nudge-state="nudges.state.value" :muted="nudges.state.value.muted"
       @close="settingsOpen = false" @update:density="setDensityValue" @update:time-format="setTimeFormatValue" @account="settingsOpen = false; authOpen = true"
@@ -90,10 +91,17 @@ const density = ref<Density>(1);
 const away = ref(false);
 const captureOpen = ref(false);
 const menuOpen = ref(false);
+const editOpen = ref(false);
+const editingNodeId = ref<string | null>(null);
 const settingsOpen = ref(false);
 const authOpen = ref(false);
 const toast = ref<string | null>(null);
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+function onEdit(nodeId: string) {
+  editingNodeId.value = nodeId;
+  editOpen.value = true;
+}
 
 const LEFT: { k: Lens; i: string; n: string }[] = [{ k: 'now', i: '◉', n: 'Now' }, { k: 'plan', i: '▤', n: 'Plan' }];
 const RIGHT: { k: Lens; i: string; n: string }[] = [{ k: 'habits', i: '↻', n: 'Habits' }, { k: 'goals', i: '△', n: 'Goals' }];
