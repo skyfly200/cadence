@@ -1,5 +1,5 @@
 -- ============================================================================
--- DRAFT, not applied. Review, then run in the Supabase SQL editor.
+-- APPLIED 2026-10-02 to the cadence project as migration "cadence_connectors" (via the Supabase MCP).
 -- Needs 0005_privacy.sql and 0006_deletion_hold.sql first (deletion_pending(), refuse_while_deleting()).
 --
 -- Assistant connectors (ticket 11): the OAuth server's state. Read the rules once:
