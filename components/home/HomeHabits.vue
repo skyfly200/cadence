@@ -1,7 +1,6 @@
 <template>
   <section class="px-4 pt-4">
     <h1 class="text-xl font-semibold">Habits</h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400">{{ graph.weeklyTally }} accomplished this week. Each period starts fresh.</p>
 
     <p v-if="nearEnd.length" class="mt-3 rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-stone-700 dark:bg-white/10 dark:text-slate-200">
       Near the end of their period, still open: {{ nearEnd.join(', ') }}. Only if you want to.
