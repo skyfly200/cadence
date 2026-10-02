@@ -286,6 +286,37 @@ describe('applyEdit: link', () => {
   });
 });
 
+describe('applyEdit: habit frequency and weekdays', () => {
+  const h = (extra: object = {}): any => ({ id: 'h1', kind: 'habit', title: 'Stretch', private: false, quiet: false, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', recurrence: { period: 'day', target: 1 }, ...extra });
+  const run = (input: object, node = h()) => applyEdit('h1', input, [node], [], () => {}, () => {}).nodes[0] as any;
+
+  it('changes how often', () => {
+    expect(run({ recurrence: { period: 'week', target: 3 } }).recurrence).toEqual({ period: 'week', target: 3 });
+  });
+
+  it('keeps the target at 1 or more and whole', () => {
+    expect(run({ recurrence: { period: 'day', target: 0 } }).recurrence.target).toBe(1);
+    expect(run({ recurrence: { period: 'day', target: 2.6 } }).recurrence.target).toBe(3);
+    expect(run({ recurrence: { period: 'day', target: -4 } }).recurrence.target).toBe(1);
+  });
+
+  it('pins to weekdays, sorted and unique, and clears the pin with none', () => {
+    expect(run({ weekdays: [5, 1, 1, 3] }).pin).toEqual({ weekdays: [1, 3, 5] });
+    expect(run({ weekdays: [] }, h({ pin: { weekdays: [2] } })).pin).toBeNull();
+    expect(run({ weekdays: null }, h({ pin: { weekdays: [2] } })).pin).toBeNull();
+  });
+
+  it('keeps the times of day when the weekdays change, and ignores bad days', () => {
+    expect(run({ weekdays: [1] }, h({ pin: { weekdays: [2], timesOfDay: ['08:00'] } })).pin).toEqual({ timesOfDay: ['08:00'], weekdays: [1] });
+    expect(run({ weekdays: [9, -1, 2.5] }).pin).toBeNull();
+  });
+
+  it('leaves frequency and pin alone when the edit does not mention them', () => {
+    const n = h({ recurrence: { period: 'week', target: 2 }, pin: { weekdays: [4] } });
+    expect(run({ title: 'x' }, n)).toMatchObject({ recurrence: { period: 'week', target: 2 }, pin: { weekdays: [4] } });
+  });
+});
+
 describe('deleteNode', () => {
   it('removes the node and all links touching it', () => {
     const c1 = commitment('c1');

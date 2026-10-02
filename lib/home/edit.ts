@@ -2,7 +2,7 @@
  * Pure functions for editing and deleting Commitments and Ideas.
  * No Vue, no Pinia, no side effects.
  */
-import type { Commitment, Habit, Idea, Link, Node, Thing } from '../domain';
+import type { Commitment, Habit, Idea, Link, Node, Period, Thing } from '../domain';
 
 // ── Cycle detection ──────────────────────────────────────────────
 
@@ -75,6 +75,8 @@ export interface EditInput {
   durationMinutes?: number | null;
   location?: string | null;  // place name or null to clear the 'at' link
   dependencyId?: string | null;  // commitment id or null to clear
+  recurrence?: { period: Period; target: number };  // a Habit: how often
+  weekdays?: number[] | null;  // a Habit: pin to these weekdays (0 = Sunday), or null to clear
   link?: string | null;  // an https link to open for a Commitment or Habit, or null to clear
 }
 
@@ -114,6 +116,15 @@ export function applyEdit(
 
   if (input.link !== undefined && (node.kind === 'commitment' || node.kind === 'habit')) {
     (updatedNode as Commitment | Habit).link = input.link;
+  }
+  if (node.kind === 'habit') {
+    const h = updatedNode as Habit;
+    if (input.recurrence) h.recurrence = { period: input.recurrence.period, target: Math.max(1, Math.round(input.recurrence.target) || 1) };
+    if (input.weekdays !== undefined) {
+      const days = [...new Set(input.weekdays ?? [])].filter((d) => Number.isInteger(d) && d >= 0 && d <= 6).sort((a, b) => a - b);
+      const { weekdays: _drop, ...rest } = h.pin ?? {};
+      h.pin = days.length > 0 || Object.keys(rest).length > 0 ? { ...rest, ...(days.length > 0 ? { weekdays: days } : {}) } : null;
+    }
   }
 
   const newNodes = nodes.map((n) => (n.id === nodeId ? updatedNode : n));

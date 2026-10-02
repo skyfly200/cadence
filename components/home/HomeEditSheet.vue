@@ -90,6 +90,26 @@
         </div>
       </div>
 
+      <!-- How often (habit) -->
+      <div v-if="node.kind === 'habit'" class="mt-4">
+        <label class="text-sm font-medium">How often</label>
+        <div class="mt-1 flex items-center gap-2">
+          <input v-model.number="draft.target" type="number" min="1" max="99" aria-label="Times" class="min-h-[44px] w-16 rounded-xl border border-stone-200 bg-stone-50 px-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]" />
+          <span class="text-sm text-stone-500 dark:text-slate-400">times per</span>
+          <select v-model="draft.period" aria-label="Period" class="min-h-[44px] flex-1 rounded-xl border border-stone-200 bg-stone-50 px-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]">
+            <option v-for="p in PERIODS" :key="p" :value="p">{{ PERIOD_LABEL[p] }}</option>
+          </select>
+        </div>
+        <p class="mt-3 text-sm font-medium">On these days <span class="font-normal text-stone-500 dark:text-slate-400">(optional)</span></p>
+        <div class="mt-1 flex gap-1">
+          <button
+            v-for="(d, i) in DAY_LETTERS" :key="i" type="button" :aria-pressed="draft.weekdays.includes(i)" :aria-label="DAY_NAMES[i]"
+            :class="['min-h-[44px] flex-1 rounded-xl border text-sm', draft.weekdays.includes(i) ? 'border-[#E07A45] bg-amber-50 font-semibold text-amber-900 dark:bg-white/10 dark:text-[#FFB59F]' : 'border-slate-200 dark:border-white/10']"
+            @click="toggleDay(i)"
+          >{{ d }}</button>
+        </div>
+      </div>
+
       <!-- Link (commitment or habit) -->
       <div v-if="node.kind === 'commitment' || node.kind === 'habit'" class="mt-4">
         <label class="text-sm font-medium">Link</label>
@@ -177,7 +197,7 @@
 import { computed, ref, watch, reactive } from 'vue';
 import { X } from 'lucide-vue-next';
 import { useGraphStore } from '~/stores/graph';
-import type { Commitment, Idea, Node } from '~/lib/domain';
+import { PERIODS, type Commitment, type Idea, type Node, type Period } from '~/lib/domain';
 import { wouldCreateCycle } from '~/lib/home/edit';
 import { cleanLink } from '~/lib/home/apps';
 
@@ -198,6 +218,9 @@ const draft = reactive({
   location: '',
   dependencyId: '',
   link: '',
+  target: 1,
+  period: 'day' as Period,
+  weekdays: [] as number[],
 });
 const linkError = ref('');
 
@@ -223,6 +246,11 @@ watch(
     draft.title = c.title;
     linkError.value = '';
     draft.link = node.value.kind === 'commitment' || node.value.kind === 'habit' ? node.value.link ?? '' : '';
+    if (node.value.kind === 'habit') {
+      draft.target = node.value.recurrence.target;
+      draft.period = node.value.recurrence.period;
+      draft.weekdays = [...(node.value.pin?.weekdays ?? [])];
+    }
 
     if (c.kind === 'commitment') {
       draft.fixedTime = c.fixedTime ? toDatetimeLocal(c.fixedTime) : '';
@@ -276,11 +304,22 @@ watch(
   },
 );
 
+const PERIOD_LABEL: Record<Period, string> = { day: 'day', week: 'week', month: 'month', quarter: 'quarter', four_months: '4 months', six_months: '6 months', year: 'year' };
+const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+function toggleDay(i: number) {
+  draft.weekdays = draft.weekdays.includes(i) ? draft.weekdays.filter((d) => d !== i) : [...draft.weekdays, i];
+}
+
 function save() {
   if (!node.value) return;
   const c = node.value as Commitment | Idea;
 
   const input: any = { title: draft.title };
+  if (node.value.kind === 'habit') {
+    input.recurrence = { period: draft.period, target: draft.target };
+    input.weekdays = draft.weekdays;
+  }
   if (node.value.kind === 'commitment' || node.value.kind === 'habit') {
     const text = draft.link.trim();
     const cleaned = text ? cleanLink(text) : null;
