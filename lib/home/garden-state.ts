@@ -3,7 +3,7 @@
  * goal on it is later deleted) and the "gentle motion" choice. Plain localStorage, wrapped so a
  * blocked store never breaks Home. Nothing here is sent to the server.
  */
-import type { PressedSeason } from '../domain/garden';
+import { hemisphereOfZone, type Hemisphere, type PressedSeason } from '../domain/garden';
 
 const BOOK_KEY = 'cadence:pressedBook';
 const MOTION_KEY = 'cadence:gardenMotion';
@@ -16,7 +16,7 @@ function write(key: string, value: string): void {
   try { if (typeof window !== 'undefined') window.localStorage.setItem(key, value); } catch { /* storage blocked */ }
 }
 
-const isPage = (v: unknown): v is PressedSeason => {
+export const isPage = (v: unknown): v is PressedSeason => {
   const p = v as PressedSeason;
   return !!p && typeof p.key === 'string' && typeof p.name === 'string' && typeof p.year === 'number' && typeof p.kept === 'number'
     && Array.isArray(p.plants) && p.plants.every((x) => x && typeof x.nodeId === 'string' && typeof x.title === 'string' && typeof x.kind === 'string');
@@ -38,6 +38,11 @@ export function savePressedPages(fresh: readonly PressedSeason[]): void {
   write(BOOK_KEY, JSON.stringify([...have, ...fresh.filter((p) => !keys.has(p.key))].slice(-MAX_PAGES)));
 }
 
+/** Replace the whole local book (used when pages arrive from the server). */
+export function replacePressedPages(pages: readonly PressedSeason[]): void {
+  write(BOOK_KEY, JSON.stringify(pages.slice(-MAX_PAGES)));
+}
+
 const DRAFT_KEY = 'cadence:pressedDraft';
 
 /** The rolling page for the season in progress, replaced on every open; it becomes a real page when the season turns. */
@@ -49,3 +54,17 @@ export function saveSeasonDraft(page: PressedSeason | null): void { write(DRAFT_
 /** Slow shimmer in the dark garden: off unless switched on (and never when the device asks for less motion). */
 export function getGardenMotion(): boolean { return read(MOTION_KEY) === 'true'; }
 export function setGardenMotion(on: boolean): void { write(MOTION_KEY, String(on)); }
+
+const HEMISPHERE_KEY = 'cadence:hemisphere';
+export type HemisphereChoice = 'auto' | Hemisphere;
+/** Which hemisphere the season names follow: from the time zone ('auto', the default) or chosen. */
+export function getHemisphereChoice(): HemisphereChoice {
+  const v = read(HEMISPHERE_KEY);
+  return v === 'north' || v === 'south' ? v : 'auto';
+}
+export function setHemisphereChoice(c: HemisphereChoice): void { write(HEMISPHERE_KEY, c); }
+/** The hemisphere to use now: the choice, or the one the device's time zone is in. */
+export function resolveHemisphere(choice: HemisphereChoice = getHemisphereChoice(), timeZone?: string): Hemisphere {
+  if (choice !== 'auto') return choice;
+  try { return hemisphereOfZone(timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone); } catch { return 'north'; }
+}

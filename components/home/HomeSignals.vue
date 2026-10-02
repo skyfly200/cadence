@@ -100,7 +100,7 @@
 import { computed, ref, watch } from 'vue';
 import {
   cameBackAfterBreak, checkpointDue, compareExperiment, firstUse, keptPerWeek, keptTrend, lapsedTimeCritical,
-  mechanismVerdict, nudgeHealth, ruleFor, triageSpeed, weeksInUse, type Verdict,
+  mechanismVerdict, nudgeHealth, ruleFor, slogUse, triageSpeed, usageRule, weeksInUse, type Verdict,
 } from '~/lib/domain/signals';
 import { periodWindow } from '~/lib/domain/periods';
 import { NUDGE_KINDS } from '~/lib/domain/nudges';
@@ -152,7 +152,10 @@ const feeling = ref<Feeling | null>(null);
 const health = computed(() => nudgeHealth(events.value, NUDGE_KINDS));
 const first = computed(() => firstUse(graph.nodes, graph.occurrences));
 const rules = computed(() => MECHANISMS.map((m) => ({
-  m, verdict: mechanismVerdict(ruleFor(events.value, m.key, m.defaultOn, first.value, now.value, m.nudgeKind)),
+  m,
+  verdict: mechanismVerdict(m.usage === 'slog_finished'
+    ? usageRule(slogUse(graph.nodes, graph.occurrences, first.value, now.value))
+    : ruleFor(events.value, m.key, m.defaultOn, first.value, now.value, m.nudgeKind)),
 })));
 
 // checkpoint

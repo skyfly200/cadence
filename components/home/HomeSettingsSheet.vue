@@ -121,6 +121,14 @@
         <input v-model="gardenMotion" type="checkbox" class="mt-1 size-5 shrink-0" @change="setGardenMotion(gardenMotion)">
         <span class="text-sm text-slate-600 dark:text-slate-300"><span class="font-medium text-slate-800 dark:text-slate-100">Gentle shimmer</span><br>A slow glow on the garden's flowers. Off by default, and never if your device asks for less motion.</span>
       </label>
+      <label class="mt-2 block text-sm text-slate-600 dark:text-slate-300">
+        <span class="font-medium text-slate-800 dark:text-slate-100">Season names</span><br>Which hemisphere the Garden's seasons follow. Only the names change.
+        <select v-model="hemisphereChoice" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Hemisphere for season names" @change="saveHemisphere">
+          <option value="auto">From this device's time zone</option>
+          <option value="north">Northern hemisphere</option>
+          <option value="south">Southern hemisphere</option>
+        </select>
+      </label>
 
       <p class="mt-5 font-serif text-xl">Help lines</p>
       <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">If something you write sounds heavy, Cadence shows local help lines. Which country?</p>
@@ -152,7 +160,7 @@ import { COUNTRY_CHOICES } from '~/lib/domain/crisis';
 import { getCountryOverride, setCountryOverride } from '~/lib/home/crisis-state';
 import { getEndOfDayOn, getMusic, getRewardPrefs, getSoundOn, getVolume, setEndOfDayOn, setMusic, setRewardPref, setSoundOn, setVolume, speechVolume, toneGain, type Density, type SoundKind } from '~/lib/home/prefs';
 import { DEFAULT_REWARD_PREFS, type RewardPrefs } from '~/lib/home/rewards';
-import { getGardenMotion, setGardenMotion } from '~/lib/home/garden-state';
+import { getGardenMotion, getHemisphereChoice, resolveHemisphere, setGardenMotion, setHemisphereChoice, type HemisphereChoice } from '~/lib/home/garden-state';
 import type { NudgeKind } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
 import { useAppStore } from '~/stores/app';
@@ -239,6 +247,11 @@ const endOfDay = ref(false);
 onMounted(() => { Object.assign(rewards, getRewardPrefs()); endOfDay.value = getEndOfDayOn(); });
 
 const gardenMotion = ref(getGardenMotion());
+const hemisphereChoice = ref<HemisphereChoice>(getHemisphereChoice());
+function saveHemisphere() {
+  setHemisphereChoice(hemisphereChoice.value);
+  graph.hemisphere = resolveHemisphere(hemisphereChoice.value);
+}
 const helpCountry = ref(getCountryOverride() ?? '');
 const signalsOn = ref(getSignalsOn());
 const signalsOpen = ref(false);

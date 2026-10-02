@@ -59,6 +59,10 @@
           <p class="text-xs font-bold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">{{ s.title }}</p>
           <p v-for="l in s.lines" :key="l" class="mt-1 text-[15px]">{{ l }}</p>
         </div>
+        <div v-if="graph.weeklyTally > 0" class="mb-1 mt-3">
+          <p class="text-[15px]">{{ graph.weeklyTally }} {{ graph.weeklyTally === 1 ? 'thing' : 'things' }} kept this week.</p>
+          <button class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 text-sm font-medium dark:border-white/10" @click="emit('open-garden')">Open the garden</button>
+        </div>
         <button class="mt-3 min-h-[44px] w-full rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300" @click="next">Next</button>
       </section>
 
@@ -104,7 +108,7 @@ const RECAPS: { kind: RecapPeriod; label: string; title: string }[] = [
 const btn = 'min-h-[44px] rounded-xl border border-slate-200 text-sm font-medium dark:border-white/10';
 
 const props = defineProps<{ open: boolean }>();
-const emit = defineEmits<{ (e: 'close'): void; (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void }>();
+const emit = defineEmits<{ (e: 'close'): void; (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void; (e: 'open-garden'): void }>();
 const app = useAppStore();
 const graph = useGraphStore();
 const { reward } = useRewards();
@@ -132,7 +136,7 @@ const active = (s: Step): boolean =>
   s === 'triage' ? ideas.value.length > 0
     : s === 'connections' ? shownConnections.value.length > 0
       : s === 'conflicts' ? conflicts.value.length > 0
-        : s === 'recap' ? recaps.value.length > 0 : false;
+        : s === 'recap' ? recaps.value.length > 0 || graph.weeklyTally > 0 : false;
 
 /** The next card that has something on it after the current one, or the end. */
 function next() {

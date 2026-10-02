@@ -93,7 +93,7 @@
 
     </div>
 
-    <HomePlanningSession :open="planningOpen" @close="planningOpen = false" @said="say" @edit="onEdit" />
+    <HomePlanningSession :open="planningOpen" @close="planningOpen = false" @said="say" @edit="onEdit" @open-garden="planningOpen = false; gardenOpen = true" />
     <HomeGarden :open="gardenOpen" @close="gardenOpen = false" />
     <HomeCaptureSheet :open="captureOpen" listen @close="captureOpen = false" @said="say" />
     <HomeEditSheet :open="editOpen" :node-id="editingNodeId" @close="editOpen = false" @deleted="say('Deleted.')" />

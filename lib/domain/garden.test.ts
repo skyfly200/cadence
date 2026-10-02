@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GROUND_KINDS, MAX_BLOOMS, PIECE_KINDS, PLANT_FOR_PERIOD, RESTING_DAYS, gardenState, pressSeason, pressedBook, seasonOf, stageOf, unit,
+  GROUND_KINDS, MAX_BLOOMS, PIECE_KINDS, hemisphereOfZone, seasonNameFor, seasonNameOfKey, PLANT_FOR_PERIOD, RESTING_DAYS, gardenState, pressSeason, pressedBook, seasonOf, stageOf, unit,
 } from './garden';
 import { commitment, deepFreeze, ev, goal, habit, link, UTC } from './test-helpers';
 
@@ -204,5 +204,48 @@ describe('keeping deleted plants in the book', () => {
   it('ignores a draft for another season', () => {
     const other = { ...pressSeason([day, gone], [], occs, season, UTC)!, key: 'quarter:2026-04-01' };
     expect(pressedBook([day], [], occs, NOW, [], UTC, other).seasons[0]!.plants.map((p) => p.title)).toEqual(['Walk']);
+  });
+});
+
+describe('hemisphere', () => {
+  const south = { ...UTC, hemisphere: 'south' } as const;
+
+  it('names the seasons for the north by default and for the south when asked', () => {
+    expect(seasonOf(new Date('2026-11-10T12:00:00Z'), UTC).name).toBe('Autumn');
+    expect(seasonOf(new Date('2026-11-10T12:00:00Z'), south).name).toBe('Spring');
+    expect(seasonOf(new Date('2026-02-10T12:00:00Z'), south).name).toBe('Summer');
+    expect(seasonOf(new Date('2026-08-10T12:00:00Z'), south).name).toBe('Winter');
+    expect(seasonOf(new Date('2026-05-10T12:00:00Z'), south).name).toBe('Autumn');
+  });
+
+  it('never changes the quarter key, so stored pages stay valid', () => {
+    for (const iso of ['2026-02-10T12:00:00Z', '2026-05-10T12:00:00Z', '2026-08-10T12:00:00Z', '2026-11-10T12:00:00Z']) {
+      expect(seasonOf(new Date(iso), south).key).toBe(seasonOf(new Date(iso), UTC).key);
+    }
+  });
+
+  it('names a stored key in either hemisphere, and falls back on a key it cannot read', () => {
+    expect(seasonNameOfKey('quarter:2026-10-01')).toBe('Autumn');
+    expect(seasonNameOfKey('quarter:2026-10-01', 'south')).toBe('Spring');
+    expect(seasonNameOfKey('quarter:2026-01-01', 'south')).toBe('Summer');
+    expect(seasonNameOfKey('nonsense', 'south', 'Winter')).toBe('Winter');
+    expect(seasonNameFor(7, 'south')).toBe('Winter');
+  });
+
+  it('puts the usual southern zones in the south and everything else in the north', () => {
+    for (const z of ['Australia/Sydney', 'Australia/Perth', 'Pacific/Auckland', 'America/Sao_Paulo', 'America/Argentina/Buenos_Aires', 'Africa/Johannesburg']) {
+      expect(hemisphereOfZone(z)).toBe('south');
+    }
+    for (const z of ['Europe/London', 'America/New_York', 'Asia/Tokyo', 'UTC', 'Asia/Kolkata']) expect(hemisphereOfZone(z)).toBe('north');
+  });
+
+  it('presses a page whose key does not depend on the hemisphere', () => {
+    const day = habit({ id: 'hd', title: 'Walk', period: 'day' });
+    const occs = [ev('hd', 'logged', '2026-08-10T09:00:00.000Z')];
+    const at = new Date('2026-08-20T00:00:00Z');
+    const northPage = pressSeason([day], [], occs, seasonOf(at, UTC), UTC)!;
+    const southPage = pressSeason([day], [], occs, seasonOf(at, south), south)!;
+    expect(southPage.key).toBe(northPage.key);
+    expect([northPage.name, southPage.name]).toEqual(['Summer', 'Winter']);
   });
 });

@@ -66,19 +66,52 @@ export interface Season {
   end: Date;
 }
 
-const NAMES: Record<number, SeasonName> = { 1: 'Winter', 4: 'Spring', 7: 'Summer', 10: 'Autumn' };
+export type Hemisphere = 'north' | 'south';
+
+/** Period options plus the hemisphere the season names follow (default north). Names only: the quarter windows and keys never change. */
+export interface GardenOptions extends PeriodOptions { hemisphere?: Hemisphere }
+
+const NAMES: Record<Hemisphere, Record<number, SeasonName>> = {
+  north: { 1: 'Winter', 4: 'Spring', 7: 'Summer', 10: 'Autumn' },
+  south: { 1: 'Summer', 4: 'Autumn', 7: 'Winter', 10: 'Spring' },
+};
+
+/** The season name for a quarter that starts in `month` (1, 4, 7 or 10). */
+export function seasonNameFor(month: number, hemisphere: Hemisphere = 'north'): SeasonName {
+  return NAMES[hemisphere][month] ?? 'Winter';
+}
+
+/** The season name for a stored quarter key such as 'quarter:2026-10-01', in the given hemisphere. */
+export function seasonNameOfKey(key: string, hemisphere: Hemisphere = 'north', fallback: SeasonName = 'Winter'): SeasonName {
+  const m = /(\d{4})-(\d{2})-\d{2}$/.exec(key);
+  return m ? seasonNameFor(Number(m[2]), hemisphere) : fallback;
+}
+
+// A heuristic, not a map: the zones whose cities lie mostly south of the equator. The Settings override covers the rest.
+const SOUTH_PREFIXES = ['Australia/', 'Antarctica/', 'America/Argentina/'];
+const SOUTH_ZONES = new Set([
+  'Pacific/Auckland', 'Pacific/Chatham', 'Pacific/Fiji', 'Pacific/Tongatapu', 'Pacific/Apia', 'Pacific/Tahiti', 'Pacific/Port_Moresby', 'Pacific/Noumea', 'Pacific/Norfolk',
+  'America/Sao_Paulo', 'America/Santiago', 'America/Lima', 'America/La_Paz', 'America/Asuncion', 'America/Montevideo', 'America/Bahia', 'America/Fortaleza', 'America/Recife', 'America/Manaus', 'America/Cuiaba', 'America/Campo_Grande', 'America/Belem',
+  'Africa/Johannesburg', 'Africa/Maputo', 'Africa/Harare', 'Africa/Lusaka', 'Africa/Luanda', 'Africa/Windhoek', 'Africa/Gaborone', 'Africa/Maseru', 'Africa/Mbabane', 'Africa/Lubumbashi', 'Africa/Blantyre', 'Africa/Dar_es_Salaam',
+  'Indian/Antananarivo', 'Indian/Mauritius', 'Indian/Reunion', 'Asia/Jakarta', 'Asia/Makassar', 'Atlantic/Stanley', 'Atlantic/South_Georgia',
+]);
+
+/** Which hemisphere a time zone is in, for naming the seasons. */
+export function hemisphereOfZone(timeZone: string): Hemisphere {
+  return SOUTH_ZONES.has(timeZone) || SOUTH_PREFIXES.some((p) => timeZone.startsWith(p)) ? 'south' : 'north';
+}
 
 function zoneOf(opts: PeriodOptions): string {
   return opts.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-function seasonFrom(w: PeriodWindow, opts: PeriodOptions): Season {
+function seasonFrom(w: PeriodWindow, opts: GardenOptions): Season {
   const p = localParts(w.start, zoneOf(opts));
-  return { key: w.key, name: NAMES[p.m] ?? 'Winter', year: p.y, start: w.start, end: w.end };
+  return { key: w.key, name: seasonNameFor(p.m, opts.hemisphere), year: p.y, start: w.start, end: w.end };
 }
 
-/** The season (calendar quarter) containing `at`. Names follow the northern hemisphere. */
-export function seasonOf(at: Date, opts: PeriodOptions = {}): Season {
+/** The season (calendar quarter) containing `at`. Names follow `opts.hemisphere` (north by default). */
+export function seasonOf(at: Date, opts: GardenOptions = {}): Season {
   return seasonFrom(periodWindow('quarter', at, opts), opts);
 }
 
@@ -169,7 +202,7 @@ function goalDone(goal: Goal, nodes: readonly Node[], children: Map<string, stri
 
 /** The garden for the season containing `now`. */
 export function gardenState(
-  nodes: readonly Node[], links: readonly Link[], occurrences: readonly Occurrence[], now: Date, opts: PeriodOptions = {},
+  nodes: readonly Node[], links: readonly Link[], occurrences: readonly Occurrence[], now: Date, opts: GardenOptions = {},
 ): GardenState {
   const window = periodWindow('quarter', now, opts);
   const season = seasonFrom(window, opts);
@@ -227,7 +260,7 @@ export interface PressedSeason {
 
 /** One past season's page: the few plants that grew most, or null if nothing was kept that season. */
 export function pressSeason(
-  nodes: readonly Node[], links: readonly Link[], occurrences: readonly Occurrence[], season: Season, opts: PeriodOptions = {},
+  nodes: readonly Node[], links: readonly Link[], occurrences: readonly Occurrence[], season: Season, opts: GardenOptions = {},
 ): PressedSeason | null {
   const window = periodWindow('quarter', season.start, opts);
   const kept = keptInWindow(occurrences, window);
@@ -271,7 +304,7 @@ export interface PressedBook {
 /** Every past season that had something kept. The current season is never pressed; it is still growing. */
 export function pressedBook(
   nodes: readonly Node[], links: readonly Link[], occurrences: readonly Occurrence[], now: Date,
-  stored: readonly PressedSeason[] = [], opts: PeriodOptions = {}, draft?: PressedSeason,
+  stored: readonly PressedSeason[] = [], opts: GardenOptions = {}, draft?: PressedSeason,
 ): PressedBook {
   const storedByKey = new Map(stored.map((s) => [s.key, s] as const));
   const earliest = occurrences.reduce((m, o) => Math.min(m, new Date(o.at).getTime()), Infinity);
