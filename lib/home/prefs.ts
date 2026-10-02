@@ -99,3 +99,29 @@ const AI_KEY = 'cadence:aiOn';
 /** The AI switch as this device last saw it (the server keeps the authoritative copy). On unless turned off. */
 export function getAiOn(): boolean { return read(AI_KEY) !== 'false'; }
 export function setAiOn(on: boolean): void { write(AI_KEY, String(on)); }
+
+const PLANNING_FINISHED_KEY = 'cadence:planningFinished';
+const PLANNING_REVIEWED_KEY = 'cadence:planningReviewed';
+/** When the last Planning session was finished (ISO), or null if none yet. */
+export function getPlanningFinished(): string | null { return read(PLANNING_FINISHED_KEY); }
+/** Ideas already decided on in an unfinished session, so stopping part-way keeps the progress. */
+export function getPlanningReviewed(): string[] {
+  try { const v = JSON.parse(read(PLANNING_REVIEWED_KEY) ?? '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []; } catch { return []; }
+}
+export function addPlanningReviewed(id: string): void { write(PLANNING_REVIEWED_KEY, JSON.stringify([...new Set([...getPlanningReviewed(), id])].slice(-200))); }
+/** Finishing a session starts the next one fresh: remember when, and forget the partial progress. */
+export function finishPlanning(now: Date = new Date()): void {
+  write(PLANNING_FINISHED_KEY, now.toISOString());
+  write(PLANNING_REVIEWED_KEY, '[]');
+}
+
+export type RecapKind = 'week' | 'month' | 'quarter';
+const recapKey = (k: RecapKind) => `cadence:recap:${k}`;
+/** Recaps in the Planning session are opt-in: all off until switched on, each on its own. */
+export function getRecapOn(kind: RecapKind): boolean { return read(recapKey(kind)) === 'true'; }
+export function setRecapOn(kind: RecapKind, on: boolean): void { write(recapKey(kind), String(on)); }
+
+const PLANNING_REMINDER_KEY = 'cadence:planningReminder';
+/** A quiet in-app prompt when a week has passed since the last session. Off unless switched on. */
+export function getPlanningReminder(): boolean { return read(PLANNING_REMINDER_KEY) === 'true'; }
+export function setPlanningReminder(on: boolean): void { write(PLANNING_REMINDER_KEY, String(on)); }

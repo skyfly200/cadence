@@ -11,14 +11,14 @@ import { isParked } from './shelf';
 const byAge = (a: Node, b: Node) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || (a.id < b.id ? -1 : 1);
 
 /** part-of children by parent id (a Link runs child -> parent). */
-function childrenOf(links: readonly Link[]): Map<string, string[]> {
+export function childrenOf(links: readonly Link[]): Map<string, string[]> {
   const children = new Map<string, string[]>();
   for (const l of links) if (l.type === 'part_of') (children.get(l.toId) ?? children.set(l.toId, []).get(l.toId)!).push(l.fromId);
   return children;
 }
 
 /** Every node id below `rootId` through part-of Links, in walk order. A cycle is visited once and never loops. */
-function descendants(rootId: string, children: Map<string, string[]>): string[] {
+export function descendants(rootId: string, children: Map<string, string[]>): string[] {
   const seen = new Set<string>([rootId]);
   const out: string[] = [];
   const walk = (id: string) => {

@@ -1,6 +1,10 @@
 <template>
   <section class="px-4 pt-4">
-    <h1 class="text-xl font-semibold">Plan</h1>
+    <div class="flex items-center gap-2">
+      <h1 class="min-w-0 flex-1 text-xl font-semibold">Plan</h1>
+      <button :class="chip" @click="$emit('open-planning')">Planning session</button>
+    </div>
+    <p v-if="planningReady" class="mt-2 rounded-2xl bg-amber-50 px-4 py-2.5 text-sm text-stone-700 dark:bg-white/10 dark:text-slate-200">A planning session is ready whenever you are.</p>
     <p class="text-sm text-slate-500 dark:text-slate-400">Drag to a day, the heap, or into place within a day. Swipe a row to delete it.</p>
 
     <form class="mt-3 flex gap-2" @submit.prevent="addEntry">
@@ -74,14 +78,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { planningDue } from '~/lib/domain';
+import { getPlanningFinished, getPlanningReminder } from '~/lib/home/prefs';
 import { useGraphStore } from '~/stores/graph';
 import { startDrag } from '~/lib/home/drag';
 import { startSwipe } from '~/lib/home/swipe';
 import type { StackDay } from '~/lib/home/derive';
 
-const emit = defineEmits<{ (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void }>();
+const emit = defineEmits<{ (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void; (e: 'open-planning'): void }>();
 const graph = useGraphStore();
+
+// The opt-in weekly reminder is only a quiet line here. Read on the client, since it lives in this device's storage.
+const planningReady = ref(false);
+onMounted(() => { planningReady.value = planningDue(getPlanningFinished(), new Date(), getPlanningReminder()); });
 
 const chip = 'min-h-[44px] rounded-xl bg-stone-100 px-3 text-sm font-medium dark:bg-white/10';
 const grip = 'grid size-11 shrink-0 touch-none cursor-grab place-items-center text-xl text-slate-400 active:cursor-grabbing';
