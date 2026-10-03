@@ -22,6 +22,7 @@
           <li><strong>On this device:</strong> everything you capture and plan, plus your display, sound and clock choices. Signed out, nothing leaves the device.</li>
           <li><strong>In your account (when signed in):</strong> the same items, so your devices stay in step. Only you can read them.</li>
           <li><strong>Google Calendar (if you connected it):</strong> the sign-in token is kept on the server, encrypted, and never in your browser.</li>
+          <li><strong>Google data (Calendar, Tasks, Docs):</strong> Cadence only reads it, and only to show your events or to import when you press Import. Tasks you import become notes in your list. A Doc you pick is read once so its text can be turned into suggestions you choose to keep, and the document itself is not stored. Nothing from your Google account is shared with anyone else or used to train AI models, and Cadence never changes anything in your Google account. Disconnect Google in Settings at any time, and you can also remove Cadence at <a class="underline" href="https://myaccount.google.com/permissions" rel="noopener" target="_blank">myaccount.google.com/permissions</a>.</li>
           <li><strong>Notifications:</strong> a reminder is written on your device; the server only holds the time it should arrive and your browser's push address.</li>
           <li><strong>Voice:</strong> tap-to-talk uses your browser's own speech recognition.</li>
         </ul>
