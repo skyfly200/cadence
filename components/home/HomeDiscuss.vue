@@ -13,9 +13,23 @@
         <li v-for="(t, i) in turns" :key="i" :class="['rounded-2xl px-3 py-2 text-[15px]', t.role === 'user' ? 'ml-8 bg-stone-100 dark:bg-white/10' : 'mr-8 border border-slate-200 dark:border-white/10']">{{ t.text }}</li>
         <li v-if="busy" class="mr-8 px-3 py-2 text-sm text-slate-500 dark:text-slate-400">…</li>
       </ul>
+      <div v-if="speechSupported" class="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          :aria-pressed="speechState.listening"
+          :aria-label="speechState.listening ? 'Stop listening' : 'Start mic'"
+          :disabled="busy"
+          class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl bg-stone-100 text-stone-600 hover:bg-stone-200 disabled:opacity-50 dark:bg-white/10 dark:text-stone-300 dark:hover:bg-white/15"
+          @click="toggleSpeech"
+        >
+          <Mic v-if="!speechState.listening" class="size-5" />
+          <Square v-else class="size-5" />
+        </button>
+        <div v-if="speechState.message" class="flex-1 text-xs text-stone-600 dark:text-stone-300">{{ speechState.message }}</div>
+      </div>
       <textarea
         ref="box" v-model="input" rows="2" maxlength="1000" :disabled="busy"
-        class="mt-3 w-full rounded-2xl border border-stone-200 bg-stone-50 p-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
+        class="mt-2 w-full rounded-2xl border border-stone-200 bg-stone-50 p-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
         placeholder="Say it or type it." @keydown.ctrl.enter="send" @keydown.meta.enter="send"
       />
       <p v-if="error" class="mt-2 text-sm text-amber-700 dark:text-amber-300">{{ error }}</p>
@@ -43,9 +57,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { Mic, Square } from 'lucide-vue-next';
 import { aiFetch } from '~/lib/ai-client';
 import { checkCrisis } from '~/lib/domain/crisis';
+import { loadState } from '~/lib/home/nudge-state';
+import { getRecognitionCtor, initialState, joinTranscript, messageFor, setListening, setMessage } from '~/lib/home/speech-input';
 import { MAX_TURNS, heardLine, privateLine, spoken, userText } from '~/lib/home/discuss';
 import { linksAfterKeeping, type KeepChoice, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
 import { useAppStore } from '~/stores/app';
@@ -88,15 +105,76 @@ const shownLinks = computed(() => linksAfterKeeping(proposalLinks.value, kept, g
 const totalShown = computed(() => proposalNodes.value.length + shownLinks.value.length);
 const privateNote = computed(() => privateLine(privateExcluded.value));
 
+// Tap-to-talk, same as the capture sheet's mic: the words land in the message box.
+const speechSupported = ref(false);
+const speechState = ref(initialState());
+let recognition: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
+let baseSpeech = '';
+let ignoreResults = false;
+
 onMounted(async () => {
+  const ctor = getRecognitionCtor(window);
+  speechSupported.value = ctor !== null;
+  if (ctor) {
+    try {
+      recognition = new ctor();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.addEventListener('start', () => {
+        ignoreResults = false;
+        speechState.value = setMessage(setListening(speechState.value, true), null);
+      });
+      recognition.addEventListener('result', (event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        if (!ignoreResults) input.value = joinTranscript(baseSpeech, event.results);
+      });
+      recognition.addEventListener('error', (event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        const msg = messageFor(event.error);
+        if (msg) speechState.value = setMessage(speechState.value, msg);
+        speechState.value = setListening(speechState.value, false);
+      });
+      recognition.addEventListener('end', () => { speechState.value = setListening(speechState.value, false); });
+    } catch {
+      speechSupported.value = false;
+    }
+  }
   await nextTick();
   box.value?.focus();
   if (props.initial?.trim()) { input.value = props.initial.trim(); await send(); }
 });
 
+onUnmounted(() => stopListening());
+
+function toggleSpeech() {
+  if (!recognition) return;
+  try {
+    if (speechState.value.listening) {
+      recognition.stop();
+    } else {
+      // The one mute silences the mic too (SPEC section 6).
+      if (loadState().muted) {
+        speechState.value = setMessage(speechState.value, 'Sound is muted. Unmute it in Settings to use the mic.');
+        return;
+      }
+      baseSpeech = input.value;
+      recognition.start();
+    }
+  } catch {
+    speechState.value = setMessage(speechState.value, messageFor('unknown'));
+  }
+}
+
+/** Stop first, so recognition does not rebuild the box after a message is sent or the conversation ends. */
+function stopListening() {
+  ignoreResults = true;
+  if (recognition && speechState.value.listening) {
+    try { recognition.abort(); } catch { /* noop */ }
+  }
+}
+
 async function send() {
   const text = input.value.trim();
   if (!text || busy.value) return;
+  stopListening();
   // On-device rules first: a matching message is never sent anywhere, AI call or not.
   if (checkCrisis(text)) { emit('crisis', [userText(turns.value), text].filter(Boolean).join('\n')); return; }
   error.value = '';
@@ -120,6 +198,7 @@ async function send() {
 
 /** "Done" at any point: sum up what was said, or just close if nothing was. */
 async function done() {
+  stopListening();
   if (stage.value === 'summary') return finish();
   if (!spoken(turns.value) && !input.value.trim()) { emit('close'); return; }
   if (input.value.trim()) {
