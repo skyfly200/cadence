@@ -35,7 +35,7 @@ describe('openLink', () => {
 
   it('is an intent for the installed app on Android, with the website as the fallback', () => {
     const l = openLink(duo, true);
-    expect(l).toBe(`intent://www.duolingo.com/learn#Intent;scheme=https;package=com.duolingo;S.browser_fallback_url=${encodeURIComponent('https://www.duolingo.com/learn')};end`);
+    expect(l).toBe(`intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.duolingo;S.browser_fallback_url=${encodeURIComponent('https://www.duolingo.com/learn')};end`);
   });
 
   it('keeps the query string, so a playlist link opens that playlist', () => {

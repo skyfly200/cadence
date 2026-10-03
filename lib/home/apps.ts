@@ -13,6 +13,8 @@ export interface KnownApp {
   url: string;
   /** Android package, to open the installed app. */
   androidPackage?: string;
+  /** Open the installed app itself (its launcher), not a web link it may not handle. For apps that ignore their own site's links. */
+  launch?: boolean;
 }
 
 export const KNOWN_APPS: readonly KnownApp[] = [
@@ -20,7 +22,7 @@ export const KNOWN_APPS: readonly KnownApp[] = [
   { id: 'calendar', name: 'Calendar', words: ['calendar', 'gcal'], url: 'https://calendar.google.com/', androidPackage: 'com.google.android.calendar' },
   { id: 'maps', name: 'Maps', words: ['maps', 'directions'], url: 'https://maps.google.com/', androidPackage: 'com.google.android.apps.maps' },
   { id: 'drive', name: 'Drive', words: ['drive', 'gdrive'], url: 'https://drive.google.com/', androidPackage: 'com.google.android.apps.docs' },
-  { id: 'duolingo', name: 'Duolingo', words: ['duolingo'], url: 'https://www.duolingo.com/learn', androidPackage: 'com.duolingo' },
+  { id: 'duolingo', name: 'Duolingo', words: ['duolingo'], url: 'https://www.duolingo.com/learn', androidPackage: 'com.duolingo', launch: true },
   { id: 'youtube', name: 'YouTube', words: ['youtube'], url: 'https://www.youtube.com/', androidPackage: 'com.google.android.youtube' },
   { id: 'spotify', name: 'Spotify', words: ['spotify'], url: 'https://open.spotify.com/', androidPackage: 'com.spotify.music' },
   { id: 'whatsapp', name: 'WhatsApp', words: ['whatsapp'], url: 'https://web.whatsapp.com/', androidPackage: 'com.whatsapp' },
@@ -46,8 +48,9 @@ export function matchApp(title: string): KnownApp | null {
 /** The link to open an app: an Android intent (with the website as fallback) or the website. */
 export function openLink(app: KnownApp, android: boolean): string {
   if (!android || !app.androidPackage) return app.url;
-  const u = new URL(app.url);
   const fallback = encodeURIComponent(app.url);
+  if (app.launch) return `intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${app.androidPackage};S.browser_fallback_url=${fallback};end`;
+  const u = new URL(app.url);
   return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=${u.protocol.slice(0, -1)};package=${app.androidPackage};S.browser_fallback_url=${fallback};end`;
 }
 
