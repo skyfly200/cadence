@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_VOLUME, addPlanningReviewed, finishPlanning, getDiscussDisclosed, getPlanningFinished, setDiscussDisclosed, getPlanningNudged, setPlanningNudged, getPlanningReminder, getPlanningReviewed, getRecapOn, getSoundOn, getVolume,
   greeting, setPlanningReminder, setRecapOn, setVolume, speechLevel, speechVolume, toneGain, toneLevel,
-  addSlogDismissed, getDelightState, getEndOfDayOn, getTripsOn, getWelcomed, setWelcomed, getRewardPrefs, getSlogDismissed, setDelightState, setEndOfDayOn, setTripsOn, setRewardPref,
+  addSlogDismissed, getDelightState, getEndOfDayOn, getTripsOn, getInCar, setInCar, speechLevel, setSoundOn, getWelcomed, setWelcomed, getRewardPrefs, getSlogDismissed, setDelightState, setEndOfDayOn, setTripsOn, setRewardPref,
 } from './prefs';
 
 describe('volume', () => {
@@ -143,6 +143,17 @@ describe('reward preferences', () => {
     expect(getWelcomed()).toBe(true);
     setWelcomed(false);
     expect(getWelcomed()).toBe(false);
+  });
+
+  it('speaks at full volume in the car, even when speech is switched off', () => {
+    stub();
+    setSoundOn('speech', false);
+    expect(getInCar()).toBe(false);
+    expect(speechLevel()).toBe(0);
+    setInCar(true);
+    expect(speechLevel()).toBe(1);
+    setInCar(false);
+    expect(speechLevel()).toBe(0);
   });
 
   it('keeps Trips and Map off until switched on', () => {

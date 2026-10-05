@@ -78,7 +78,15 @@ export function getTimeFormat(): TimeFormat {
 export function setTimeFormat(f: TimeFormat): void { write(TIME_FORMAT_KEY, f); }
 /** What to play right now: the tone's peak gain and the speech volume, each 0 when switched off. */
 export function toneLevel(): number { return getSoundOn('tone') ? toneGain(getVolume('tone')) : 0; }
-export function speechLevel(): number { return getSoundOn('speech') ? speechVolume(getVolume('speech')) : 0; }
+export function speechLevel(): number {
+  if (getInCar()) return 1;
+  return getSoundOn('speech') ? speechVolume(getVolume('speech')) : 0;
+}
+
+const CAR_KEY = 'cadence:inCar';
+/** In the car (opt-in module, off by default): nudges are always spoken, at full volume. Mute and quiet hours still win. */
+export function getInCar(): boolean { return read(CAR_KEY) === 'true'; }
+export function setInCar(on: boolean): void { write(CAR_KEY, String(on)); }
 
 const MUSIC_KEY = 'cadence:music';
 /** Music for focus sessions: provider, playlist link and whether to open it on start (per device). */

@@ -118,6 +118,11 @@
         <span class="text-sm">An end-of-day line on Home, "here is what you kept"</span>
       </label>
 
+      <label class="mt-2 flex min-h-[44px] items-center gap-3">
+        <input type="checkbox" v-model="inCar" class="h-5 w-5 rounded" @change="setInCar(inCar)" />
+        <span class="text-sm">In the car: speak nudges aloud at full volume (mute and quiet hours still apply)</span>
+      </label>
+
       <p class="mt-5 font-serif text-xl">Go deeper</p>
       <label class="mt-1.5 flex min-h-[44px] items-center gap-3">
         <input type="checkbox" v-model="trips" class="h-5 w-5 rounded" @change="setTripsOn(trips)" />
@@ -168,7 +173,7 @@ import type { TimeFormat } from '~/lib/domain';
 import { MUSIC_PROVIDERS, parsePlaylist } from '~/lib/home/music';
 import { COUNTRY_CHOICES } from '~/lib/domain/crisis';
 import { getCountryOverride, setCountryOverride } from '~/lib/home/crisis-state';
-import { getEndOfDayOn, getMusic, getRewardPrefs, getSoundOn, getTripsOn, getVolume, setEndOfDayOn, setTripsOn, setMusic, setRewardPref, setSoundOn, setVolume, speechVolume, toneGain, type Density, type SoundKind } from '~/lib/home/prefs';
+import { getEndOfDayOn, getMusic, getRewardPrefs, getSoundOn, getInCar, getTripsOn, getVolume, setInCar, setEndOfDayOn, setTripsOn, setMusic, setRewardPref, setSoundOn, setVolume, speechVolume, toneGain, type Density, type SoundKind } from '~/lib/home/prefs';
 import { DEFAULT_REWARD_PREFS, type RewardPrefs } from '~/lib/home/rewards';
 import { getGardenMotion, getHemisphereChoice, resolveHemisphere, setGardenMotion, setHemisphereChoice, type HemisphereChoice } from '~/lib/home/garden-state';
 import type { NudgeKind } from '~/lib/domain';
@@ -255,7 +260,8 @@ const REWARD_TOGGLES: { key: keyof RewardPrefs; label: string }[] = [
 const rewards = reactive<RewardPrefs>({ ...DEFAULT_REWARD_PREFS });
 const endOfDay = ref(false);
 const trips = ref(false);
-onMounted(() => { Object.assign(rewards, getRewardPrefs()); endOfDay.value = getEndOfDayOn(); trips.value = getTripsOn(); });
+const inCar = ref(false);
+onMounted(() => { Object.assign(rewards, getRewardPrefs()); endOfDay.value = getEndOfDayOn(); trips.value = getTripsOn(); inCar.value = getInCar(); });
 
 const gardenMotion = ref(getGardenMotion());
 const hemisphereChoice = ref<HemisphereChoice>(getHemisphereChoice());
