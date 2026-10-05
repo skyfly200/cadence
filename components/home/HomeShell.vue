@@ -30,6 +30,7 @@
       <div class="mt-auto flex flex-col gap-1">
         <button class="min-h-[44px] rounded-xl px-3 text-left text-[15px] hover:bg-white/60 dark:hover:bg-white/5" @click="planningOpen = true">Planning session</button>
         <NuxtLink to="/deeper" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-white/60 dark:hover:bg-white/5">Go deeper</NuxtLink>
+        <button class="min-h-[44px] rounded-xl px-3 text-left text-[15px] hover:bg-white/60 dark:hover:bg-white/5" @click="welcomeOpen = true">Show the welcome</button>
         <button class="min-h-[44px] rounded-xl px-3 text-left text-[15px] hover:bg-white/60 dark:hover:bg-white/5" @click="settingsOpen = true">Settings</button>
         <NuxtLink to="/privacy" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-white/60 dark:hover:bg-white/5">What Cadence knows and does</NuxtLink>
         <NuxtLink to="/classic" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-white/60 dark:hover:bg-white/5">Classic view</NuxtLink>
@@ -64,6 +65,7 @@
         <ul class="ml-auto w-60 rounded-2xl bg-white p-2 shadow-lg dark:bg-[#2A2645]" role="menu">
           <li><button class="min-h-[44px] w-full rounded-xl px-3 text-left text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem" @click="menuOpen = false; planningOpen = true">Planning session</button></li>
           <li><NuxtLink to="/deeper" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem">Go deeper</NuxtLink></li>
+          <li><button class="min-h-[44px] w-full rounded-xl px-3 text-left text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem" @click="menuOpen = false; welcomeOpen = true">Show the welcome</button></li>
           <li><button class="min-h-[44px] w-full rounded-xl px-3 text-left text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem" @click="menuOpen = false; settingsOpen = true">Settings</button></li>
           <li><NuxtLink to="/privacy" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem">What Cadence knows and does</NuxtLink></li>
           <li><NuxtLink to="/classic" class="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] hover:bg-stone-100 dark:hover:bg-white/10" role="menuitem">Classic view</NuxtLink></li>
@@ -96,6 +98,7 @@
     </div>
 
     <HomePlanningSession :open="planningOpen" @close="planningOpen = false" @said="say" @edit="onEdit" @open-garden="planningOpen = false; gardenOpen = true" />
+    <HomeWelcome :open="welcomeOpen" @close="closeWelcome" />
     <HomeGarden :open="gardenOpen" @close="gardenOpen = false" />
     <HomeCaptureSheet :open="captureOpen" listen @close="captureOpen = false" @said="say" />
     <HomeEditSheet :open="editOpen" :node-id="editingNodeId" @close="editOpen = false" @deleted="say('Deleted.')" />
@@ -122,7 +125,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import type { NudgeKind } from '~/lib/domain';
 import { useAppStore } from '~/stores/app';
 import { useGraphStore } from '~/stores/graph';
-import { getDensity, getEndOfDayOn, getTimeFormat, greeting, markOpened, setDensity, setTimeFormat, wasAway, type Density } from '~/lib/home/prefs';
+import { getDensity, getWelcomed, setWelcomed, getEndOfDayOn, getTimeFormat, greeting, markOpened, setDensity, setTimeFormat, wasAway, type Density } from '~/lib/home/prefs';
 import { endOfDayLine } from '~/lib/home/rewards';
 import type { TimeFormat } from '~/lib/domain';
 import { useNudges } from '~/composables/useNudges';
@@ -145,6 +148,8 @@ const settingsOpen = ref(false);
 const planningOpen = ref(false);
 const gardenOpen = ref(false);
 const authOpen = ref(false);
+const welcomeOpen = ref(false);
+function closeWelcome() { welcomeOpen.value = false; setWelcomed(true); }
 const railText = ref('');
 const railBusy = ref(false);
 const railError = ref('');
@@ -233,6 +238,8 @@ onMounted(() => {
   away.value = wasAway();
   markOpened();
   graph.load();
+  // First run only: someone who already has entries has no need for the tour (it can be replayed from Settings).
+  if (!getWelcomed()) { if (graph.nodes.length) setWelcomed(true); else welcomeOpen.value = true; }
   void app.initAuth(); // restores a signed-in session and starts the sync (which now covers the graph tables)
   window.addEventListener('cadence:hydrated', onHydrated);
 });

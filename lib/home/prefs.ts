@@ -149,6 +149,11 @@ const EOD_KEY = 'cadence:endOfDayLine';
 export function getEndOfDayOn(): boolean { return read(EOD_KEY) === 'true'; }
 export function setEndOfDayOn(on: boolean): void { write(EOD_KEY, String(on)); }
 
+const WELCOMED_KEY = 'cadence:welcomed';
+/** The first-run welcome has been seen or skipped on this device. */
+export function getWelcomed(): boolean { return read(WELCOMED_KEY) === 'true'; }
+export function setWelcomed(done: boolean): void { write(WELCOMED_KEY, String(done)); }
+
 const TRIPS_KEY = 'cadence:tripsModule';
 /** Trips and Map in Go deeper: a module, off until switched on in Settings. */
 export function getTripsOn(): boolean { return read(TRIPS_KEY) === 'true'; }
