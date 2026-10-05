@@ -149,6 +149,11 @@ const EOD_KEY = 'cadence:endOfDayLine';
 export function getEndOfDayOn(): boolean { return read(EOD_KEY) === 'true'; }
 export function setEndOfDayOn(on: boolean): void { write(EOD_KEY, String(on)); }
 
+const TRIPS_KEY = 'cadence:tripsModule';
+/** Trips and Map in Go deeper: a module, off until switched on in Settings. */
+export function getTripsOn(): boolean { return read(TRIPS_KEY) === 'true'; }
+export function setTripsOn(on: boolean): void { write(TRIPS_KEY, String(on)); }
+
 const DELIGHT_KEY = 'cadence:rewardDelight';
 /** The day the last rare delight showed and how many showed that day (the cap is one a day). */
 export function getDelightState(): DelightState | null {

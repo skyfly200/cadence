@@ -13,3 +13,4 @@ export * from './parse-capture';
 export * from './nudges';
 export * from './clock';
 export * from './signals';
+export * from './eisenhower';

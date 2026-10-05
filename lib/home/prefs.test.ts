@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_VOLUME, addPlanningReviewed, finishPlanning, getDiscussDisclosed, getPlanningFinished, setDiscussDisclosed, getPlanningNudged, setPlanningNudged, getPlanningReminder, getPlanningReviewed, getRecapOn, getSoundOn, getVolume,
   greeting, setPlanningReminder, setRecapOn, setVolume, speechLevel, speechVolume, toneGain, toneLevel,
-  addSlogDismissed, getDelightState, getEndOfDayOn, getRewardPrefs, getSlogDismissed, setDelightState, setEndOfDayOn, setRewardPref,
+  addSlogDismissed, getDelightState, getEndOfDayOn, getTripsOn, getRewardPrefs, getSlogDismissed, setDelightState, setEndOfDayOn, setTripsOn, setRewardPref,
 } from './prefs';
 
 describe('volume', () => {
@@ -134,6 +134,14 @@ describe('reward preferences', () => {
     expect(getRewardPrefs()).toEqual({ lines: true, tally: false, sound: false });
     setEndOfDayOn(true);
     expect(getEndOfDayOn()).toBe(true);
+  });
+
+  it('keeps Trips and Map off until switched on', () => {
+    expect(getTripsOn()).toBe(false);
+    stub();
+    expect(getTripsOn()).toBe(false);
+    setTripsOn(true);
+    expect(getTripsOn()).toBe(true);
   });
 
   it('keeps the delight state and the dismissed slog offers', () => {
