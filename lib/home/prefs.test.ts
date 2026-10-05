@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_VOLUME, addPlanningReviewed, finishPlanning, getDiscussDisclosed, getPlanningFinished, setDiscussDisclosed, getPlanningNudged, setPlanningNudged, getPlanningReminder, getPlanningReviewed, getRecapOn, getSoundOn, getVolume,
   greeting, setPlanningReminder, setRecapOn, setVolume, speechLevel, speechVolume, toneGain, toneLevel,
-  addSlogDismissed, getDelightState, getEndOfDayOn, getRewardPrefs, getSlogDismissed, setDelightState, setEndOfDayOn, setRewardPref,
+  addSlogDismissed, getDelightState, getEndOfDayOn, getTripsOn, getInCar, setInCar, getCloudVoiceOn, setCloudVoiceOn, speechLevel, setSoundOn, getWelcomed, setWelcomed, getRewardPrefs, getSlogDismissed, setDelightState, setEndOfDayOn, setTripsOn, setRewardPref,
 } from './prefs';
 
 describe('volume', () => {
@@ -134,6 +134,42 @@ describe('reward preferences', () => {
     expect(getRewardPrefs()).toEqual({ lines: true, tally: false, sound: false });
     setEndOfDayOn(true);
     expect(getEndOfDayOn()).toBe(true);
+  });
+
+  it('remembers the first-run welcome, and shows it again when storage is blocked', () => {
+    expect(getWelcomed()).toBe(false);
+    stub();
+    setWelcomed(true);
+    expect(getWelcomed()).toBe(true);
+    setWelcomed(false);
+    expect(getWelcomed()).toBe(false);
+  });
+
+  it('speaks at full volume in the car, even when speech is switched off', () => {
+    stub();
+    setSoundOn('speech', false);
+    expect(getInCar()).toBe(false);
+    expect(speechLevel()).toBe(0);
+    setInCar(true);
+    expect(speechLevel()).toBe(1);
+    setInCar(false);
+    expect(speechLevel()).toBe(0);
+  });
+
+  it('keeps cloud voices off until switched on', () => {
+    expect(getCloudVoiceOn()).toBe(false);
+    stub();
+    expect(getCloudVoiceOn()).toBe(false);
+    setCloudVoiceOn(true);
+    expect(getCloudVoiceOn()).toBe(true);
+  });
+
+  it('keeps Trips and Map off until switched on', () => {
+    expect(getTripsOn()).toBe(false);
+    stub();
+    expect(getTripsOn()).toBe(false);
+    setTripsOn(true);
+    expect(getTripsOn()).toBe(true);
   });
 
   it('keeps the delight state and the dismissed slog offers', () => {

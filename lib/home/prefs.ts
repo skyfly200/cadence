@@ -4,7 +4,7 @@
  * break). Plain localStorage, wrapped so a blocked store never breaks Home.
  */
 import type { TimeFormat } from '~/lib/domain/clock';
-import { DEFAULT_MUSIC, providerById, type MusicConfig } from './music';
+import { cleanPlaylistMinutes, DEFAULT_MUSIC, providerById, type MusicConfig } from './music';
 import type { DelightState, RewardPrefs } from './rewards';
 import { recordSetting } from './signals-state';
 
@@ -78,7 +78,20 @@ export function getTimeFormat(): TimeFormat {
 export function setTimeFormat(f: TimeFormat): void { write(TIME_FORMAT_KEY, f); }
 /** What to play right now: the tone's peak gain and the speech volume, each 0 when switched off. */
 export function toneLevel(): number { return getSoundOn('tone') ? toneGain(getVolume('tone')) : 0; }
-export function speechLevel(): number { return getSoundOn('speech') ? speechVolume(getVolume('speech')) : 0; }
+export function speechLevel(): number {
+  if (getInCar()) return 1;
+  return getSoundOn('speech') ? speechVolume(getVolume('speech')) : 0;
+}
+
+const CLOUD_KEY = 'cadence:cloudVoice';
+/** Cloud voices (opt-in, off by default): nudge lines go to a voice service. Never for Private items. */
+export function getCloudVoiceOn(): boolean { return read(CLOUD_KEY) === 'true'; }
+export function setCloudVoiceOn(on: boolean): void { write(CLOUD_KEY, String(on)); }
+
+const CAR_KEY = 'cadence:inCar';
+/** In the car (opt-in module, off by default): nudges are always spoken, at full volume. Mute and quiet hours still win. */
+export function getInCar(): boolean { return read(CAR_KEY) === 'true'; }
+export function setInCar(on: boolean): void { write(CAR_KEY, String(on)); }
 
 const MUSIC_KEY = 'cadence:music';
 /** Music for focus sessions: provider, playlist link and whether to open it on start (per device). */
@@ -90,6 +103,7 @@ export function getMusic(): MusicConfig {
         provider: providerById(String(v.provider)).id,
         playlist: typeof v.playlist === 'string' ? v.playlist : '',
         onFocus: v.onFocus === true,
+        playlistMinutes: cleanPlaylistMinutes(v.playlistMinutes),
       };
     }
   } catch { /* fall through */ }
@@ -148,6 +162,16 @@ const EOD_KEY = 'cadence:endOfDayLine';
 /** The end-of-day "here is what you kept" line on Home is opt-in: off until switched on. */
 export function getEndOfDayOn(): boolean { return read(EOD_KEY) === 'true'; }
 export function setEndOfDayOn(on: boolean): void { write(EOD_KEY, String(on)); }
+
+const WELCOMED_KEY = 'cadence:welcomed';
+/** The first-run welcome has been seen or skipped on this device. */
+export function getWelcomed(): boolean { return read(WELCOMED_KEY) === 'true'; }
+export function setWelcomed(done: boolean): void { write(WELCOMED_KEY, String(done)); }
+
+const TRIPS_KEY = 'cadence:tripsModule';
+/** Trips and Map in Go deeper: a module, off until switched on in Settings. */
+export function getTripsOn(): boolean { return read(TRIPS_KEY) === 'true'; }
+export function setTripsOn(on: boolean): void { write(TRIPS_KEY, String(on)); }
 
 const DELIGHT_KEY = 'cadence:rewardDelight';
 /** The day the last rare delight showed and how many showed that day (the cap is one a day). */

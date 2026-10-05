@@ -29,9 +29,26 @@ export interface MusicConfig {
   playlist: string;
   /** Open music when a focus session starts. */
   onFocus: boolean;
+  /** Music as the timer: the playlist's length in minutes (0 = not used). The session can then last exactly that long. */
+  playlistMinutes: number;
 }
 
-export const DEFAULT_MUSIC: MusicConfig = { provider: DEFAULT_MUSIC_PROVIDER, playlist: '', onFocus: false };
+export const DEFAULT_MUSIC: MusicConfig = { provider: DEFAULT_MUSIC_PROVIDER, playlist: '', onFocus: false, playlistMinutes: 0 };
+
+export const FOCUS_MINUTES: readonly number[] = [15, 25, 45];
+export const MAX_PLAYLIST_MINUTES = 180;
+
+/** A typed playlist length as whole minutes within 1 to 180, otherwise 0 (not used). */
+export function cleanPlaylistMinutes(v: unknown): number {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) && n >= 1 && n <= MAX_PLAYLIST_MINUTES ? n : 0;
+}
+
+/** The focus lengths to offer: the usual three, plus the playlist's own length when music is the timer. */
+export function focusDurations(m: MusicConfig): number[] {
+  const own = m.onFocus ? cleanPlaylistMinutes(m.playlistMinutes) : 0;
+  return own && !FOCUS_MINUTES.includes(own) ? [...FOCUS_MINUTES, own].sort((a, b) => a - b) : [...FOCUS_MINUTES];
+}
 
 export const providerById = (id: string): MusicProvider =>
   MUSIC_PROVIDERS.find((p) => p.id === id) ?? MUSIC_PROVIDERS[0]!;

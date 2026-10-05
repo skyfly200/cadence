@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { openLink } from './apps';
-import { DEFAULT_MUSIC, MUSIC_PROVIDERS, musicTarget, parsePlaylist, providerById } from './music';
+import { cleanPlaylistMinutes, focusDurations, DEFAULT_MUSIC, MUSIC_PROVIDERS, musicTarget, parsePlaylist, providerById } from './music';
 
 describe('parsePlaylist', () => {
   it('recognises each provider from a pasted link', () => {
@@ -30,7 +30,7 @@ describe('musicTarget', () => {
   });
 
   it('a playlist link wins and brings its own provider', () => {
-    const t = musicTarget({ provider: 'ytmusic', playlist: 'https://open.spotify.com/playlist/abc', onFocus: true });
+    const t = musicTarget({ provider: 'ytmusic', playlist: 'https://open.spotify.com/playlist/abc', onFocus: true, playlistMinutes: 0 });
     expect(t).toMatchObject({ name: 'Spotify', url: 'https://open.spotify.com/playlist/abc' });
   });
 
@@ -49,5 +49,18 @@ describe('musicTarget', () => {
       expect(providerById(p.id)).toBe(p);
       expect(new URL(p.home).protocol).toBe('https:');
     }
+  });
+});
+
+describe('music as the timer', () => {
+  it('cleans a typed playlist length to whole minutes, 1 to 180', () => {
+    expect([cleanPlaylistMinutes('52.4'), cleanPlaylistMinutes(0), cleanPlaylistMinutes(181), cleanPlaylistMinutes('x'), cleanPlaylistMinutes(-5)]).toEqual([52, 0, 0, 0, 0]);
+  });
+  it('offers the playlist length as a focus length only when music opens on focus', () => {
+    expect(focusDurations(DEFAULT_MUSIC)).toEqual([15, 25, 45]);
+    expect(focusDurations({ ...DEFAULT_MUSIC, onFocus: true, playlistMinutes: 52 })).toEqual([15, 25, 45, 52]);
+    expect(focusDurations({ ...DEFAULT_MUSIC, onFocus: true, playlistMinutes: 10 })).toEqual([10, 15, 25, 45]);
+    expect(focusDurations({ ...DEFAULT_MUSIC, onFocus: true, playlistMinutes: 25 })).toEqual([15, 25, 45]);
+    expect(focusDurations({ ...DEFAULT_MUSIC, onFocus: false, playlistMinutes: 52 })).toEqual([15, 25, 45]);
   });
 });
