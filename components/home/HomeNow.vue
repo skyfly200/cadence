@@ -78,7 +78,7 @@
               <p class="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">How long?</p>
               <div class="mt-2 grid grid-cols-3 gap-2">
                 <button
-                  v-for="dur in [15, 25, 45]"
+                  v-for="dur in focusDurations(music)"
                   :key="dur"
                   class="min-h-[44px] rounded-xl bg-white py-2 text-sm font-medium dark:bg-[#1D1A2F]"
                   @click="startStayWithMe(dur)"
@@ -132,7 +132,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, onBeforeUnmount, onMounted } from 'vue';
 import { appForItem, isAndroidUa, openLink } from '~/lib/home/apps';
-import { musicTarget } from '~/lib/home/music';
+import { focusDurations, musicTarget } from '~/lib/home/music';
 import { useGraphStore } from '~/stores/graph';
 import type { Commitment, Habit } from '~/lib/domain';
 import { useAppStore } from '~/stores/app';

@@ -4,7 +4,7 @@
  * break). Plain localStorage, wrapped so a blocked store never breaks Home.
  */
 import type { TimeFormat } from '~/lib/domain/clock';
-import { DEFAULT_MUSIC, providerById, type MusicConfig } from './music';
+import { cleanPlaylistMinutes, DEFAULT_MUSIC, providerById, type MusicConfig } from './music';
 import type { DelightState, RewardPrefs } from './rewards';
 import { recordSetting } from './signals-state';
 
@@ -83,6 +83,11 @@ export function speechLevel(): number {
   return getSoundOn('speech') ? speechVolume(getVolume('speech')) : 0;
 }
 
+const CLOUD_KEY = 'cadence:cloudVoice';
+/** Cloud voices (opt-in, off by default): nudge lines go to a voice service. Never for Private items. */
+export function getCloudVoiceOn(): boolean { return read(CLOUD_KEY) === 'true'; }
+export function setCloudVoiceOn(on: boolean): void { write(CLOUD_KEY, String(on)); }
+
 const CAR_KEY = 'cadence:inCar';
 /** In the car (opt-in module, off by default): nudges are always spoken, at full volume. Mute and quiet hours still win. */
 export function getInCar(): boolean { return read(CAR_KEY) === 'true'; }
@@ -98,6 +103,7 @@ export function getMusic(): MusicConfig {
         provider: providerById(String(v.provider)).id,
         playlist: typeof v.playlist === 'string' ? v.playlist : '',
         onFocus: v.onFocus === true,
+        playlistMinutes: cleanPlaylistMinutes(v.playlistMinutes),
       };
     }
   } catch { /* fall through */ }

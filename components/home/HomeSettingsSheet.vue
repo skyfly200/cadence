@@ -86,6 +86,11 @@
         class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]" @change="savePlaylist"
       />
       <p v-if="playlistNote" class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ playlistNote }}</p>
+      <input
+        v-model.number="music.playlistMinutes" type="number" min="0" max="180" inputmode="numeric" placeholder="Playlist length in minutes (optional)" aria-label="Playlist length in minutes"
+        class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]" @change="music.playlistMinutes = cleanPlaylistMinutes(music.playlistMinutes); saveMusic()"
+      />
+      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Music as the timer: with "Open music" on, a focus session can last as long as the playlist.</p>
 
       <div v-if="stoppedOrSilenced.length > 0" class="mt-3">
         <p class="text-sm font-medium">Muted items</p>
@@ -121,6 +126,11 @@
       <label class="mt-2 flex min-h-[44px] items-center gap-3">
         <input type="checkbox" v-model="inCar" class="h-5 w-5 rounded" @change="setInCar(inCar)" />
         <span class="text-sm">In the car: speak nudges aloud at full volume (mute and quiet hours still apply)</span>
+      </label>
+
+      <label class="mt-2 flex min-h-[44px] items-start gap-3">
+        <input type="checkbox" v-model="cloudVoice" class="mt-1 h-5 w-5 rounded" @change="setCloudVoiceOn(cloudVoice)" />
+        <span class="text-sm">Cloud voice for nudges (needs sign-in and a voice service on the server). The nudge line is sent to that service to be spoken; Private items never are. Otherwise your browser's voice is used.</span>
       </label>
 
       <p class="mt-5 font-serif text-xl">Go deeper</p>
@@ -170,10 +180,10 @@
 <script setup lang="ts">
 import { computed, reactive, ref, onMounted } from 'vue';
 import type { TimeFormat } from '~/lib/domain';
-import { MUSIC_PROVIDERS, parsePlaylist } from '~/lib/home/music';
+import { cleanPlaylistMinutes, MUSIC_PROVIDERS, parsePlaylist } from '~/lib/home/music';
 import { COUNTRY_CHOICES } from '~/lib/domain/crisis';
 import { getCountryOverride, setCountryOverride } from '~/lib/home/crisis-state';
-import { getEndOfDayOn, getMusic, getRewardPrefs, getSoundOn, getInCar, getTripsOn, getVolume, setInCar, setEndOfDayOn, setTripsOn, setMusic, setRewardPref, setSoundOn, setVolume, speechVolume, toneGain, type Density, type SoundKind } from '~/lib/home/prefs';
+import { getEndOfDayOn, getMusic, getRewardPrefs, getSoundOn, getCloudVoiceOn, getInCar, getTripsOn, getVolume, setInCar, setCloudVoiceOn, setEndOfDayOn, setTripsOn, setMusic, setRewardPref, setSoundOn, setVolume, speechVolume, toneGain, type Density, type SoundKind } from '~/lib/home/prefs';
 import { DEFAULT_REWARD_PREFS, type RewardPrefs } from '~/lib/home/rewards';
 import { getGardenMotion, getHemisphereChoice, resolveHemisphere, setGardenMotion, setHemisphereChoice, type HemisphereChoice } from '~/lib/home/garden-state';
 import type { NudgeKind } from '~/lib/domain';
@@ -261,7 +271,8 @@ const rewards = reactive<RewardPrefs>({ ...DEFAULT_REWARD_PREFS });
 const endOfDay = ref(false);
 const trips = ref(false);
 const inCar = ref(false);
-onMounted(() => { Object.assign(rewards, getRewardPrefs()); endOfDay.value = getEndOfDayOn(); trips.value = getTripsOn(); inCar.value = getInCar(); });
+const cloudVoice = ref(false);
+onMounted(() => { Object.assign(rewards, getRewardPrefs()); endOfDay.value = getEndOfDayOn(); trips.value = getTripsOn(); inCar.value = getInCar(); cloudVoice.value = getCloudVoiceOn(); });
 
 const gardenMotion = ref(getGardenMotion());
 const hemisphereChoice = ref<HemisphereChoice>(getHemisphereChoice());

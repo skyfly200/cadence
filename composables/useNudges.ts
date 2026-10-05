@@ -25,6 +25,7 @@ import {
   setDisclosed,
   type NudgeState,
 } from '~/lib/home/nudge-state';
+import { cloudSpeak } from '~/lib/cloud-voice';
 import { useGraphStore } from '~/stores/graph';
 import { useAppStore } from '~/stores/app';
 
@@ -74,7 +75,15 @@ function playTone(freq = 650, durationMs = 250, gainLevel = toneLevel()): void {
   }
 }
 
-function speak(text: string): void {
+async function playCloudAudio(audio: string, mime: string, volume: number): Promise<void> {
+  const el = new Audio(`data:${mime};base64,${audio}`);
+  el.volume = volume;
+  await el.play();
+}
+
+/** Speaks a line: the cloud voice when it is on and allowed, otherwise the browser's own voice. */
+async function speak(text: string, cloud?: { accessToken: string | null | undefined; priv: boolean }): Promise<void> {
+  if (cloud && await cloudSpeak(text, { accessToken: cloud.accessToken, priv: cloud.priv, volume: speechLevel(), play: playCloudAudio })) return;
   if (!('speechSynthesis' in window) || speechLevel() <= 0) return;
   try {
     const utterance = new SpeechSynthesisUtterance(text);
@@ -137,11 +146,9 @@ export function useNudges() {
       if (!inQuietHours(Date.now(), settings.wakeTime, settings.sleepTime, tz)) {
         playTone();
         // Speak the title and a bit of the body
-        if (nudge.body) {
-          speak(`${nudge.title}. ${nudge.body}`);
-        } else {
-          speak(nudge.title);
-        }
+        const priv = !!nudge.nodeId && graph.nodes.some((n) => n.id === nudge.nodeId && n.private);
+        const cloud = { accessToken: app.session?.access_token, priv };
+        void speak(nudge.body ? `${nudge.title}. ${nudge.body}` : nudge.title, cloud);
       }
     }
   }
