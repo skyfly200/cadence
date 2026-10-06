@@ -7,8 +7,21 @@
       No goals yet. Add one below, then give it a first step. Small is fine.
     </p>
 
-    <article v-for="row in graph.goalList" :key="row.goal.id" class="mt-4 rounded-3xl bg-white p-4 shadow-sm dark:bg-[#2A2645]">
-      <h2 class="break-words font-serif text-lg leading-snug">{{ row.goal.title }}</h2>
+    <article v-for="(row, i) in graph.goalList" :key="row.goal.id" class="mt-4 rounded-3xl bg-white p-4 shadow-sm dark:bg-[#2A2645]">
+      <div class="flex items-start gap-1">
+        <h2 class="min-w-0 flex-1 break-words font-serif text-lg leading-snug">{{ row.goal.title }}</h2>
+        <button :class="icon" :disabled="i === 0" :aria-label="`Move ${row.goal.title} up`" title="Move up" @click="graph.moveGoal(row.goal.id, -1)"><ChevronUp class="size-4" /></button>
+        <button :class="icon" :disabled="i === graph.goalList.length - 1" :aria-label="`Move ${row.goal.title} down`" title="Move down" @click="graph.moveGoal(row.goal.id, 1)"><ChevronDown class="size-4" /></button>
+        <button :class="icon" :aria-label="`Edit ${row.goal.title}`" title="Edit" @click="emit('edit', row.goal.id)"><Pencil class="size-4" /></button>
+        <button :class="[icon, 'text-red-600 dark:text-red-400']" :aria-label="`Delete ${row.goal.title}`" title="Delete" @click="confirmId = row.goal.id"><Trash2 class="size-4" /></button>
+      </div>
+      <div v-if="confirmId === row.goal.id" class="mt-2 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/30">
+        <p class="text-sm text-red-900 dark:text-red-300">Delete this goal? Its steps stay; they just stop being part of it.</p>
+        <div class="mt-2 flex gap-2">
+          <button class="min-h-[44px] flex-1 rounded-xl bg-stone-100 text-sm font-medium dark:bg-white/10" @click="confirmId = null">Cancel</button>
+          <button class="min-h-[44px] flex-1 rounded-xl bg-red-600 text-sm font-medium text-white" @click="remove(row.goal.id)">Yes, delete</button>
+        </div>
+      </div>
       <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/20" role="progressbar" :aria-valuenow="Math.round(row.fraction * 100)" aria-valuemin="0" aria-valuemax="100" :aria-label="`${row.goal.title} progress`">
         <div class="h-full rounded-full bg-teal-400 dark:bg-[#B9A6FF]" :style="{ width: `${row.fraction * 100}%` }" />
       </div>
@@ -54,9 +67,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-vue-next';
 import { useGraphStore } from '~/stores/graph';
 
-const emit = defineEmits<{ (e: 'said', msg: string): void; (e: 'open-garden'): void }>();
+const emit = defineEmits<{ (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void; (e: 'open-garden'): void }>();
+const icon = 'grid size-9 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-stone-100 disabled:opacity-30 dark:text-slate-300 dark:hover:bg-white/10';
+const confirmId = ref<string | null>(null);
 const graph = useGraphStore();
 
 const title = ref('');
@@ -66,6 +82,7 @@ const milestoneTitle = ref('');
 
 const toggle = (id: string) => { openId.value = openId.value === id ? null : id; stepTitle.value = ''; milestoneTitle.value = ''; };
 
+function remove(id: string) { graph.removeNode(id); confirmId.value = null; emit('said', 'Goal deleted.'); }
 function add() {
   if (graph.createGoal(title.value)) { title.value = ''; emit('said', 'Goal added.'); }
 }

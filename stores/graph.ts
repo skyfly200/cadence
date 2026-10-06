@@ -13,7 +13,7 @@ import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrenc
 import { activeOccurrences, gardenState, goalRows, habitProgress, habitTap, homeHabitsPiece, keepDeleted, parseCapture, pressSeason, pressedBook, rankNow, weeklyKept } from '~/lib/domain';
 import { getPressedPages, getSeasonDraft, resolveHemisphere, savePressedPages, saveSeasonDraft } from '~/lib/home/garden-state';
 import type { Hemisphere } from '~/lib/domain';
-import { attachable, newGoal, newStep, partOf } from '~/lib/home/goal-edit';
+import { attachable, movedOrder, newGoal, newStep, partOf } from '~/lib/home/goal-edit';
 import { importedTaskIds } from '~/lib/home/import';
 import { matchTag, openBlockers } from '~/lib/home/heap';
 import { getTags } from '~/lib/home/prefs';
@@ -392,6 +392,16 @@ export const useGraphStore = defineStore('graph', () => {
     return { tagged, estimated };
   }
 
+  /** Move a goal one place up (-1) or down (1) in the Goals list. */
+  function moveGoal(id: string, dir: -1 | 1) {
+    const order = movedOrder(goalList.value.map((r) => r.goal.id), id, dir);
+    if (order.size === 0) return;
+    const stamp = new Date().toISOString();
+    nodes.value = nodes.value.map((n) => (n.kind === 'goal' && order.has(n.id) ? { ...n, order: order.get(n.id)!, updatedAt: stamp } : n));
+    persistNodes();
+    asOf.value = new Date();
+  }
+
   /** A new open step (Commitment) under a Goal or milestone. */
   function addStep(title: string, parentId: string): boolean {
     const now = new Date();
@@ -449,6 +459,6 @@ export const useGraphStore = defineStore('graph', () => {
   return {
     nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat, hemisphere,
     rank, heap, blockers, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, garden, pressed, attachableTo,
-    load, refresh, capture, promote, plan, start, stop, complete, finish, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, keepProposedNode, importedTaskCount, removeImportedTasks, setBacklog, autoTagHeap, applyHeapAi, addStep, tapHabit, edit, removeNode,
+    load, refresh, capture, promote, plan, start, stop, complete, finish, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, keepProposedNode, importedTaskCount, removeImportedTasks, setBacklog, moveGoal, autoTagHeap, applyHeapAi, addStep, tapHabit, edit, removeNode,
   };
 });

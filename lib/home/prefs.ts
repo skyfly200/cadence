@@ -191,8 +191,8 @@ export function getSlogDismissed(): string[] {
 export function addSlogDismissed(id: string): void { write(SLOG_DISMISSED_KEY, JSON.stringify([...new Set([...getSlogDismissed(), id])].slice(-200))); }
 
 const TAGS_KEY = 'cadence:tags';
-/** The user's own tags for sorting the Heap (a person or an area of life). Device-only; starts with two examples. */
-export const DEFAULT_TAGS = ['Jev', 'Laya'];
+/** The user's own tags for sorting the Heap (an area of life). Device-only and editable; starts with a few generic ones. */
+export const DEFAULT_TAGS = ['Work', 'Home', 'Health', 'Errands'];
 export function getTags(): string[] {
   try {
     const raw = read(TAGS_KEY);

@@ -8,6 +8,7 @@ import { activeOccurrences } from './estimates';
 import { inTimeWindow } from './periods';
 import { isParked } from './shelf';
 
+const byOrder = (a: Goal, b: Goal) => (a.order ?? Infinity) - (b.order ?? Infinity) || byAge(a, b);
 const byAge = (a: Node, b: Node) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || (a.id < b.id ? -1 : 1);
 
 /** part-of children by parent id (a Link runs child -> parent). */
@@ -73,7 +74,7 @@ function progressOf(id: string, byId: Map<string, Node>, children: Map<string, s
   return { done, total: cs.length, fraction: cs.length ? done / cs.length : 0 };
 }
 
-/** One row per Goal that is not itself a milestone of another Goal, oldest first. */
+/** One row per Goal that is not itself a milestone of another Goal, in the user's order (then oldest first). */
 export function goalRows(
   nodes: readonly Node[], links: readonly Link[], occurrences: readonly Occurrence[],
   now: Date = new Date(), timeZone: string = Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -89,7 +90,7 @@ export function goalRows(
   for (const [cid, gid] of goalNextSteps(nodes, links, open)) nextByGoal.set(gid, byId.get(cid) as Commitment);
 
   const isMilestone = new Set(links.filter((l) => l.type === 'part_of' && byId.get(l.fromId)?.kind === 'goal' && byId.get(l.toId)?.kind === 'goal').map((l) => l.fromId));
-  return nodes.filter((n): n is Goal => n.kind === 'goal' && !isMilestone.has(n.id)).sort(byAge).map((goal) => ({
+  return nodes.filter((n): n is Goal => n.kind === 'goal' && !isMilestone.has(n.id)).sort(byOrder).map((goal) => ({
     goal,
     ...progressOf(goal.id, byId, children, doneIds),
     milestones: (children.get(goal.id) ?? []).flatMap((id) => {

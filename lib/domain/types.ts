@@ -45,6 +45,8 @@ export interface Goal extends NodeBase {
   finishLine: boolean;
   /** A milestone: a Goal marked as a checkpoint (done when its parts are done). */
   checkpoint: boolean;
+  /** Where it sits in the Goals list (lower first); unset goals follow in the order they were made. */
+  order?: number | null;
 }
 
 /** Optional pinning of a Habit. Flexible by default: no pin means any day/time in the period. */
