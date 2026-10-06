@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { CAP_WINDOW_MS, buildSlice, createMemoryAiStore, createOpenAiCompatProvider, heapProviderFromEnv, runAi, type AiProvider, type AiRequest } from './ai';
+import { CAP_WINDOW_MS, buildSlice, createMemoryAiStore, createOpenAiCompatProvider, runAi, type AiProvider, type AiRequest } from './ai';
 
 const T0 = Date.UTC(2026, 9, 1, 12, 0, 0);
 const req: AiRequest = { tier: 'fast', system: 's', prompt: 'p', maxTokens: 50 };
@@ -45,22 +45,6 @@ describe('runAi', () => {
     expect(await runAi({ provider: null, store: createMemoryAiStore() }, 'u1', req)).toEqual({ ok: false, reason: 'unavailable' });
     const failing: AiProvider = { complete: async () => { throw new Error('boom'); } };
     expect(await runAi({ provider: failing, store: createMemoryAiStore() }, 'u1', req)).toEqual({ ok: false, reason: 'unavailable' });
-  });
-});
-
-describe('heapProviderFromEnv', () => {
-  it('is null unless both the endpoint and the model are set', () => {
-    expect(heapProviderFromEnv({})).toBeNull();
-    expect(heapProviderFromEnv({ HEAP_AI_BASE_URL: 'http://localhost:11434/v1' })).toBeNull();
-    expect(heapProviderFromEnv({ HEAP_AI_MODEL: 'laya' })).toBeNull();
-  });
-  it('calls the configured endpoint and model for every tier', async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] })));
-    const p = heapProviderFromEnv({ HEAP_AI_BASE_URL: 'http://localhost:11434/v1', HEAP_AI_MODEL: 'laya' }, fetchMock as unknown as typeof fetch)!;
-    expect(await p.complete({ ...req, tier: 'strong' })).toBe('ok');
-    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe('http://localhost:11434/v1/chat/completions');
-    expect(JSON.parse(String(init.body))).toMatchObject({ model: 'laya' });
   });
 });
 

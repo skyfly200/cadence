@@ -8,7 +8,8 @@
  * instructions. The answer is checked against the ids and tags that were sent, and it is only ever advice:
  * the browser applies a tag or a guess only where there is none, and connections wait for a tap.
  */
-import { buildSlice, runAi, type AiDeps, type AiSupabaseLike } from './ai';
+import { CAP_WINDOW_MS, DEFAULT_DAILY_CALL_CAP, buildSlice, runAi, type AiDeps, type AiSupabaseLike } from './ai';
+import type { Triage } from './triage';
 
 export const MAX_ITEMS = 30;
 export const MAX_TAGS = 12;
@@ -69,7 +70,23 @@ export interface HeapLookup {
   findMany(userId: string, ids: readonly string[]): Promise<HeapNode[]>;
 }
 
-export interface HeapDeps { ai: AiDeps; nodes: HeapLookup }
+export interface HeapDeps {
+  ai: AiDeps;
+  nodes: HeapLookup;
+  /** Optional decision engine (Jev or a self-hosted Laya) that picks each item's tag and size. */
+  triage?: Triage | null;
+}
+
+/** The engine's tag wins (it is the more accurate); Claude's minutes win over a size bucket. */
+function merge(claude: HeapAnswer | null, engine: Map<string, { category: string | null; minutes: number | null }>, ids: readonly string[]): HeapAnswer {
+  const by = new Map((claude?.items ?? []).map((i) => [i.id, i] as const));
+  const items = ids.flatMap((id): HeapAnswerItem[] => {
+    const c = by.get(id);
+    const e = engine.get(id);
+    return c || e ? [{ id, category: e?.category ?? c?.category ?? null, minutes: c?.minutes ?? e?.minutes ?? null, requires: c?.requires ?? null }] : [];
+  });
+  return { items, first: claude?.first ?? [] };
+}
 
 /** Body: { ids: string[], tags?: string[] }. */
 export async function handleHeap(deps: HeapDeps, input: { userId: string; body: unknown }): Promise<HeapResult> {
@@ -86,6 +103,20 @@ export async function handleHeap(deps: HeapDeps, input: { userId: string; body: 
   if (slice.length === 0) return { status: 200, body: { ok: true, items: [], first: [] } };
 
   const sent = slice.map((n) => n.id);
+
+  // The decision engine is gated like every AI call: the user's AI switch and the daily cap.
+  const engine = new Map<string, { category: string | null; minutes: number | null }>();
+  if (deps.triage) {
+    try {
+      if (!(await deps.ai.store.isAiOn(input.userId))) return { status: 403, body: { ok: false, error: 'ai_off', message: 'AI is switched off.' } };
+      const now = (deps.ai.now ?? Date.now)();
+      const used = await deps.ai.store.countSince(input.userId, new Date(now - CAP_WINDOW_MS).toISOString());
+      if (used >= (deps.ai.dailyCap ?? DEFAULT_DAILY_CALL_CAP)) return { status: 429, body: { ok: false, error: 'over_cap', message: 'That is enough AI for today.' } };
+      const got = await deps.triage.classify(slice.map((n) => ({ id: n.id, title: n.title.slice(0, MAX_TITLE) })), tags);
+      for (const [id, a] of got) engine.set(id, a);
+    } catch { /* the engine is optional: fall back to Claude alone */ }
+  }
+
   const lines = slice.map((n) => `${n.id} | ${n.title.replace(/\s+/g, ' ').trim().slice(0, MAX_TITLE)}`);
   const r = await runAi(deps.ai, input.userId, {
     tier: 'strong', system: SYSTEM, maxTokens: 1500,
@@ -94,10 +125,12 @@ export async function handleHeap(deps: HeapDeps, input: { userId: string; body: 
   if (!r.ok) {
     if (r.reason === 'ai_off') return { status: 403, body: { ok: false, error: 'ai_off', message: 'AI is switched off.' } };
     if (r.reason === 'over_cap') return { status: 429, body: { ok: false, error: 'over_cap', message: 'That is enough AI for today.' } };
-    return unavailable;
+    // Claude is down but the engine answered: tags and sizes are still worth returning.
+    return engine.size ? { status: 200, body: { ok: true, ...merge(null, engine, sent) } } : unavailable;
   }
-  const answer = parseHeapAnswer(r.text, sent, tags);
-  return answer ? { status: 200, body: { ok: true, ...answer } } : unavailable;
+  const claude = parseHeapAnswer(r.text, sent, tags);
+  if (!claude && !engine.size) return unavailable;
+  return { status: 200, body: { ok: true, ...merge(claude, engine, sent) } };
 }
 
 /** Reads the nodes from `cadence_nodes` with the service role, scoped to the user. */

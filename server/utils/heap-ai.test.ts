@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createMemoryAiStore, type AiProvider } from './ai';
+import type { Triage } from './triage';
 import { createSupabaseHeapLookup, handleHeap, parseHeapAnswer, type HeapLookup, type HeapNode } from './heap-ai';
 
 const T0 = Date.UTC(2026, 9, 1, 12, 0, 0);
@@ -79,6 +80,49 @@ describe('handleHeap', () => {
     expect((await send(provider('not json'), { ids: ['a'] })).status).toBe(503);
     const broken: HeapLookup = { findMany: async () => { throw new Error('db'); } };
     expect((await send(provider(GOOD), { ids: ['a'] }, createMemoryAiStore(), broken)).status).toBe(503);
+  });
+});
+
+describe('handleHeap with a decision engine', () => {
+  const engine = (map: [string, { category: string | null; minutes: number | null }][]): Triage & { classify: ReturnType<typeof vi.fn> } => ({ classify: vi.fn(async () => new Map(map)) });
+  const run = (p: AiProvider | null, triage: Triage | null, store = createMemoryAiStore(), body: unknown = { ids: ['a', 'b', 'p'], tags: ['Jev', 'Laya'] }) =>
+    handleHeap({ ai: { provider: p, store, now: () => T0 }, nodes: lookup(), triage }, { userId: 'u1', body });
+
+  it('takes the tag from the engine and the minutes from Claude, filling gaps from the engine', async () => {
+    const e = engine([['a', { category: 'Jev', minutes: 90 }], ['b', { category: null, minutes: 10 }]]);
+    const r = await run(provider(GOOD), e);
+    expect(r.status).toBe(200);
+    expect((r.body as { items: unknown[] }).items).toEqual([
+      { id: 'a', category: 'Jev', minutes: 45, requires: 'b' },
+      { id: 'b', category: 'Jev', minutes: 10, requires: null },
+    ]);
+  });
+
+  it('only ever shows the engine non-Private items', async () => {
+    const e = engine([]);
+    await run(provider(GOOD), e);
+    expect((e.classify.mock.calls[0]![0] as { id: string }[]).map((x) => x.id)).toEqual(['a', 'b']);
+  });
+
+  it('still answers from the engine alone when Claude is not configured or fails', async () => {
+    const e = engine([['a', { category: 'Laya', minutes: 30 }]]);
+    expect(await run(null, e)).toEqual({ status: 200, body: { ok: true, items: [{ id: 'a', category: 'Laya', minutes: 30, requires: null }], first: [] } });
+    expect((await run(provider('not json'), e)).status).toBe(200);
+    expect((await run(null, engine([]))).status).toBe(503);
+  });
+
+  it('keeps going with Claude alone when the engine throws', async () => {
+    const broken: Triage = { classify: async () => { throw new Error('down'); } };
+    expect((await run(provider(GOOD), broken)).status).toBe(200);
+  });
+
+  it('respects the AI switch and the cap before calling the engine', async () => {
+    const e = engine([['a', { category: 'Jev', minutes: 10 }]]);
+    expect((await run(provider(GOOD), e, createMemoryAiStore({ aiOn: false }))).status).toBe(403);
+    const capped = createMemoryAiStore();
+    capped.uses.push(...Array.from({ length: 100 }, () => ({ userId: 'u1', at: new Date(T0 - 1000).toISOString(), tier: 'fast' as const })));
+    expect((await run(provider(GOOD), e, capped)).status).toBe(429);
+    expect(e.classify).not.toHaveBeenCalled();
   });
 });
 
