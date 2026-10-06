@@ -4,13 +4,13 @@
  */
 import type { H3Event } from 'h3';
 import {
-  DEFAULT_DAILY_CALL_CAP, createAnthropicProvider, createOpenAiCompatProvider, createSupabaseAiStore,
+  DEFAULT_DAILY_CALL_CAP, createAnthropicProvider, createOpenAiCompatProvider, createSupabaseAiStore, heapProviderFromEnv,
   type AiDeps, type AiProvider,
 } from './ai';
 import { createServiceClient } from './capture';
 
 /** The deps for runAi, or the names of what is missing (so the route can answer calmly). */
-export function aiDeps(event: H3Event): { ok: true; deps: AiDeps } | { ok: false; missing: string[] } {
+export function aiDeps(event: H3Event, feature?: 'heap'): { ok: true; deps: AiDeps } | { ok: false; missing: string[] } {
   const cfg = useRuntimeConfig(event);
   // Read at runtime too: Nuxt bakes process.env into runtimeConfig at build time (see gcal-context.ts).
   const env = process.env;
@@ -29,6 +29,7 @@ export function aiDeps(event: H3Event): { ok: true; deps: AiDeps } | { ok: false
   } else if (env.ANTHROPIC_API_KEY) {
     provider = createAnthropicProvider({ apiKey: env.ANTHROPIC_API_KEY, models: { ...(fast ? { fast } : {}), ...(strong ? { strong } : {}) } });
   }
+  if (feature === 'heap') provider = heapProviderFromEnv(env) ?? provider;
   const cap = Number(env.AI_DAILY_CALL_CAP);
   return {
     ok: true,

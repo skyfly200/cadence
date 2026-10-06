@@ -65,6 +65,18 @@ export function createOpenAiCompatProvider(opts: {
   return fromModels({ fast: compat.chatModel(opts.models.fast), strong: compat.chatModel(opts.models.strong) });
 }
 
+/**
+ * A separate provider just for heap tagging and triage, from HEAP_AI_BASE_URL and HEAP_AI_MODEL (and an optional
+ * HEAP_AI_API_KEY): any OpenAI-compatible endpoint, so a self-hosted or local model works. Null when not set,
+ * and the caller keeps the default provider.
+ */
+export function heapProviderFromEnv(env: Record<string, string | undefined>, fetchImpl?: typeof fetch): AiProvider | null {
+  const baseUrl = env.HEAP_AI_BASE_URL?.trim();
+  const model = env.HEAP_AI_MODEL?.trim();
+  if (!baseUrl || !model) return null;
+  return createOpenAiCompatProvider({ baseUrl, apiKey: env.HEAP_AI_API_KEY || undefined, models: { fast: model, strong: model }, fetch: fetchImpl });
+}
+
 // ── what may be sent ──────────────────────────────────────────
 
 /** The nodes an AI call may see: Private ones are dropped here, once, for every feature. */

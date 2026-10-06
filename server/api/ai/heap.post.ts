@@ -11,7 +11,7 @@ import { createSupabaseHeapLookup, handleHeap } from '../../utils/heap-ai';
 
 export default defineEventHandler(async (event) => {
   const userId = await requireUser(event);
-  const d = aiDeps(event);
+  const d = aiDeps(event, 'heap');
   if (!d.ok) {
     setResponseStatus(event, 503);
     return { ok: false, error: 'unavailable', message: 'The AI is not available right now.' };
