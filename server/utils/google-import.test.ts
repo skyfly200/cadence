@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { randomBytes } from 'node:crypto';
-import { DRIVE_FILE_SCOPE, TASKS_SCOPE, buildAuthUrl, exchangeCode } from './google-oauth';
+import { DRIVE_FILE_SCOPE, buildAuthUrl, exchangeCode } from './google-oauth';
 import { createMemoryTokenStore, createTokenVault, type GoogleTokens, type TokenVault } from './google-tokens';
-import { MAX_DOC_CHARS, handleCapabilities, handleDoc, handleTasks, type ImportDeps } from './google-import';
+import { MAX_DOC_CHARS, handleCapabilities, handleDoc, type ImportDeps } from './google-import';
 
 const CAL = 'https://www.googleapis.com/auth/calendar.readonly';
 const key = randomBytes(32);
@@ -17,12 +17,12 @@ async function setup(tokens: Partial<GoogleTokens> | null, route: (url: string) 
   return { deps, f };
 }
 const urlsCalled = (f: ReturnType<typeof vi.fn>) => f.mock.calls.map((c) => String(c[0]));
-const GRANTED = `${CAL} ${TASKS_SCOPE} ${DRIVE_FILE_SCOPE}`;
+const GRANTED = `${CAL} ${DRIVE_FILE_SCOPE}`;
 
 describe('scopes', () => {
-  it('asks Google for Tasks and Drive per-file access as well as Calendar', () => {
+  it('asks Google for Drive per-file access as well as Calendar', () => {
     const scope = new URL(buildAuthUrl({ clientId: 'c', redirectUri: 'https://x/cb', state: 's' })).searchParams.get('scope') ?? '';
-    expect(scope.split(' ')).toEqual(expect.arrayContaining([CAL, TASKS_SCOPE, DRIVE_FILE_SCOPE]));
+    expect(scope.split(' ')).toEqual(expect.arrayContaining([CAL, DRIVE_FILE_SCOPE]));
   });
 
   it('records the scopes Google granted, and tokens saved before imports count as calendar only', async () => {
@@ -39,56 +39,10 @@ describe('scopes', () => {
   });
 
   it('reports what can be imported without exposing a token', async () => {
-    const { deps } = await setup({ scope: `${CAL} ${TASKS_SCOPE}` }, () => json({}));
-    expect(await handleCapabilities(deps, 'u1')).toEqual({ connected: true, email: 'me@example.com', canImportTasks: true, canImportDocs: false });
+    const { deps } = await setup({ scope: CAL }, () => json({}));
+    expect(await handleCapabilities(deps, 'u1')).toEqual({ connected: true, email: 'me@example.com', canImportDocs: false });
     const { deps: none } = await setup(null, () => json({}));
-    expect(await handleCapabilities(none, 'u1')).toEqual({ connected: false, email: null, canImportTasks: false, canImportDocs: false });
-  });
-});
-
-describe('handleTasks', () => {
-  const routes = (url: string) => {
-    if (url.includes('/users/@me/lists')) return json({ items: [{ id: 'L1' }, { id: 'L2' }] });
-    if (url.includes('/lists/L1/tasks')) return json({ items: [
-      { id: 't1', title: '  Call   the dentist ', notes: 'ask about Friday', due: '2026-10-05T00:00:00.000Z', status: 'needsAction' },
-      { id: 't2', title: 'Done already', status: 'completed' },
-      { id: 't3', title: '   ' },
-    ] });
-    if (url.includes('/lists/L2/tasks')) return json({ items: [{ id: 't1', title: 'Buy stamps' }] });
-    return json({}, 404);
-  };
-
-  it('lists open tasks across lists, tidied, with ids that stay unique across lists', async () => {
-    const { deps, f } = await setup({ scope: GRANTED }, routes);
-    const r = await handleTasks(deps, { userId: 'u1' });
-    expect(r).toEqual({ status: 200, body: { ok: true, tasks: [
-      { id: 'L1:t1', title: 'Call the dentist', notes: 'ask about Friday', due: '2026-10-05T00:00:00.000Z' },
-      { id: 'L2:t1', title: 'Buy stamps', notes: null, due: null },
-    ] } });
-    // Read-only: only GETs, only the Tasks API, and always asking for open tasks.
-    expect(f.mock.calls.every((c) => ((c[1] as RequestInit | undefined)?.method ?? 'GET') === 'GET')).toBe(true);
-    expect(urlsCalled(f).every((u) => u.startsWith('https://tasks.googleapis.com/'))).toBe(true);
-    expect(urlsCalled(f).some((u) => u.includes('showCompleted=false'))).toBe(true);
-  });
-
-  it('asks to reconnect, calmly, when the tokens predate the Tasks scope, without calling Google', async () => {
-    const { deps, f } = await setup({}, routes); // no scope recorded: calendar only
-    expect(await handleTasks(deps, { userId: 'u1' })).toEqual({ status: 409, body: { ok: false, error: 'reconnect', message: 'Reconnect Google to import.' } });
-    expect(f).not.toHaveBeenCalled();
-  });
-
-  it('asks to reconnect when not connected at all, or when Google refuses the grant', async () => {
-    const { deps: none } = await setup(null, routes);
-    expect((await handleTasks(none, { userId: 'u1' })).status).toBe(409);
-    const { deps } = await setup({ scope: GRANTED }, () => json({ error: 'forbidden' }, 403));
-    expect((await handleTasks(deps, { userId: 'u1' })).status).toBe(409);
-  });
-
-  it('answers 502 when Google fails, with no detail leaked', async () => {
-    const { deps } = await setup({ scope: GRANTED }, () => json({ secret: 'x' }, 500));
-    const r = await handleTasks(deps, { userId: 'u1' });
-    expect(r.status).toBe(502);
-    expect(JSON.stringify(r.body)).not.toContain('secret');
+    expect(await handleCapabilities(none, 'u1')).toEqual({ connected: false, email: null, canImportDocs: false });
   });
 });
 
@@ -134,7 +88,7 @@ describe('handleDoc', () => {
   });
 
   it('asks to reconnect before the Drive scope, without calling Google', async () => {
-    const { deps, f } = await setup({ scope: `${CAL} ${TASKS_SCOPE}` }, doc('x'));
+    const { deps, f } = await setup({ scope: CAL }, doc('x'));
     expect((await handleDoc(deps, { userId: 'u1', body: { fileId: ID }, maxChars: 4000 })).status).toBe(409);
     expect(f).not.toHaveBeenCalled();
   });

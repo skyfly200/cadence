@@ -24,12 +24,12 @@ export const TRIAGE_MAX = 5;
 /**
  * Ideas captured since the last finished session that have not been looked at yet, newest first.
  * `reviewed` is what the user already decided on in an unfinished session, so stopping part-way
- * keeps the progress.
+ * keeps the progress. Backlogged Ideas are left alone until the user brings them back up.
  */
 export function ideasToReview(nodes: readonly Node[], sinceIso: string | null, reviewed: Iterable<string> = [], limit = TRIAGE_MAX): Idea[] {
   const seen = new Set(reviewed);
   return nodes
-    .filter((n): n is Idea => n.kind === 'idea' && !seen.has(n.id) && (sinceIso === null || n.createdAt > sinceIso))
+    .filter((n): n is Idea => n.kind === 'idea' && !n.backlog && !seen.has(n.id) && (sinceIso === null || n.createdAt > sinceIso))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || (a.id < b.id ? -1 : 1))
     .slice(0, limit);
 }

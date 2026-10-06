@@ -10,15 +10,21 @@
       <!-- the cards: one at a time, each skippable by moving on -->
       <section v-if="step === 'triage'" class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
         <p class="font-serif text-lg">Things you captured</p>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Keep puts it on today. Park leaves it in the heap. Drop deletes it.</p>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Today puts it on today. Schedule picks a day. Park leaves it in the heap. Backlog pushes it to the bottom of the heap. Drop deletes it.</p>
         <ul class="mt-3 space-y-3">
           <li v-for="i in ideas" :key="i.id" class="rounded-2xl border border-slate-200 p-3 dark:border-white/10">
             <p class="break-words text-[15px]">{{ i.title }}</p>
             <div class="mt-2 grid grid-cols-3 gap-2">
-              <button :class="btn" @click="decide(i.id, 'keep')">Keep</button>
+              <button :class="btn" @click="decide(i.id, 'keep')">Today</button>
+              <button :class="btn" :aria-expanded="scheduling === i.id" @click="openSchedule(i.id)">Schedule</button>
               <button :class="btn" @click="decide(i.id, 'park')">Park</button>
-              <button :class="btn" @click="decide(i.id, 'drop')">Drop</button>
+              <button :class="btn" @click="decide(i.id, 'backlog')">Backlog</button>
+              <button :class="[btn, 'col-span-2']" @click="decide(i.id, 'drop')">Drop</button>
             </div>
+            <form v-if="scheduling === i.id" class="mt-2 flex gap-2" @submit.prevent="schedule(i.id)">
+              <input v-model="scheduleDate" type="date" :min="todayKey" required :aria-label="`Day for ${i.title}`" class="min-h-[44px] min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-[#1D1A2F]" />
+              <button type="submit" class="min-h-[44px] rounded-xl bg-[#E07A45] px-4 text-sm font-semibold text-white disabled:opacity-50" :disabled="!scheduleDate">Set</button>
+            </form>
           </li>
         </ul>
         <button class="mt-3 min-h-[44px] w-full rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300" @click="next">Skip these for now</button>
@@ -177,8 +183,29 @@ async function loadProposals(mine: number) {
   proposals.value = r.data.links;
 }
 
-function decide(id: string, choice: 'keep' | 'park' | 'drop') {
-  if (choice === 'keep') { graph.plan(id, dayKey(new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone)); emit('said', 'Added to today.'); }
+const tz = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+const todayKey = computed(() => dayKey(graph.asOf, tz()));
+const scheduling = ref<string | null>(null);
+const scheduleDate = ref('');
+function openSchedule(id: string) { scheduling.value = scheduling.value === id ? null : id; scheduleDate.value = ''; }
+/** Put an idea on a chosen day (today or later; an earlier day would just show as today). */
+function schedule(id: string) {
+  if (!scheduleDate.value) return;
+  const day = scheduleDate.value < todayKey.value ? todayKey.value : scheduleDate.value;
+  graph.plan(id, day);
+  emit('said', day === todayKey.value ? 'Added to today.' : `Scheduled for ${new Date(`${day}T12:00:00`).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}.`);
+  scheduling.value = null;
+  reviewed(id);
+}
+function reviewed(id: string) {
+  addPlanningReviewed(id); // kept even if the session is stopped here
+  ideas.value = ideas.value.filter((i) => i.id !== id);
+  afterList();
+}
+
+function decide(id: string, choice: 'keep' | 'park' | 'backlog' | 'drop') {
+  if (choice === 'keep') { graph.plan(id, todayKey.value); emit('said', 'Added to today.'); }
+  else if (choice === 'backlog') { graph.setBacklog(id, true); emit('said', 'Pushed down the heap.'); }
   else if (choice === 'drop') { graph.removeNode(id); emit('said', 'Dropped.'); }
   addPlanningReviewed(id); // kept even if the session is stopped here
   ideas.value = ideas.value.filter((i) => i.id !== id);

@@ -73,7 +73,7 @@ describe('stackDays', () => {
     expect(at('2026-10-03')).toEqual(['plain']);
   });
 
-  it('puts overdue items on today, orders timed items first, and skips done, parked and out-of-range items', () => {
+  it('puts overdue items on today, orders timed items first, and skips done and parked items', () => {
     const p = occ('parked', 'parked', '2026-10-03T08:00:00.000Z');
     const d = occ('finished', 'done', '2026-10-03T08:00:00.000Z');
     const days = stack([
@@ -83,7 +83,15 @@ describe('stackDays', () => {
       commitment('far', { plannedFor: '2027-01-01' }),
     ], [p, d]);
     expect(days[0].items.map((i) => i.id)).toEqual(['late', 'noon']);
-    expect(days.flatMap((x) => x.items).map((i) => i.id)).not.toContain('far');
+    expect(days.flatMap((x) => x.items).map((i) => i.id)).not.toContain('parked');
+    expect(days.flatMap((x) => x.items).map((i) => i.id)).not.toContain('finished');
+  });
+
+  it('gives an item scheduled past the week a day of its own, after the week', () => {
+    const days = stack([commitment('far', { plannedFor: '2026-12-01' }), commitment('today')]);
+    expect(days).toHaveLength(8);
+    expect(days[7]).toMatchObject({ key: '2026-12-01' });
+    expect(days[7]!.items.map((i) => i.id)).toEqual(['far']);
   });
 
 });
@@ -145,5 +153,27 @@ describe('day order', () => {
     expect(reorderIds(['a', 'b', 'c'], 'a', null)).toEqual(['b', 'c', 'a']);
     expect(reorderIds(['a', 'b'], 'x', 'b')).toEqual(['a', 'x', 'b']);
     expect(reorderIds(['a', 'b'], 'a', 'missing')).toEqual(['b', 'a']);
+  });
+});
+
+describe('heapItems details', () => {
+  const link = (fromId: string, toId: string) => ({ id: `${fromId}-${toId}`, type: 'requires' as const, fromId, toId, origin: 'stated' as const, confidence: 1, evidence: [], createdAt: '', updatedAt: '' });
+
+  it('carries tag, minutes, backlog and open blockers, and pushes backlogged items to the bottom', () => {
+    const nodes = [
+      { ...idea('later', '2026-10-03T00:00:00.000Z'), backlog: true },
+      { ...idea('tagged', '2026-10-01T00:00:00.000Z'), category: 'Jev', estimateMinutes: 20 },
+      idea('blocked', '2026-10-02T00:00:00.000Z'),
+    ];
+    const items = heapItems(nodes, [], [link('blocked', 'tagged')]);
+    expect(items.map((i) => i.id)).toEqual(['blocked', 'tagged', 'later']);
+    expect(items[1]).toMatchObject({ category: 'Jev', minutes: 20, backlog: false, blockedBy: [] });
+    expect(items[0]!.blockedBy).toEqual([{ id: 'tagged', title: 'tagged' }]);
+  });
+
+  it('a parked commitment uses its own duration, and a finished prerequisite no longer blocks', () => {
+    const c = commitment('c', { durationMinutes: 45, estimateMinutes: 10 });
+    const items = heapItems([c, idea('i')], [occ('c', 'parked', '2026-10-03T09:00:00.000Z'), occ('i', 'done', '2026-10-03T09:00:00.000Z')], [link('c', 'i')]);
+    expect(items.find((x) => x.id === 'c')).toMatchObject({ minutes: 45, blockedBy: [] });
   });
 });

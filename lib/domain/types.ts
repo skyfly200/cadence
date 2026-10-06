@@ -28,6 +28,12 @@ interface NodeBase {
   notes?: string | null;
   /** Private Nodes are never sent to the AI or returned to an assistant. */
   private: boolean;
+  /** A tag from the user's own list (for example a person or an area of life); set by hand, by a name match or by the AI. */
+  category?: string | null;
+  /** A rough guess in minutes, for an Idea that has no duration yet (a Commitment's own duration wins). */
+  estimateMinutes?: number | null;
+  /** Pushed to the bottom of the Heap until the user is ready for it. */
+  backlog?: boolean;
   createdAt: string;
   updatedAt: string;
 }
