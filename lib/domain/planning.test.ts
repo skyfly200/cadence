@@ -21,6 +21,11 @@ describe('ideasToReview', () => {
     expect(ideasToReview(nodes, null, ['new2']).map((n) => n.id)).toEqual(['new1', 'old']);
   });
 
+  it('leaves backlogged Ideas alone until they are brought back up', () => {
+    const withBacklog = [{ ...idea('later', '2026-03-11T00:00:00.000Z'), backlog: true }, idea('now', '2026-03-10T00:00:00.000Z')];
+    expect(ideasToReview(withBacklog, null).map((n) => n.id)).toEqual(['now']);
+  });
+
   it('shows only a few at a time', () => {
     const many = Array.from({ length: 9 }, (_, i) => idea(`i${i}`, `2026-03-0${i + 1}T00:00:00.000Z`));
     expect(ideasToReview(many, null)).toHaveLength(TRIAGE_MAX);

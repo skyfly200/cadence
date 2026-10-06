@@ -422,3 +422,25 @@ describe('applyEdit: private', () => {
     expect(r.nodes[0]!.private).toBe(true);
   });
 });
+
+describe('applyEdit: tag, estimate and backlog', () => {
+  const idea = (id: string): any => ({ id, kind: 'idea', title: id, private: false, createdAt: NOW, updatedAt: NOW });
+
+  it('sets and clears them on an Idea, and tidies the values', () => {
+    const set = applyEdit('i1', { category: ' Jev ', estimateMinutes: 25.4, backlog: true }, [idea('i1')], [], () => {}, () => {});
+    expect(set.nodes[0]).toMatchObject({ category: 'Jev', estimateMinutes: 25, backlog: true });
+    const cleared = applyEdit('i1', { category: '', estimateMinutes: 0, backlog: false }, set.nodes, [], () => {}, () => {});
+    expect(cleared.nodes[0]).toMatchObject({ category: null, estimateMinutes: null, backlog: false });
+  });
+
+  it('leaves them alone when not mentioned', () => {
+    const base = { ...idea('i1'), category: 'Laya', estimateMinutes: 10, backlog: true };
+    expect(applyEdit('i1', { title: 'x' }, [base], [], () => {}, () => {}).nodes[0]).toMatchObject({ category: 'Laya', estimateMinutes: 10, backlog: true });
+  });
+
+  it('lets an Idea wait on something, and offers Ideas as things to wait on', () => {
+    const r = applyEdit('i1', { dependencyId: 'c1' }, [idea('i1'), commitment('c1')], [], () => {}, () => {});
+    expect(r.links).toMatchObject([{ type: 'requires', fromId: 'i1', toId: 'c1' }]);
+    expect(dependencyOptions('c1', [idea('i1'), commitment('c1')], [], []).map((o) => o.id)).toEqual(['i1']);
+  });
+});

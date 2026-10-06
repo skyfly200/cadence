@@ -45,13 +45,13 @@ export function toDatetimeLocal(iso: string, timeZone?: string): string {
 export interface DependencyOption { id: string; title: string; done: boolean }
 
 /**
- * The Commitments this one could depend on: not itself and not one that would
+ * The Commitments and Ideas this one could depend on: not itself and not one that would
  * make a loop. Open ones come first in their own order; finished ones come last
  * (they can still be picked, e.g. to keep a record of what came before).
  */
 export function dependencyOptions(nodeId: string, nodes: readonly Node[], links: readonly Link[], occs: readonly Occurrence[]): DependencyOption[] {
   const all = nodes
-    .filter((n): n is Commitment => n.kind === 'commitment' && n.id !== nodeId && !wouldCreateCycle(links, nodeId, n.id))
+    .filter((n): n is Commitment | Idea => (n.kind === 'commitment' || n.kind === 'idea') && n.id !== nodeId && !wouldCreateCycle(links, nodeId, n.id))
     .map((n) => ({ id: n.id, title: n.title, done: nodeState(n.id, occs).done }));
   return [...all.filter((o) => !o.done), ...all.filter((o) => o.done)];
 }
@@ -108,6 +108,9 @@ export interface EditInput {
   weekdays?: number[] | null;  // a Habit: pin to these weekdays (0 = Sunday), or null to clear
   link?: string | null;  // an https link to open for a Commitment or Habit, or null to clear
   private?: boolean;  // Private nodes are never sent to the AI or returned to an assistant
+  category?: string | null;  // a tag from the user's own list, or null to clear
+  estimateMinutes?: number | null;  // a guess in minutes for something with no duration yet, or null to clear
+  backlog?: boolean;  // pushed to the bottom of the Heap
   slog?: boolean;  // a Commitment tagged as a slog: a bigger reward and a two-minute "just start" ritual
 }
 
@@ -138,6 +141,9 @@ export function applyEdit(
   const updatedNode = { ...node, updatedAt: now };
   if (input.title !== undefined) updatedNode.title = input.title;
   if (input.private !== undefined) updatedNode.private = input.private;
+  if (input.category !== undefined) updatedNode.category = input.category?.trim() || null;
+  if (input.estimateMinutes !== undefined) updatedNode.estimateMinutes = input.estimateMinutes && input.estimateMinutes > 0 ? Math.round(input.estimateMinutes) : null;
+  if (input.backlog !== undefined) updatedNode.backlog = input.backlog;
 
   if (node.kind === 'commitment') {
     const c = updatedNode as Commitment;

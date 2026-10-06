@@ -10,6 +10,6 @@ import { handleCapabilities } from '../../utils/google-import';
 export default defineEventHandler(async (event) => {
   const uid = await requireUser(event);
   const c = gcalContext(event);
-  if (!c.ok) return { configured: false, connected: false, email: null, canImportTasks: false, canImportDocs: false };
+  if (!c.ok) return { configured: false, connected: false, email: null, canImportDocs: false };
   return { configured: true, ...(await handleCapabilities({ vault: c.ctx.vault }, uid)) };
 });

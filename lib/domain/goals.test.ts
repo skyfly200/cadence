@@ -82,3 +82,10 @@ describe('goalRows time windows', () => {
     expect(goalRows(nodes, links, [], at('2026-03-14T22:30:00.000Z'), 'UTC')[0]!.next?.id).toBe('night');
   });
 });
+
+describe('goalRows order', () => {
+  it('follows the user\'s order first, then age for goals never moved', () => {
+    const nodes = [goal('old', later('', 1)), goal('mid', { ...later('', 2), order: 0 }), goal('new', later('', 3))];
+    expect(goalRows(nodes, [], []).map((r) => r.goal.id)).toEqual(['mid', 'old', 'new']);
+  });
+});

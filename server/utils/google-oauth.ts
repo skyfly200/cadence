@@ -13,11 +13,9 @@ export const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 export const GOOGLE_REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
 const CALENDAR_EVENTS_URL = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
 export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
-/** Read-only access to the user's Google Tasks (for the import). */
-export const TASKS_SCOPE = 'https://www.googleapis.com/auth/tasks.readonly';
 /** Per-file access: only to the documents the user picks with the Google Picker (for the import). */
 export const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const SCOPES = [CALENDAR_SCOPE, TASKS_SCOPE, DRIVE_FILE_SCOPE, 'https://www.googleapis.com/auth/userinfo.email'].join(' ');
+const SCOPES = [CALENDAR_SCOPE, DRIVE_FILE_SCOPE, 'https://www.googleapis.com/auth/userinfo.email'].join(' ');
 
 export function buildAuthUrl(opts: { clientId: string; redirectUri: string; state: string }): string {
   const params = new URLSearchParams({

@@ -77,7 +77,7 @@
     <HomeNow v-if="lens === 'now'" :density="density" @open-plan="lens = 'plan'" @said="say" @edit="onEdit" />
     <HomePlan v-else-if="lens === 'plan'" @said="say" @edit="onEdit" @open-planning="planningOpen = true" />
     <HomeHabits v-else-if="lens === 'habits'" @said="say" @edit="onEdit" @open-garden="gardenOpen = true" />
-    <HomeGoals v-else @said="say" @open-garden="gardenOpen = true" />
+    <HomeGoals v-else @said="say" @edit="onEdit" @open-garden="gardenOpen = true" />
     </main>
 
     <!-- toast with Undo -->

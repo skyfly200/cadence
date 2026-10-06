@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attachable, newGoal, newStep, partOf } from './goal-edit';
+import { attachable, movedOrder, newGoal, newStep, partOf } from './goal-edit';
 import { commitment, goal, link } from '../domain/test-helpers';
 
 const NOW = new Date('2026-10-01T12:00:00.000Z');
@@ -31,5 +31,17 @@ describe('attachable', () => {
     const nodes = [goal('g'), commitment('a'), commitment('b'), commitment('done')];
     const links = [link('part_of', 'a', 'g')];
     expect(attachable(nodes, links, 'g', new Set(['done'])).map((c) => c.id)).toEqual(['b']);
+  });
+});
+
+describe('movedOrder', () => {
+  it('swaps a goal with its neighbour and numbers the whole list', () => {
+    expect([...movedOrder(['a', 'b', 'c'], 'c', -1)]).toEqual([['a', 0], ['c', 1], ['b', 2]]);
+    expect([...movedOrder(['a', 'b', 'c'], 'a', 1)]).toEqual([['b', 0], ['a', 1], ['c', 2]]);
+  });
+  it('does nothing at the ends or for an unknown id', () => {
+    expect(movedOrder(['a', 'b'], 'a', -1).size).toBe(0);
+    expect(movedOrder(['a', 'b'], 'b', 1).size).toBe(0);
+    expect(movedOrder(['a', 'b'], 'zzz', 1).size).toBe(0);
   });
 });

@@ -5,7 +5,8 @@
  * finished items.
  */
 import { activeOccurrences, dayKey, isParked, periodWindow } from '../domain';
-import type { Commitment, Idea, Node, Occurrence, PeriodOptions } from '../domain';
+import type { Commitment, Idea, Link, Node, Occurrence, PeriodOptions } from '../domain';
+import { openBlockers } from './heap';
 
 export interface NodeState {
   done: boolean;
@@ -31,16 +32,32 @@ export function stopRecords<T>(nodeId: string, occs: readonly Occurrence[], make
 const isCommitment = (n: Node): n is Commitment => n.kind === 'commitment';
 const isIdea = (n: Node): n is Idea => n.kind === 'idea';
 
-export interface HeapItem { id: string; title: string; kind: 'idea' | 'commitment'; }
+export interface HeapItem {
+  id: string; title: string; kind: 'idea' | 'commitment';
+  /** When it arrived in the Heap (for sorting). */
+  at: string;
+  category: string | null;
+  /** The user's own duration if it has one, else the guess. */
+  minutes: number | null;
+  backlog: boolean;
+  /** What it still waits on. */
+  blockedBy: { id: string; title: string }[];
+}
 
-/** The Heap: unclassified Ideas plus Commitments the user parked. Newest first. */
-export function heapItems(nodes: readonly Node[], occs: readonly Occurrence[]): HeapItem[] {
-  const out: (HeapItem & { at: string })[] = [];
+/** The Heap: unclassified Ideas plus Commitments the user parked. Newest first, backlogged items last. */
+export function heapItems(nodes: readonly Node[], occs: readonly Occurrence[], links: readonly Link[] = []): HeapItem[] {
+  const blockers = openBlockers(nodes, links, occs);
+  const out: HeapItem[] = [];
   for (const n of nodes) {
-    if (isIdea(n)) out.push({ id: n.id, title: n.title, kind: 'idea', at: n.createdAt });
-    else if (isCommitment(n) && isParked(n.id, occs)) out.push({ id: n.id, title: n.title, kind: 'commitment', at: n.updatedAt });
+    const parked = isCommitment(n) && isParked(n.id, occs);
+    if (!isIdea(n) && !parked) continue;
+    out.push({
+      id: n.id, title: n.title, kind: isIdea(n) ? 'idea' : 'commitment', at: isIdea(n) ? n.createdAt : n.updatedAt,
+      category: n.category ?? null, minutes: (isCommitment(n) ? n.durationMinutes : null) ?? n.estimateMinutes ?? null,
+      backlog: n.backlog === true, blockedBy: blockers.get(n.id) ?? [],
+    });
   }
-  return out.sort((a, b) => b.at.localeCompare(a.at)).map(({ at: _at, ...rest }) => rest);
+  return out.sort((a, b) => Number(a.backlog) - Number(b.backlog) || b.at.localeCompare(a.at));
 }
 
 /** Commitments finished today (the "Accomplished earlier" list), most recent first. */
@@ -60,7 +77,7 @@ export interface StackDay { key: string; date: Date; items: StackItem[]; }
 /**
  * The Stack: open, unparked Commitments laid out over `days` local days starting today. A fixed time or
  * deadline places an item on its day; otherwise the day the user planned it for; an item with neither
- * sits on today. Overdue items are shown on today. Within a day: timed items first, by time.
+ * sits on today. Overdue items are shown on today; anything further out gets a day of its own after the week. Within a day: timed items first, by time.
  */
 export function stackDays(nodes: readonly Node[], occs: readonly Occurrence[], now: Date, days = 7, opts: PeriodOptions = {}): StackDay[] {
   const tz = opts.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -76,12 +93,18 @@ export function stackDays(nodes: readonly Node[], occs: readonly Occurrence[], n
     const at = c.fixedTime ?? c.deadline ?? null;
     let key = at ? dayKey(new Date(at), tz) : (c.plannedFor ?? today);
     if (key < today) key = today;
-    const day = byKey.get(key);
-    if (!day) continue;
+    let day = byKey.get(key);
+    if (!day) {
+      // Scheduled past the week: it gets its own day after the week, so it never vanishes.
+      day = { key, date: new Date(`${key}T12:00:00`), items: [] };
+      byKey.set(key, day);
+      out.push(day);
+    }
     day.items.push({ id: c.id, title: c.title, time: at });
     order.set(c.id, c.dayOrder ?? Infinity);
   }
   const rank = (id: string) => order.get(id) ?? Infinity;
+  out.sort((a, b) => a.key.localeCompare(b.key));
   for (const d of out) d.items.sort((a, b) => (a.time ?? '￿').localeCompare(b.time ?? '￿') || (rank(a.id) === rank(b.id) ? 0 : rank(a.id) < rank(b.id) ? -1 : 1));
   return out;
 }

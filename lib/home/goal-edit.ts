@@ -46,3 +46,13 @@ export function attachable(nodes: readonly Node[], links: readonly Link[], paren
   return nodes.filter((n): n is Commitment => n.kind === 'commitment' && !doneIds.has(n.id)
     && !links.some((l) => l.type === 'part_of' && l.fromId === n.id && l.toId === parentId));
 }
+
+/** The new `order` for each goal id once `id` moves one place up or down in `ids` (the list as shown); empty if it cannot move. */
+export function movedOrder(ids: readonly string[], id: string, dir: -1 | 1): Map<string, number> {
+  const at = ids.indexOf(id);
+  const to = at + dir;
+  if (at < 0 || to < 0 || to >= ids.length) return new Map();
+  const next = [...ids];
+  [next[at], next[to]] = [next[to]!, next[at]!];
+  return new Map(next.map((x, i) => [x, i] as const));
+}

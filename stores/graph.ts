@@ -13,8 +13,10 @@ import { appendGraphOccurrences, getGraphLinks, getGraphNodes, getGraphOccurrenc
 import { activeOccurrences, gardenState, goalRows, habitProgress, habitTap, homeHabitsPiece, keepDeleted, parseCapture, pressSeason, pressedBook, rankNow, weeklyKept } from '~/lib/domain';
 import { getPressedPages, getSeasonDraft, resolveHemisphere, savePressedPages, saveSeasonDraft } from '~/lib/home/garden-state';
 import type { Hemisphere } from '~/lib/domain';
-import { attachable, newGoal, newStep, partOf } from '~/lib/home/goal-edit';
-import { ideasFromTasks, type ImportedTask } from '~/lib/home/import';
+import { attachable, movedOrder, newGoal, newStep, partOf } from '~/lib/home/goal-edit';
+import { importedTaskIds } from '~/lib/home/import';
+import { matchTag, openBlockers } from '~/lib/home/heap';
+import { getTags } from '~/lib/home/prefs';
 import { acceptLink, defaultChoice, nodeFromProposal, type KeepChoice, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
 import type { ParsedCapture, TimeFormat } from '~/lib/domain';
 import { postCapture } from '~/lib/capture-client';
@@ -103,7 +105,9 @@ export const useGraphStore = defineStore('graph', () => {
   const rank = computed(() => rankNow(rankInput(density.value)));
   /** The Today lens list: always the fullest strip. */
   /** The Heap: unsorted Ideas and parked Commitments. */
-  const heap = computed(() => heapItems(nodes.value, occurrences.value));
+  const heap = computed(() => heapItems(nodes.value, occurrences.value, links.value));
+  /** What each item still waits on (open `requires` targets), by item id. */
+  const blockers = computed(() => openBlockers(nodes.value, links.value, occurrences.value));
   /** The Stack: this week's open Commitments by day. */
   const stack = computed(() => stackDays(nodes.value, occurrences.value, asOf.value));
   const kept = computed(() => keptToday(nodes.value, occurrences.value, asOf.value));
@@ -125,9 +129,10 @@ export const useGraphStore = defineStore('graph', () => {
 
   function nodeFromCapture(id: string, p: ParsedCapture, now: Date): Node {
     const t = now.toISOString();
-    if (p.kind === 'idea') return { id, kind: 'idea', title: p.title, private: false, createdAt: t, updatedAt: t };
+    const category = matchTag(p.title, getTags());
+    if (p.kind === 'idea') return { id, kind: 'idea', title: p.title, private: false, category, createdAt: t, updatedAt: t };
     return {
-      id, kind: 'commitment', title: p.title, notes: p.text !== p.title ? p.text : null, private: false, createdAt: t, updatedAt: t,
+      id, kind: 'commitment', title: p.title, notes: p.text !== p.title ? p.text : null, private: false, category, createdAt: t, updatedAt: t,
       fixedTime: p.fixedAt ?? null, deadline: p.deadline ?? null, windowStart: p.windowStart ?? null, windowEnd: p.windowEnd ?? null,
       durationMinutes: p.durationMinutes ?? null, slog: false, quiet: false,
     };
@@ -206,6 +211,14 @@ export const useGraphStore = defineStore('graph', () => {
     lastAction.value = null;
   }
   const complete = (id: string) => act(id, 'done', 'Done');
+  /** Finish something from the Plan: an Idea becomes a Commitment and a parked one comes back first, then it is done. */
+  function finish(id: string) {
+    const node = nodes.value.find((n) => n.id === id);
+    if (!node || (node.kind !== 'idea' && node.kind !== 'commitment')) return;
+    if (node.kind === 'idea') promote(id);
+    else bringBack(id);
+    complete(id);
+  }
   const park = (id: string) => act(id, 'parked', 'Sent to the heap');
   const notNow = (id: string) => act(id, 'moved', 'Moved to later');
 
@@ -219,7 +232,7 @@ export const useGraphStore = defineStore('graph', () => {
     if (node.kind === 'idea') promote(id);
     else bringBack(id);
     const now = new Date();
-    nodes.value = nodes.value.map((n) => (n.id === id && n.kind === 'commitment' ? { ...n, plannedFor: day, dayOrder: null, updatedAt: now.toISOString() } : n));
+    nodes.value = nodes.value.map((n) => (n.id === id && n.kind === 'commitment' ? { ...n, plannedFor: day, dayOrder: null, backlog: false, updatedAt: now.toISOString() } : n));
     if (day) {
       // Place it among the day's untimed items: before `beforeId`, or last.
       const items = stackDays(nodes.value, occurrences.value, now).find((d) => d.key === day)?.items ?? [];
@@ -319,17 +332,74 @@ export const useGraphStore = defineStore('graph', () => {
     return node.id;
   }
 
-  /** Add imported Google Tasks as Ideas, skipping any already imported. Returns how many were added and skipped. */
-  function importTasks(tasks: ImportedTask[]): { imported: number; skipped: number } {
-    const now = new Date();
-    const r = ideasFromTasks(tasks, nodes.value, now, uid);
-    if (r.ideas.length) {
-      nodes.value = [...nodes.value, ...r.ideas];
-      persistNodes();
-      append(r.ideas.map((i) => occ(i.id, 'captured', now)));
-      asOf.value = now;
+  /** How many Ideas came from the old Google Tasks import. */
+  const importedTaskCount = computed(() => importedTaskIds(nodes.value).size);
+
+  /** Remove the Ideas the old Google Tasks import added (they were never part of anything else, unless planned). */
+  function removeImportedTasks(): number {
+    const ids = importedTaskIds(nodes.value);
+    if (ids.size === 0) return 0;
+    nodes.value = nodes.value.filter((n) => !ids.has(n.id));
+    links.value = links.value.filter((l) => !ids.has(l.fromId) && !ids.has(l.toId));
+    persistNodes();
+    persistLinks();
+    lastAction.value = null;
+    asOf.value = new Date();
+    return ids.size;
+  }
+
+  /** Send a Heap item to the bottom of the Heap, or bring it back up. */
+  function setBacklog(id: string, on: boolean) {
+    edit(id, { backlog: on });
+  }
+
+  /** Give untagged Heap items a tag when a tag's name appears in the title. Returns how many were tagged. */
+  function autoTagHeap(): number {
+    const tags = getTags();
+    const ids = new Map<string, string>();
+    for (const h of heap.value) {
+      const n = nodes.value.find((x) => x.id === h.id);
+      const hit = n && !n.category ? matchTag(n.title, tags) : null;
+      if (hit) ids.set(h.id, hit);
     }
-    return { imported: r.imported, skipped: r.skipped };
+    if (ids.size === 0) return 0;
+    const stamp = new Date().toISOString();
+    nodes.value = nodes.value.map((n) => (ids.has(n.id) ? { ...n, category: ids.get(n.id)!, updatedAt: stamp } : n));
+    persistNodes();
+    asOf.value = new Date();
+    return ids.size;
+  }
+
+  /**
+   * Apply what the heap AI answered: a tag and a time guess only where the item has none, so nothing the user
+   * set is overwritten. Returns how many tags and estimates were added.
+   */
+  function applyHeapAi(answers: { id: string; category: string | null; minutes: number | null }[]): { tagged: number; estimated: number } {
+    const stamp = new Date().toISOString();
+    let tagged = 0;
+    let estimated = 0;
+    const by = new Map(answers.map((a) => [a.id, a] as const));
+    nodes.value = nodes.value.map((n) => {
+      const a = by.get(n.id);
+      if (!a || n.private) return n;
+      const next = { ...n };
+      if (a.category && !n.category) { next.category = a.category; tagged++; }
+      const has = n.kind === 'commitment' ? (n.durationMinutes ?? n.estimateMinutes) : n.estimateMinutes;
+      if (a.minutes && !has) { next.estimateMinutes = a.minutes; estimated++; }
+      return next === n || (next.category === n.category && next.estimateMinutes === n.estimateMinutes) ? n : { ...next, updatedAt: stamp };
+    });
+    if (tagged || estimated) { persistNodes(); asOf.value = new Date(); }
+    return { tagged, estimated };
+  }
+
+  /** Move a goal one place up (-1) or down (1) in the Goals list. */
+  function moveGoal(id: string, dir: -1 | 1) {
+    const order = movedOrder(goalList.value.map((r) => r.goal.id), id, dir);
+    if (order.size === 0) return;
+    const stamp = new Date().toISOString();
+    nodes.value = nodes.value.map((n) => (n.kind === 'goal' && order.has(n.id) ? { ...n, order: order.get(n.id)!, updatedAt: stamp } : n));
+    persistNodes();
+    asOf.value = new Date();
   }
 
   /** A new open step (Commitment) under a Goal or milestone. */
@@ -388,7 +458,7 @@ export const useGraphStore = defineStore('graph', () => {
 
   return {
     nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat, hemisphere,
-    rank, heap, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, garden, pressed, attachableTo,
-    load, refresh, capture, promote, plan, start, stop, complete, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, keepProposedNode, importTasks, addStep, tapHabit, edit, removeNode,
+    rank, heap, blockers, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, garden, pressed, attachableTo,
+    load, refresh, capture, promote, plan, start, stop, complete, finish, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, keepProposedNode, importedTaskCount, removeImportedTasks, setBacklog, moveGoal, autoTagHeap, applyHeapAi, addStep, tapHabit, edit, removeNode,
   };
 });

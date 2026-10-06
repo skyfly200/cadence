@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fetchGoogleDoc, fetchGoogleTasks, getGoogleStatus, startGoogleConnect } from './google-import-client';
+import { fetchGoogleDoc, getGoogleStatus, startGoogleConnect } from './google-import-client';
 
 const reply = (status: number, body: unknown) => vi.fn(async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch & ReturnType<typeof vi.fn>;
 
@@ -17,19 +17,19 @@ describe('google import client', () => {
 
   it('makes no request when signed out, and treats a 401 as signed out', async () => {
     const f = reply(200, {});
-    expect(await fetchGoogleTasks(null, f)).toEqual({ status: 'signed_out' });
+    expect(await fetchGoogleDoc('abcDEF123456', null, f)).toEqual({ status: 'signed_out' });
     expect(f).not.toHaveBeenCalled();
-    expect(await fetchGoogleTasks('tok', reply(401, {}))).toEqual({ status: 'signed_out' });
+    expect(await fetchGoogleDoc('abcDEF123456', 'tok', reply(401, {}))).toEqual({ status: 'signed_out' });
   });
 
   it('maps a 409 to the calm reconnect message', async () => {
-    expect(await fetchGoogleTasks('tok', reply(409, { error: 'reconnect' }))).toEqual({ status: 'reconnect', message: 'Reconnect Google to import.' });
+    expect(await fetchGoogleDoc('abcDEF123456', 'tok', reply(409, { error: 'reconnect' }))).toEqual({ status: 'reconnect', message: 'Reconnect Google to import.' });
   });
 
   it('shows the server message for a bad document or a Google hiccup, and a generic one otherwise', async () => {
     expect(await fetchGoogleDoc('x', 'tok', reply(400, { message: 'Cadence could not open that document.' }))).toEqual({ status: 'failed', message: 'Cadence could not open that document.' });
-    expect(await fetchGoogleTasks('tok', reply(502, { message: 'Google did not answer just now.' }))).toEqual({ status: 'failed', message: 'Google did not answer just now.' });
-    const generic = await fetchGoogleTasks('tok', reply(500, { message: 'internal detail' }));
+    expect(await fetchGoogleDoc('abcDEF123456', 'tok', reply(502, { message: 'Google did not answer just now.' }))).toEqual({ status: 'failed', message: 'Google did not answer just now.' });
+    const generic = await fetchGoogleDoc('abcDEF123456', 'tok', reply(500, { message: 'internal detail' }));
     expect(generic).toEqual({ status: 'failed', message: 'That did not go through. Please try again.' });
   });
 

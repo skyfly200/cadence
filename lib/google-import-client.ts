@@ -1,17 +1,15 @@
 /**
- * Browser helpers for the Google imports (Tasks and Docs) and for connecting Google. Framework-free, with
+ * Browser helpers for the Google Docs import and for connecting Google. Framework-free, with
  * `fetch` injectable. Every answer is calm: a missing grant says "Reconnect Google to import", and nothing
  * here ever sees a Google token (the server holds them).
  */
-import type { ImportedTask } from './home/import';
-
 export type GoogleOutcome<T> =
   | { status: 'ok'; data: T }
   | { status: 'signed_out' }
   | { status: 'reconnect'; message: string }
   | { status: 'failed'; message: string };
 
-export interface GoogleStatus { configured: boolean; connected: boolean; email: string | null; canImportTasks: boolean; canImportDocs: boolean }
+export interface GoogleStatus { configured: boolean; connected: boolean; email: string | null; canImportDocs: boolean }
 
 async function call<T>(path: string, method: 'GET' | 'POST', body: unknown, accessToken: string | null | undefined, f?: typeof fetch): Promise<GoogleOutcome<T>> {
   if (!accessToken) return { status: 'signed_out' };
@@ -40,9 +38,6 @@ export const getGoogleStatus = (accessToken: string | null | undefined, f?: type
 /** The Google consent URL to send the browser to (the server signs the state and asks for every scope). */
 export const startGoogleConnect = (accessToken: string | null | undefined, f?: typeof fetch) =>
   call<{ url: string }>('/api/google-calendar/start', 'POST', {}, accessToken, f);
-
-export const fetchGoogleTasks = (accessToken: string | null | undefined, f?: typeof fetch) =>
-  call<{ ok: true; tasks: ImportedTask[] }>('/api/google/tasks', 'GET', null, accessToken, f);
 
 /** The plain text of a Google Doc the user picked; `truncated` says it was longer than extraction takes. */
 export const fetchGoogleDoc = (fileId: string, accessToken: string | null | undefined, f?: typeof fetch) =>

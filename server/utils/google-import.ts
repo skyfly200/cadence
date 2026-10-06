@@ -1,30 +1,22 @@
 /**
- * Read-only imports from Google, user-triggered: open Google Tasks, and the text of one Google Doc the
- * user picked with the Google Picker. Framework-free (no Nitro globals), with `fetch` and the token vault
+ * Read-only import from Google, user-triggered: the text of one Google Doc the user picked with the Google
+ * Picker. (The Google Tasks import was dropped: it filled the Heap with old tasks.) Framework-free (no Nitro globals), with `fetch` and the token vault
  * injected so it can be unit tested. Nothing is ever written back to Google, no Google token reaches the
- * browser, and nothing here is saved: the browser turns tasks into Ideas and runs a doc's text through
+ * browser, and nothing here is saved: the browser runs a doc's text through
  * extraction, where every proposal waits for a tap.
  *
  * Users who connected before imports existed hold tokens without these scopes; they get a calm
  * "reconnect" answer instead of an error.
  */
-import { DRIVE_FILE_SCOPE, TASKS_SCOPE, getFreshAccessToken } from './google-oauth';
+import { DRIVE_FILE_SCOPE, getFreshAccessToken } from './google-oauth';
 import type { TokenVault } from './google-tokens';
 
 type Fetch = typeof fetch;
 
-const TASKS_BASE = 'https://tasks.googleapis.com/tasks/v1';
 const DRIVE_FILES = 'https://www.googleapis.com/drive/v3/files';
-const MAX_LISTS = 10;
-const MAX_PER_LIST = 100;
-const MAX_TASKS = 300;
-const MAX_TITLE = 200;
-const MAX_NOTES = 1000;
 /** The most of a document read into memory; the route trims further to what extraction accepts. */
 export const MAX_DOC_CHARS = 100_000;
 const FILE_ID = /^[A-Za-z0-9_-]{10,100}$/;
-
-export interface GoogleTask { id: string; title: string; notes: string | null; due: string | null }
 
 /** Google answered, but not with what was asked for: the grant is missing or revoked. */
 class NotAllowed extends Error {}
@@ -36,32 +28,6 @@ async function getJson(f: Fetch, url: string, accessToken: string): Promise<any>
   if (res.status === 401 || res.status === 403) throw new NotAllowed();
   if (!res.ok) throw new Upstream(`Google answered ${res.status}`);
   return res.json();
-}
-
-/** Open (not completed) tasks across the user's first few lists, newest lists first as Google returns them. */
-export async function listOpenTasks(opts: { fetch: Fetch; accessToken: string }): Promise<GoogleTask[]> {
-  const lists = await getJson(opts.fetch, `${TASKS_BASE}/users/@me/lists?maxResults=${MAX_LISTS}`, opts.accessToken);
-  const out: GoogleTask[] = [];
-  for (const l of (Array.isArray(lists?.items) ? lists.items : []).slice(0, MAX_LISTS)) {
-    if (typeof l?.id !== 'string') continue;
-    const page = await getJson(
-      opts.fetch,
-      `${TASKS_BASE}/lists/${encodeURIComponent(l.id)}/tasks?showCompleted=false&showHidden=false&maxResults=${MAX_PER_LIST}`,
-      opts.accessToken,
-    );
-    for (const t of Array.isArray(page?.items) ? page.items : []) {
-      const title = typeof t?.title === 'string' ? t.title.replace(/\s+/g, ' ').trim() : '';
-      if (!title || typeof t.id !== 'string' || t.status === 'completed') continue;
-      out.push({
-        id: `${l.id}:${t.id}`,
-        title: title.slice(0, MAX_TITLE),
-        notes: typeof t.notes === 'string' && t.notes.trim() ? t.notes.trim().slice(0, MAX_NOTES) : null,
-        due: typeof t.due === 'string' ? t.due : null,
-      });
-      if (out.length >= MAX_TASKS) return out;
-    }
-  }
-  return out;
 }
 
 /**
@@ -104,22 +70,12 @@ async function tokenFor(deps: ImportDeps, userId: string, scope: string): Promis
 }
 
 /** What the browser may know about this connection: whether each import is available, never a token. */
-export async function handleCapabilities(deps: Pick<ImportDeps, 'vault'>, userId: string): Promise<{ connected: boolean; email: string | null; canImportTasks: boolean; canImportDocs: boolean }> {
+export async function handleCapabilities(deps: Pick<ImportDeps, 'vault'>, userId: string): Promise<{ connected: boolean; email: string | null; canImportDocs: boolean }> {
   const s = await deps.vault.status(userId);
-  if (!s.connected) return { connected: false, email: null, canImportTasks: false, canImportDocs: false };
+  if (!s.connected) return { connected: false, email: null, canImportDocs: false };
   let granted: string[] = [];
   try { granted = await deps.vault.scopes(userId); } catch { /* unreadable tokens: ask to reconnect */ }
-  return { connected: true, email: s.email, canImportTasks: granted.includes(TASKS_SCOPE), canImportDocs: granted.includes(DRIVE_FILE_SCOPE) };
-}
-
-export async function handleTasks(deps: ImportDeps, input: { userId: string }): Promise<ImportResult<{ ok: true; tasks: GoogleTask[] }>> {
-  const t = await tokenFor(deps, input.userId, TASKS_SCOPE);
-  if (!t.ok) return t.result;
-  try {
-    return { status: 200, body: { ok: true, tasks: await listOpenTasks({ fetch: deps.fetch, accessToken: t.accessToken }) } };
-  } catch (e) {
-    return e instanceof NotAllowed ? reconnect() : failed();
-  }
+  return { connected: true, email: s.email, canImportDocs: granted.includes(DRIVE_FILE_SCOPE) };
 }
 
 /** Body: { fileId: string }. `text` is the document's plain text, trimmed to `maxChars` with `truncated` saying so. */
