@@ -1,6 +1,6 @@
 -- ============================================================================
--- NOT APPLIED. Proposed 2026-10-07 from the Supabase security and performance
--- advisors. Changes no data: policies keep the same meaning, two indexes are
+-- APPLIED 2026-10-07 to the cadence project as migration "cadence_advisor_fixes" (via the Supabase MCP).
+-- From the Supabase security and performance advisors. Changes no data: policies keep the same meaning, two indexes are
 -- added, and client roles lose table grants they never used.
 --
 -- 1. auth_rls_initplan (30 policies): `auth.uid()` in a policy is re-run for
