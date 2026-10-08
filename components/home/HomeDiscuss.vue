@@ -17,7 +17,7 @@
         <button
           type="button"
           :aria-pressed="speechState.listening"
-          :aria-label="speechState.listening ? 'Stop listening' : 'Start mic'"
+          :aria-label="speechState.listening ? 'Stop and send' : 'Start mic'"
           :disabled="busy"
           class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl bg-stone-100 text-stone-600 hover:bg-stone-200 disabled:opacity-50 dark:bg-white/10 dark:text-stone-300 dark:hover:bg-white/15"
           @click="toggleSpeech"
@@ -26,14 +26,15 @@
           <Square v-else class="size-5" />
         </button>
         <div v-if="speechState.message" class="flex-1 text-xs text-stone-600 dark:text-stone-300">{{ speechState.message }}</div>
+        <div v-else-if="speechState.listening" class="flex-1 text-xs text-stone-600 dark:text-stone-300">Listening. Tap the square to send.</div>
       </div>
       <textarea
         ref="box" v-model="input" rows="2" maxlength="1000" :disabled="busy"
         class="mt-2 w-full rounded-2xl border border-stone-200 bg-stone-50 p-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
-        placeholder="Say it or type it." @keydown.ctrl.enter="send" @keydown.meta.enter="send"
+        placeholder="Say it or type it." @keydown.ctrl.enter="send()" @keydown.meta.enter="send()"
       />
       <p v-if="error" class="mt-2 text-sm text-amber-700 dark:text-amber-300">{{ error }}</p>
-      <button type="button" class="mt-3 min-h-[44px] w-full rounded-2xl bg-[#E07A45] font-semibold text-white disabled:opacity-50" :disabled="!input.trim() || busy" @click="send">Send</button>
+      <button type="button" class="mt-3 min-h-[44px] w-full rounded-2xl bg-[#E07A45] font-semibold text-white disabled:opacity-50" :disabled="!input.trim() || busy" @click="send()">Send</button>
     </template>
 
     <!-- the summary: nothing is saved until a tap -->
@@ -63,6 +64,8 @@ import { aiFetch } from '~/lib/ai-client';
 import { checkCrisis } from '~/lib/domain/crisis';
 import { loadState } from '~/lib/home/nudge-state';
 import { getRecognitionCtor, initialState, joinTranscript, messageFor, setListening, setMessage } from '~/lib/home/speech-input';
+import { browserVoice, sayAloud } from '~/lib/home/talk';
+import { speechLevel } from '~/lib/home/prefs';
 import { MAX_TURNS, heardLine, privateLine, spoken, userText } from '~/lib/home/discuss';
 import { linksAfterKeeping, type KeepChoice, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
 import { useAppStore } from '~/stores/app';
@@ -105,12 +108,13 @@ const shownLinks = computed(() => linksAfterKeeping(proposalLinks.value, kept, g
 const totalShown = computed(() => proposalNodes.value.length + shownLinks.value.length);
 const privateNote = computed(() => privateLine(privateExcluded.value));
 
-// Tap-to-talk, same as the capture sheet's mic: the words land in the message box.
+// Tap-to-talk, same as the capture sheet's mic: the words land in the message box, and tapping it off sends them.
 const speechSupported = ref(false);
 const speechState = ref(initialState());
 let recognition: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
 let baseSpeech = '';
 let ignoreResults = false;
+let sendOnEnd = false;
 
 onMounted(async () => {
   const ctor = getRecognitionCtor(window);
@@ -132,7 +136,11 @@ onMounted(async () => {
         if (msg) speechState.value = setMessage(speechState.value, msg);
         speechState.value = setListening(speechState.value, false);
       });
-      recognition.addEventListener('end', () => { speechState.value = setListening(speechState.value, false); });
+      recognition.addEventListener('end', () => {
+        speechState.value = setListening(speechState.value, false);
+        if (sendOnEnd && input.value.trim()) void send({ voice: true });
+        sendOnEnd = false;
+      });
     } catch {
       speechSupported.value = false;
     }
@@ -142,12 +150,14 @@ onMounted(async () => {
   if (props.initial?.trim()) { input.value = props.initial.trim(); await send(); }
 });
 
-onUnmounted(() => stopListening());
+let unmounted = false;
+onUnmounted(() => { unmounted = true; stopListening(); window.speechSynthesis?.cancel(); });
 
 function toggleSpeech() {
   if (!recognition) return;
   try {
     if (speechState.value.listening) {
+      sendOnEnd = true;
       recognition.stop();
     } else {
       // The one mute silences the mic too (SPEC section 6).
@@ -166,12 +176,14 @@ function toggleSpeech() {
 /** Stop first, so recognition does not rebuild the box after a message is sent or the conversation ends. */
 function stopListening() {
   ignoreResults = true;
+  sendOnEnd = false;
   if (recognition && speechState.value.listening) {
     try { recognition.abort(); } catch { /* noop */ }
   }
 }
 
-async function send() {
+/** `voice`: the words came from the mic, so the reply is said aloud and the mic opens again after it. */
+async function send(opts: { voice?: boolean } = {}) {
   const text = input.value.trim();
   if (!text || busy.value) return;
   stopListening();
@@ -192,8 +204,13 @@ async function send() {
   if (r.data.crisis) { emit('crisis', null); return; }
   privateExcluded.value = r.data.privateExcluded ?? 0;
   turns.value = [...next, { role: 'assistant', text: r.data.reply ?? '' }];
-  if (r.data.last || spoken(turns.value) >= MAX_TURNS) await summarise();
-  else { await nextTick(); box.value?.focus(); }
+  if (r.data.last || spoken(turns.value) >= MAX_TURNS) { await summarise(); return; }
+  await nextTick();
+  if (!opts.voice) { box.value?.focus(); return; }
+  // Spoken in, spoken back (never over the one mute), then listen for the answer.
+  if (loadState().muted) return;
+  await sayAloud(r.data.reply ?? '', { ...browserVoice(window), volume: speechLevel() });
+  if (!unmounted && stage.value === 'talk' && !busy.value && !speechState.value.listening) toggleSpeech();
 }
 
 /** "Done" at any point: sum up what was said, or just close if nothing was. */

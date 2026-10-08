@@ -18,6 +18,8 @@ Rebuilt from `docs/SPEC.md` section 13 (what shipped without being tried on a re
 9. **Google import.** In Settings > Import, connect Google. Import Tasks as Ideas, then re-import and confirm no duplicates. Pick a Google Doc with the Picker and check it produces tap-to-keep proposals. Check that Home handles Google's return, that a reconnect works after disconnecting, and that the Picker API key and the Production (unverified) consent screen are set.
 10. **Extraction on real captures.** Capture "twice a week" and "monthly" phrases and check the Habit cycle. Capture a place name and check the address and coordinates come from the lookup. Edit the cycle and place on the Discuss card. Keep about 20 to 30 captures for the extraction spike (ticket 21).
 11. **Safety and trust.** In Discuss, type crisis wording and check the calm help-line card, Private auto-save and the country setting. Then check the AI-off switch, Private, the export, and delete everything with the 7-day undo. Also check the new Discuss mic and the Duolingo open-app button on Android.
+12. **Tap-to-talk back-and-forth.** On an Android phone and an iPhone, tap the bottom mic, say something, and tap the square. Check it shows as your turn, Cadence answers in a bubble and says the answer aloud, and the mic opens again by itself for the next thing. Say a second thing the same way, then Close and check both are in the heap. Repeat in Discuss with AI on and check the spoken question and the mic reopening. Check that mute keeps it silent with the mic off, that the reply never gets picked up by the mic, and note whether iOS Safari refuses to reopen the mic without a tap.
+
 
 ## Assumptions to confirm on real screens (SPEC 16)
 
