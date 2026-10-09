@@ -47,11 +47,23 @@ export function getRecognitionCtor(win: Window): SpeechRecognitionConstructor | 
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+/** A word as compared for repeats: no case, no punctuation. */
+const norm = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}']/gu, '');
+
+/** True when `words` begins with every word of `head`. */
+function startsWith(words: string[], head: string[]): boolean {
+  return head.length > 0 && head.length <= words.length && head.every((w, i) => norm(words[i]!) === norm(w));
+}
+
 /**
  * Join interim and final transcript parts into a single string.
  * Rebuilds from scratch each time to ensure live updates and no duplicates.
  * Respects existing base text (e.g., previously captured transcript).
  * Takes the best alternative (first) from each result, rebuilds every event.
+ *
+ * Android Chrome repeats itself: a result can carry the whole phrase so far, everything heard so
+ * far, or the tail of the previous result again. Words are compared without case or punctuation,
+ * and only words not already heard are added.
  *
  * @param base - existing text to build on (e.g., from a previous final result)
  * @param results - SpeechRecognitionResultList from the event
@@ -61,19 +73,27 @@ export function joinTranscript(
   base: string,
   results: SpeechRecognitionResultList
 ): string {
-  const parts: string[] = [];
+  let heard: string[] = [];
+  let lastStart = 0; // where the previous result's words begin in `heard`
   for (let i = 0; i < results.length; i++) {
     const result = results[i];
-    if (result.length > 0) {
-      const text = result[0].transcript.replace(/\s+/g, ' ').trim();
-      const prev = parts[parts.length - 1];
-      // Android Chrome sends each result as the whole phrase so far; a result that
-      // extends the previous one replaces it instead of repeating it.
-      if (prev && text.toLowerCase().startsWith(prev.toLowerCase())) parts[parts.length - 1] = text;
-      else parts.push(text);
+    if (result.length === 0) continue;
+    const words = result[0].transcript.split(/\s+/).filter(Boolean);
+    if (!words.length) continue;
+    if (startsWith(words, heard)) { heard = words; lastStart = 0; continue; } // everything so far, and more
+    const last = heard.slice(lastStart);
+    if (startsWith(words, last)) { heard = [...heard.slice(0, lastStart), ...words]; continue; } // the previous phrase, grown
+    if (startsWith(last, words)) continue; // the start of the previous phrase again
+    if (words.length > 1 && startsWith(heard.slice(heard.length - words.length), words)) continue; // the end again
+    // The end of what was heard, then new words: keep only the new ones.
+    let overlap = 0;
+    for (let k = Math.min(heard.length, words.length - 1); k >= 2; k--) {
+      if (startsWith(words, heard.slice(heard.length - k))) { overlap = k; break; }
     }
+    lastStart = heard.length - overlap;
+    heard = [...heard, ...words.slice(overlap)];
   }
-  let spoken = parts.join(' ').replace(/\s+/g, ' ').trim();
+  const spoken = heard.join(' ');
   if (!spoken) return base;
   const baseTrimmed = base.trimEnd();
   if (!baseTrimmed) return spoken;
