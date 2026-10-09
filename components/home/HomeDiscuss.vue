@@ -2,6 +2,7 @@
   <div role="region" aria-label="Discuss">
     <div class="flex items-center gap-3">
       <p class="min-w-0 flex-1 font-serif text-xl">{{ stage === 'talk' ? "Let's talk it through." : heardLine(totalShown) }}</p>
+      <HomeSpeakToggle v-if="stage === 'talk'" v-model="speakReplies" />
       <button type="button" class="min-h-[44px] rounded-2xl bg-stone-100 px-4 text-sm font-medium dark:bg-white/10" @click="done">Done</button>
     </div>
     <p v-if="privateNote" class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ privateNote }}</p>
@@ -65,7 +66,7 @@ import { checkCrisis } from '~/lib/domain/crisis';
 import { loadState } from '~/lib/home/nudge-state';
 import { getRecognitionCtor, initialState, joinTranscript, messageFor, setListening, setMessage } from '~/lib/home/speech-input';
 import { browserVoice, sayAloud } from '~/lib/home/talk';
-import { speechLevel } from '~/lib/home/prefs';
+import { getSpeakReplies, speechLevel } from '~/lib/home/prefs';
 import { MAX_TURNS, heardLine, privateLine, spoken, userText } from '~/lib/home/discuss';
 import { linksAfterKeeping, type KeepChoice, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
 import { useAppStore } from '~/stores/app';
@@ -77,8 +78,8 @@ import type { Turn } from '~~/server/utils/discuss';
  * The sheet saves `text` as a Private Idea and shows the calm card; no AI call is made for that turn.
  */
 const emit = defineEmits<{ (e: 'close'): void; (e: 'said', msg: string): void; (e: 'crisis', text: string | null): void }>();
-/** Words already typed on the capture sheet: they open the conversation. */
-const props = defineProps<{ initial?: string }>();
+/** `initial`: words already typed on the capture sheet; they open the conversation. `listen`: opened from the mic, so start listening. */
+const props = defineProps<{ initial?: string; listen?: boolean }>();
 const app = useAppStore();
 const graph = useGraphStore();
 
@@ -90,6 +91,8 @@ const busy = ref(false);
 const error = ref('');
 const privateExcluded = ref(0);
 const box = ref<HTMLTextAreaElement | null>(null);
+/** Replies are always shown; this also says them aloud. */
+const speakReplies = ref(getSpeakReplies());
 
 const summarising = ref(false);
 const proposalNodes = ref<NodeProposal[]>([]);
@@ -148,6 +151,7 @@ onMounted(async () => {
   await nextTick();
   box.value?.focus();
   if (props.initial?.trim()) { input.value = props.initial.trim(); await send(); }
+  else if (props.listen && recognition) toggleSpeech();
 });
 
 let unmounted = false;
@@ -206,10 +210,9 @@ async function send(opts: { voice?: boolean } = {}) {
   turns.value = [...next, { role: 'assistant', text: r.data.reply ?? '' }];
   if (r.data.last || spoken(turns.value) >= MAX_TURNS) { await summarise(); return; }
   await nextTick();
+  // Spoken replies are optional and never over the one mute; the mic opens again after a spoken turn.
+  if (speakReplies.value && !loadState().muted) await sayAloud(r.data.reply ?? '', { ...browserVoice(window), volume: speechLevel() });
   if (!opts.voice) { box.value?.focus(); return; }
-  // Spoken in, spoken back (never over the one mute), then listen for the answer.
-  if (loadState().muted) return;
-  await sayAloud(r.data.reply ?? '', { ...browserVoice(window), volume: speechLevel() });
   if (!unmounted && stage.value === 'talk' && !busy.value && !speechState.value.listening) toggleSpeech();
 }
 

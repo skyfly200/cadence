@@ -6,13 +6,16 @@
         <p class="font-serif text-xl">Before we talk</p>
         <p class="mt-2 text-[15px] text-slate-700 dark:text-slate-200">This sends this conversation and the relevant part of your list to Claude.</p>
         <div class="mt-3 flex gap-2">
-          <button type="button" class="min-h-[44px] rounded-2xl bg-stone-100 px-4 text-sm dark:bg-white/10" @click="mode = 'form'">Not now</button>
+          <button type="button" class="min-h-[44px] rounded-2xl bg-stone-100 px-4 text-sm dark:bg-white/10" @click="notNow">Not now</button>
           <button type="button" class="min-h-[44px] flex-1 rounded-2xl bg-[#E07A45] font-semibold text-white" @click="acceptDisclosure">Continue</button>
         </div>
       </div>
-      <HomeDiscuss v-else-if="mode === 'discuss'" :initial="draft" @close="$emit('close')" @said="(m: string) => $emit('said', m)" @crisis="onDiscussCrisis" />
+      <HomeDiscuss v-else-if="mode === 'discuss'" :initial="draft" :listen="discussListen" @close="$emit('close')" @said="(m: string) => $emit('said', m)" @crisis="onDiscussCrisis" />
       <template v-else>
-      <p class="font-serif text-xl">What's on your mind?</p>
+      <div class="flex items-center gap-3">
+        <p class="min-w-0 flex-1 font-serif text-xl">What's on your mind?</p>
+        <HomeSpeakToggle v-model="speakReplies" />
+      </div>
       <!-- the back-and-forth: each thing said, and Cadence's reply -->
       <ul v-if="turns.length" ref="list" class="mt-3 max-h-56 space-y-2 overflow-y-auto" aria-live="polite">
         <li v-for="(t, i) in turns" :key="i" :class="['rounded-2xl px-3 py-2 text-[15px]', t.role === 'user' ? 'ml-8 bg-stone-100 dark:bg-white/10' : 'mr-8 border border-slate-200 dark:border-white/10']">{{ t.text }}</li>
@@ -66,7 +69,7 @@ import { useRewards } from '~/composables/useRewards';
 import { loadState } from '~/lib/home/nudge-state';
 import { checkCrisis, type Resource } from '~/lib/domain/crisis';
 import { currentResources, markCardShown, shouldShowCard } from '~/lib/home/crisis-state';
-import { getAiOn, getDiscussDisclosed, setDiscussDisclosed, speechLevel } from '~/lib/home/prefs';
+import { getAiOn, getDiscussDisclosed, getSpeakReplies, setDiscussDisclosed, speechLevel } from '~/lib/home/prefs';
 import { useAppStore } from '~/stores/app';
 import { getRecognitionCtor, joinTranscript, messageFor, initialState, setListening, setMessage } from '~/lib/home/speech-input';
 import { browserVoice, followUp, sayAloud } from '~/lib/home/talk';
@@ -92,6 +95,10 @@ const speechState = ref(initialState());
 /** What was said on this sheet and what Cadence answered; in memory only, gone when the sheet closes. */
 const turns = ref<{ role: 'user' | 'assistant'; text: string }[]>([]);
 const list = ref<HTMLUListElement | null>(null);
+/** Cadence's replies are always shown; this also says them aloud. */
+const speakReplies = ref(false);
+/** Discuss was opened from the mic, so it starts listening. */
+const discussListen = ref(false);
 
 let recognition: any = null;
 let baseSpeech = '';
@@ -152,13 +159,19 @@ watch(() => props.open, async (o) => {
     crisis.value = null;
     mode.value = 'form';
     turns.value = [];
+    speakReplies.value = getSpeakReplies();
     discussAvailable.value = getAiOn() && app.signedIn;
+    discussListen.value = false;
     baseSpeech = '';
     ignoreResults = false;
     sendOnEnd = false;
     speechState.value = initialState();
     await nextTick();
-    if (props.listen && recognition) toggleSpeech(); // still inside the tap that opened it
+    // With AI on, the mic opens the AI conversation itself; otherwise the back-and-forth that parks each thing.
+    if (props.listen && discussAvailable.value) {
+      discussListen.value = true;
+      mode.value = getDiscussDisclosed() ? 'discuss' : 'disclose';
+    } else if (props.listen && recognition) toggleSpeech(); // still inside the tap that opened it
     else box.value?.focus();
   } else {
     ignoreResults = true;
@@ -200,12 +213,21 @@ function stopListening() {
 
 function startDiscuss() {
   stopListening();
+  discussListen.value = false;
   mode.value = getDiscussDisclosed() ? 'discuss' : 'disclose';
 }
 
 function acceptDisclosure() {
   setDiscussDisclosed(true);
   mode.value = 'discuss';
+}
+
+/** Not now: the plain sheet, listening if the mic opened it (the tap is still fresh). */
+async function notNow() {
+  mode.value = 'form';
+  await nextTick();
+  if (discussListen.value && recognition) toggleSpeech();
+  else box.value?.focus();
 }
 
 /**
@@ -275,10 +297,9 @@ async function add(opts: { voice?: boolean } = {}) {
   turns.value = [...turns.value, { role: 'user', text }, { role: 'assistant', text: `${ack} ${ask}` }];
   await nextTick();
   if (list.value) list.value.scrollTop = list.value.scrollHeight;
+  // Spoken replies are optional and never over the one mute; the mic opens again after a spoken turn.
+  if (speakReplies.value && !loadState().muted) await sayAloud(`${ack} ${ask}`, { ...browserVoice(window), volume: speechLevel() });
   if (!opts.voice) { box.value?.focus(); return; }
-  // Spoken in, spoken back: say the reply (never over the one mute), then listen for the next thing.
-  if (loadState().muted) return;
-  await sayAloud(`${ack} ${ask}`, { ...browserVoice(window), volume: speechLevel() });
   if (props.open && mode.value === 'form' && !crisis.value && !speechState.value.listening) toggleSpeech();
 }
 </script>
