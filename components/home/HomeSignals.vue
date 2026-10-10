@@ -1,6 +1,6 @@
 <template>
   <div v-if="open" class="fixed inset-0 z-[60] flex items-end bg-stone-900/30" @click.self="$emit('close')">
-    <div class="mx-auto max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-[#2A2645]" role="dialog" aria-label="Signals">
+    <div class="mx-auto max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-dusk-card" role="dialog" aria-label="Signals">
       <p class="font-serif text-xl">Signals</p>
       <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
         For you, while you test whether Cadence helps. Worked out on this device from your own log; nothing leaves it. None of this is a score.
@@ -10,13 +10,13 @@
       <div v-if="due" class="mt-4 rounded-2xl bg-amber-50 p-4 dark:bg-white/10">
         <p class="font-serif text-lg">Week {{ due }} check-in</p>
         <p class="mt-1 text-sm">{{ weeksUsed }} of the last {{ series.length }} weeks had something kept; {{ thisWeek }} so far this week. Below is how each feature is doing. What works, what doesn't, and why?</p>
-        <select v-model="cpMechanism" class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="About which feature">
+        <select v-model="cpMechanism" class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-dusk" aria-label="About which feature">
           <option value="">Overall</option>
           <option v-for="m in MECHANISMS" :key="m.key" :value="m.label">{{ m.label }}</option>
         </select>
-        <textarea v-model="cpText" rows="3" class="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-[16px] dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="What works and what doesn't" placeholder="A few words are plenty."></textarea>
+        <textarea v-model="cpText" rows="3" class="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-[16px] dark:border-white/10 dark:bg-dusk" aria-label="What works and what doesn't" placeholder="A few words are plenty."></textarea>
         <div class="mt-2 grid grid-cols-2 gap-2">
-          <button class="min-h-[44px] rounded-xl bg-[#E07A45] text-sm font-semibold text-white disabled:opacity-40" :disabled="!cpText.trim() || cpBusy" @click="saveCheckpoint">Save to my Ideas</button>
+          <button class="min-h-[44px] rounded-xl bg-ember text-sm font-semibold text-white disabled:opacity-40" :disabled="!cpText.trim() || cpBusy" @click="saveCheckpoint">Save to my Ideas</button>
           <button class="min-h-[44px] rounded-xl border border-slate-200 text-sm dark:border-white/10" @click="skipCheckpoint">Skip this one</button>
         </div>
         <p v-if="cpNote" class="mt-2 text-sm">{{ cpNote }}</p>
@@ -31,7 +31,7 @@
       <div class="mt-2 flex h-20 items-end gap-1.5" role="img" :aria-label="`Things kept in each of the last ${series.length} weeks`">
         <div v-for="w in series" :key="w.start.toISOString()" class="flex flex-1 flex-col items-center justify-end gap-1">
           <span class="text-[11px] text-slate-500 dark:text-slate-400">{{ w.kept }}</span>
-          <div class="w-full rounded-t bg-teal-600/70 dark:bg-[#B9A6FF]/70" :style="{ height: `${Math.max(2, (w.kept / maxKept) * 48)}px` }"></div>
+          <div class="w-full rounded-t bg-teal-600/70 dark:bg-lavender/70" :style="{ height: `${Math.max(2, (w.kept / maxKept) * 48)}px` }"></div>
         </div>
       </div>
       <p class="mt-1 text-sm">{{ trendLine }}</p>
@@ -46,7 +46,7 @@
       <div class="mt-1.5 grid grid-cols-3 gap-2">
         <button
           v-for="f in FEELINGS" :key="f.value"
-          :class="['min-h-[44px] rounded-xl border text-sm', feeling === f.value ? 'border-[#E07A45] bg-amber-50 font-semibold text-amber-900 dark:bg-white/10 dark:text-[#FFB59F]' : 'border-slate-200 dark:border-white/10']"
+          :class="['min-h-[44px] rounded-xl border text-sm', feeling === f.value ? 'border-ember bg-amber-50 font-semibold text-amber-900 dark:bg-white/10 dark:text-peach' : 'border-slate-200 dark:border-white/10']"
           @click="chooseFeeling(f.value)"
         >{{ f.label }}</button>
       </div>
@@ -84,7 +84,7 @@
       </div>
       <div v-else class="mt-1.5">
         <p class="text-sm text-slate-600 dark:text-slate-300">Turn one thing off or on for a week or two, then compare. Nothing changes unless you start it.</p>
-        <select v-model="expKey" class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Feature to try">
+        <select v-model="expKey" class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-dusk" aria-label="Feature to try">
           <option value="">Choose a feature</option>
           <option v-for="m in EXPERIMENTAL" :key="m.key" :value="m.key">{{ m.label }} (now {{ m.isOn!() ? 'on' : 'off' }})</option>
         </select>

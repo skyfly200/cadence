@@ -1,13 +1,13 @@
 <template>
   <div v-if="open" class="fixed inset-0 z-50 flex items-end bg-stone-900/30" @click.self="$emit('close')">
-    <div class="mx-auto w-full max-w-md rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-[#2A2645]" role="dialog" aria-label="Display and account">
+    <div class="mx-auto w-full max-w-md rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-dusk-card" role="dialog" aria-label="Display and account">
       <p class="font-serif text-xl">Display</p>
 
       <p class="mt-4 text-sm font-medium">How much to show</p>
       <div class="mt-1.5 grid grid-cols-3 gap-2">
         <button
           v-for="(n, i) in ['Simple', 'Balanced', 'Rich']" :key="n"
-          :class="['min-h-[44px] rounded-xl border text-sm', density === i ? 'border-[#E07A45] bg-amber-50 font-semibold text-amber-900 dark:bg-white/10 dark:text-[#FFB59F]' : 'border-slate-200 dark:border-white/10']"
+          :class="['min-h-[44px] rounded-xl border text-sm', density === i ? 'border-ember bg-amber-50 font-semibold text-amber-900 dark:bg-white/10 dark:text-peach' : 'border-slate-200 dark:border-white/10']"
           @click="$emit('update:density', i as 0 | 1 | 2)"
         >{{ n }}</button>
       </div>
@@ -16,7 +16,7 @@
       <div class="mt-1.5 grid grid-cols-2 gap-2">
         <button
           v-for="f in [{ v: '12', l: '12-hour' }, { v: '24', l: '24-hour' }]" :key="f.v"
-          :class="['min-h-[44px] rounded-xl border text-sm', timeFormat === f.v ? 'border-[#E07A45] bg-amber-50 font-semibold text-amber-900 dark:bg-white/10 dark:text-[#FFB59F]' : 'border-slate-200 dark:border-white/10']"
+          :class="['min-h-[44px] rounded-xl border text-sm', timeFormat === f.v ? 'border-ember bg-amber-50 font-semibold text-amber-900 dark:bg-white/10 dark:text-peach' : 'border-slate-200 dark:border-white/10']"
           @click="$emit('update:timeFormat', f.v as TimeFormat)"
         >{{ f.l }}</button>
       </div>
@@ -26,7 +26,7 @@
         <div class="mt-1.5 grid grid-cols-3 gap-2">
           <button
             v-for="m in MODES" :key="m.value"
-            :class="['min-h-[44px] rounded-xl border text-sm', colorMode.preference === m.value ? 'border-[#E07A45] bg-amber-50 font-semibold text-amber-900 dark:bg-white/10 dark:text-[#FFB59F]' : 'border-slate-200 dark:border-white/10']"
+            :class="['min-h-[44px] rounded-xl border text-sm', colorMode.preference === m.value ? 'border-ember bg-amber-50 font-semibold text-amber-900 dark:bg-white/10 dark:text-peach' : 'border-slate-200 dark:border-white/10']"
             @click="colorMode.preference = m.value"
           >{{ m.label }}</button>
         </div>
@@ -78,17 +78,17 @@
       </div>
 
       <p class="mt-4 text-sm font-medium">Music for focus</p>
-      <select v-model="music.provider" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Music app" @change="saveMusic">
+      <select v-model="music.provider" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-dusk" aria-label="Music app" @change="saveMusic">
         <option v-for="p in MUSIC_PROVIDERS" :key="p.id" :value="p.id">{{ p.name }}</option>
       </select>
       <input
         v-model="music.playlist" type="url" inputmode="url" placeholder="Playlist link (optional)" aria-label="Playlist link"
-        class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]" @change="savePlaylist"
+        class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-dusk" @change="savePlaylist"
       />
       <p v-if="playlistNote" class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ playlistNote }}</p>
       <input
         v-model.number="music.playlistMinutes" type="number" min="0" max="180" inputmode="numeric" placeholder="Playlist length in minutes (optional)" aria-label="Playlist length in minutes"
-        class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]" @change="music.playlistMinutes = cleanPlaylistMinutes(music.playlistMinutes); saveMusic()"
+        class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-dusk" @change="music.playlistMinutes = cleanPlaylistMinutes(music.playlistMinutes); saveMusic()"
       />
       <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Music as the timer: with "Open music" on, a focus session can last as long as the playlist.</p>
 
@@ -146,7 +146,7 @@
       </label>
       <label class="mt-2 block text-sm text-slate-600 dark:text-slate-300">
         <span class="font-medium text-slate-800 dark:text-slate-100">Season names</span><br>Which hemisphere the Garden's seasons follow. Only the names change.
-        <select v-model="hemisphereChoice" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Hemisphere for season names" @change="saveHemisphere">
+        <select v-model="hemisphereChoice" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-dusk" aria-label="Hemisphere for season names" @change="saveHemisphere">
           <option value="auto">From this device's time zone</option>
           <option value="north">Northern hemisphere</option>
           <option value="south">Southern hemisphere</option>
@@ -155,7 +155,7 @@
 
       <p class="mt-5 font-serif text-xl">Help lines</p>
       <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">If something you write sounds heavy, Cadence shows local help lines. Which country?</p>
-      <select v-model="helpCountry" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Country for help lines" @change="saveHelpCountry">
+      <select v-model="helpCountry" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-dusk" aria-label="Country for help lines" @change="saveHelpCountry">
         <option value="">From this device</option>
         <option v-for="c in COUNTRY_CHOICES" :key="c.code" :value="c.code">{{ c.label }}</option>
         <option value="ZZ">Somewhere else</option>

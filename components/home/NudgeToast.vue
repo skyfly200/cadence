@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div v-if="nudge" class="fixed inset-x-0 bottom-40 z-40 mx-auto flex w-fit max-w-sm flex-col gap-2 rounded-2xl bg-white p-4 shadow-lg dark:bg-[#2A2645]" role="alert">
+    <div v-if="nudge" class="fixed inset-x-0 bottom-40 z-40 mx-auto flex w-fit max-w-sm flex-col gap-2 rounded-2xl bg-white p-4 shadow-lg dark:bg-dusk-card" role="alert">
       <div>
         <p class="font-semibold text-slate-900 dark:text-slate-100">{{ nudge.title }}</p>
         <p v-if="nudge.body" class="mt-1 text-sm text-slate-700 dark:text-slate-300">{{ nudge.body }}</p>

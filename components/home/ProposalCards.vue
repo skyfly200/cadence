@@ -7,12 +7,12 @@
       <!-- a habit: how often (editable; without one it is kept as an idea) -->
       <div v-if="p.kind === 'habit' && !kept.has(p.ref)" class="flex basis-full flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
         <span>How often?</span>
-        <select :value="cyclePeriod(p)" class="min-h-[44px] rounded-xl border border-stone-200 bg-stone-50 px-2 dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Period" @change="setCycle(p, ($event.target as HTMLSelectElement).value, cycleTarget(p))">
+        <select :value="cyclePeriod(p)" class="min-h-[44px] rounded-xl border border-stone-200 bg-stone-50 px-2 dark:border-white/10 dark:bg-dusk" aria-label="Period" @change="setCycle(p, ($event.target as HTMLSelectElement).value, cycleTarget(p))">
           <option value="">Not sure</option>
           <option v-for="w in PERIOD_WORDS" :key="w.value" :value="w.value">a {{ w.label }}</option>
         </select>
         <template v-if="cyclePeriod(p)">
-          <select :value="cycleTarget(p)" class="min-h-[44px] rounded-xl border border-stone-200 bg-stone-50 px-2 dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Times" @change="setCycle(p, cyclePeriod(p), Number(($event.target as HTMLSelectElement).value))">
+          <select :value="cycleTarget(p)" class="min-h-[44px] rounded-xl border border-stone-200 bg-stone-50 px-2 dark:border-white/10 dark:bg-dusk" aria-label="Times" @change="setCycle(p, cyclePeriod(p), Number(($event.target as HTMLSelectElement).value))">
             <option v-for="n in 7" :key="n" :value="n">{{ n }}×</option>
           </select>
         </template>
@@ -21,7 +21,7 @@
       <!-- a place: the address it was found at, with the other matches to choose from -->
       <div v-if="p.thingType === 'place' && !kept.has(p.ref)" class="basis-full text-sm text-slate-600 dark:text-slate-300">
         <template v-if="p.matches?.length">
-          <select v-if="p.matches.length > 1" :value="matchIndex(p)" class="min-h-[44px] w-full rounded-xl border border-stone-200 bg-stone-50 px-2 dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Which place" @change="pickMatch(p, Number(($event.target as HTMLSelectElement).value))">
+          <select v-if="p.matches.length > 1" :value="matchIndex(p)" class="min-h-[44px] w-full rounded-xl border border-stone-200 bg-stone-50 px-2 dark:border-white/10 dark:bg-dusk" aria-label="Which place" @change="pickMatch(p, Number(($event.target as HTMLSelectElement).value))">
             <option v-for="(m, i) in p.matches" :key="i" :value="i">{{ m.address }}</option>
           </select>
           <p v-else>{{ p.matches[0]!.address }}</p>

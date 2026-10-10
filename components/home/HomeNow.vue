@@ -12,13 +12,13 @@
       </template>
 
       <li class="relative pb-5">
-        <span class="absolute -left-[38px] top-9 size-6 rounded-full bg-[#E07A45] ring-4 ring-[#EEF5F3] dark:ring-[#1D1A2F]" />
+        <span class="absolute -left-[38px] top-9 size-6 rounded-full bg-ember ring-4 ring-sage dark:ring-dusk" />
         <!-- The Now card -->
-        <div class="relative mt-8 rounded-[2rem] bg-white p-5 pt-9 shadow-[0_10px_30px_-12px_rgba(180,110,40,0.35)] dark:bg-[#2A2645] dark:shadow-none">
+        <div class="relative mt-8 rounded-[2rem] bg-white p-5 pt-9 shadow-[0_10px_30px_-12px_rgba(180,110,40,0.35)] dark:bg-dusk-card dark:shadow-none">
           <span class="absolute -top-8 left-1/2 -translate-x-1/2 text-[3.5rem] leading-none" aria-hidden="true">🌱</span>
 
           <template v-if="current">
-            <p class="text-center text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-[#FFB59F]">{{ started ? 'You are on it' : 'Right now' }}</p>
+            <p class="text-center text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-peach">{{ started ? 'You are on it' : 'Right now' }}</p>
             <div class="mt-1 flex items-center justify-center gap-2">
               <h1 class="break-words text-center font-serif text-[1.7rem] leading-tight">{{ current.node.title }}</h1>
               <button
@@ -39,16 +39,16 @@
             <div v-if="graph.rank.offerShrinkParkKeep && !keepDismissed" class="mt-4 rounded-2xl bg-amber-50 p-3 text-center text-sm dark:bg-white/10">
               <p>This has moved a few times. Send it to the heap, or keep it?</p>
               <div class="mt-2 flex justify-center gap-2">
-                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-[#1D1A2F]" @click="onPark">To the heap</button>
-                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-[#1D1A2F]" @click="keepDismissed = true">Keep it</button>
+                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-dusk" @click="onPark">To the heap</button>
+                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-dusk" @click="keepDismissed = true">Keep it</button>
               </div>
             </div>
 
             <div v-if="offerSlog" class="mt-4 rounded-2xl bg-amber-50 p-3 text-center text-sm dark:bg-white/10">
               <p>This one keeps getting put off. Is it a slog? A slog gets a bigger reward and a two-minute "just start".</p>
               <div class="mt-2 flex justify-center gap-2">
-                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-[#1D1A2F]" @click="onTagSlog">Yes, a slog</button>
-                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-[#1D1A2F]" @click="onDismissSlog">No thanks</button>
+                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-dusk" @click="onTagSlog">Yes, a slog</button>
+                <button class="min-h-[44px] rounded-xl bg-white px-4 font-medium dark:bg-dusk" @click="onDismissSlog">No thanks</button>
               </div>
             </div>
 
@@ -59,7 +59,7 @@
             </div>
 
             <div v-if="!started && !stayWithMeActive" class="mt-5 grid grid-cols-3 gap-2">
-              <button class="col-span-3 min-h-[44px] rounded-2xl bg-[#E07A45] py-3.5 text-base font-semibold text-white shadow-sm active:scale-[.99]" @click="onStart">Start</button>
+              <button class="col-span-3 min-h-[44px] rounded-2xl bg-ember py-3.5 text-base font-semibold text-white shadow-sm active:scale-[.99]" @click="onStart">Start</button>
               <button class="col-span-2 min-h-[44px] rounded-2xl bg-stone-100 py-3 text-sm font-medium dark:bg-white/10" @click="onNotNow">Not now</button>
               <button class="min-h-[44px] rounded-2xl bg-stone-100 py-3 text-sm font-medium dark:bg-white/10" @click="onPark">To the heap</button>
             </div>
@@ -80,7 +80,7 @@
                 <button
                   v-for="dur in focusDurations(music)"
                   :key="dur"
-                  class="min-h-[44px] rounded-xl bg-white py-2 text-sm font-medium dark:bg-[#1D1A2F]"
+                  class="min-h-[44px] rounded-xl bg-white py-2 text-sm font-medium dark:bg-dusk"
                   @click="startStayWithMe(dur)"
                 >
                   {{ dur }}m
@@ -91,10 +91,10 @@
             <div v-if="stayWithMeActive && stayWithMeState" class="mt-4 rounded-2xl bg-stone-50 p-4 dark:bg-white/10">
               <p class="text-center text-sm text-slate-700 dark:text-slate-200">{{ stayWithMeStatus }}</p>
               <div class="mt-3 flex justify-center">
-                <button class="mr-2 min-h-[44px] min-w-[44px] rounded-xl bg-white px-3 text-lg dark:bg-[#1D1A2F]" :aria-label="`Open ${musicTarget(music).name}`" :title="musicTarget(music).name" @click="launchMusic">
+                <button class="mr-2 min-h-[44px] min-w-[44px] rounded-xl bg-white px-3 text-lg dark:bg-dusk" :aria-label="`Open ${musicTarget(music).name}`" :title="musicTarget(music).name" @click="launchMusic">
                   🎵
                 </button>
-                <button class="min-h-[44px] rounded-xl bg-white px-4 text-sm font-medium dark:bg-[#1D1A2F]" @click="endStayWithMe">
+                <button class="min-h-[44px] rounded-xl bg-white px-4 text-sm font-medium dark:bg-dusk" @click="endStayWithMe">
                   End
                 </button>
               </div>
@@ -109,7 +109,7 @@
             <p class="mt-2 text-center text-stone-600 dark:text-slate-300">
               {{ graph.heap.length ? 'Open Plan and put something from the heap on your stack.' : 'Nothing needs you. Capture anything that pops up with the + button.' }}
             </p>
-            <button v-if="graph.heap.length" class="mx-auto mt-4 block min-h-[44px] rounded-2xl bg-[#E07A45] px-5 text-sm font-semibold text-white" @click="$emit('open-plan')">Open Plan</button>
+            <button v-if="graph.heap.length" class="mx-auto mt-4 block min-h-[44px] rounded-2xl bg-ember px-5 text-sm font-semibold text-white" @click="$emit('open-plan')">Open Plan</button>
           </template>
         </div>
 
@@ -119,13 +119,13 @@
       </li>
 
       <li v-for="item in graph.rank.strip" :key="item.node.id" class="relative pb-3">
-        <span class="absolute -left-[31px] top-1.5 size-3.5 rounded-full bg-sky-400 ring-4 ring-[#EEF5F3] dark:ring-[#1D1A2F]" />
+        <span class="absolute -left-[31px] top-1.5 size-3.5 rounded-full bg-sky-400 ring-4 ring-sage dark:ring-dusk" />
         <p v-if="timeOf(item.node)" class="text-[11px] font-bold text-slate-400">{{ timeOf(item.node) }}</p>
         <p class="break-words text-[15px]">{{ item.node.title }}</p>
       </li>
     </ol>
 
-    <button v-if="density >= 1" class="ml-8 mt-3 min-h-[44px] text-xs font-medium text-teal-700 underline dark:text-[#B9A6FF]" @click="$emit('open-plan')">The heap</button>
+    <button v-if="density >= 1" class="ml-8 mt-3 min-h-[44px] text-xs font-medium text-teal-700 underline dark:text-lavender" @click="$emit('open-plan')">The heap</button>
   </section>
 </template>
 

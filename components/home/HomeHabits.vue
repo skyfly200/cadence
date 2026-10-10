@@ -12,12 +12,12 @@
       <div class="mt-1.5 grid grid-cols-2 gap-3">
         <div v-for="row in g.rows" :key="row.habit.id" class="flex flex-col gap-1">
         <button
-          :class="['min-h-[44px] rounded-xl border p-3 text-left shadow-sm', row.progress.met ? 'border-teal-300 bg-teal-50 dark:border-emerald-300/50 dark:bg-emerald-400/90 dark:text-emerald-950' : 'border-slate-200 bg-white dark:border-white/10 dark:bg-[#2A2645]']"
+          :class="['min-h-[44px] rounded-xl border p-3 text-left shadow-sm', row.progress.met ? 'border-teal-300 bg-teal-50 dark:border-emerald-300/50 dark:bg-emerald-400/90 dark:text-emerald-950' : 'border-slate-200 bg-white dark:border-white/10 dark:bg-dusk-card']"
           @click="tap(row.habit.id)"
         >
           <span class="block break-words text-sm font-medium leading-tight">{{ row.habit.title }}</span>
           <span class="mt-2 flex flex-wrap gap-1">
-            <i v-for="n in Math.min(row.progress.target, 8)" :key="n" :class="['size-2 rounded-full', n <= row.progress.count ? 'bg-teal-400 dark:bg-[#B9A6FF]' : 'bg-slate-200 dark:bg-white/20']" />
+            <i v-for="n in Math.min(row.progress.target, 8)" :key="n" :class="['size-2 rounded-full', n <= row.progress.count ? 'bg-teal-400 dark:bg-lavender' : 'bg-slate-200 dark:bg-white/20']" />
           </span>
           <span class="mt-1 block text-[11px] opacity-70">{{ row.progress.count }} of {{ row.progress.target }} {{ WORD[g.period] }}</span>
         </button>
@@ -32,17 +32,17 @@
 
     <p v-if="!groups.length" class="mt-4 text-[15px] text-slate-500 dark:text-slate-400">No habits yet. Add one below. A missed day is just a day.</p>
 
-    <form class="mt-5 rounded-2xl bg-white p-3 shadow-sm dark:bg-[#2A2645]" @submit.prevent="add">
+    <form class="mt-5 rounded-2xl bg-white p-3 shadow-sm dark:bg-dusk-card" @submit.prevent="add">
       <p class="text-sm font-medium">Add a habit</p>
-      <input v-model="title" class="mt-2 min-h-[44px] w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]" placeholder="e.g. Stretch" maxlength="120">
+      <input v-model="title" class="mt-2 min-h-[44px] w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-[16px] outline-none dark:border-white/10 dark:bg-dusk" placeholder="e.g. Stretch" maxlength="120">
       <div class="mt-2 flex items-center gap-2">
-        <input v-model.number="target" type="number" min="1" max="99" class="min-h-[44px] w-16 rounded-lg border border-slate-200 bg-slate-50 px-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Times">
+        <input v-model.number="target" type="number" min="1" max="99" class="min-h-[44px] w-16 rounded-lg border border-slate-200 bg-slate-50 px-3 text-[16px] outline-none dark:border-white/10 dark:bg-dusk" aria-label="Times">
         <span class="text-sm text-slate-500 dark:text-slate-400">times per</span>
-        <select v-model="period" class="min-h-[44px] flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]" aria-label="Period">
+        <select v-model="period" class="min-h-[44px] flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2 text-[16px] outline-none dark:border-white/10 dark:bg-dusk" aria-label="Period">
           <option v-for="p in PERIODS" :key="p" :value="p">{{ LABEL[p] }}</option>
         </select>
       </div>
-      <button type="submit" class="mt-3 min-h-[44px] w-full rounded-2xl bg-[#E07A45] font-semibold text-white disabled:opacity-50" :disabled="!title.trim()">Add habit</button>
+      <button type="submit" class="mt-3 min-h-[44px] w-full rounded-2xl bg-ember font-semibold text-white disabled:opacity-50" :disabled="!title.trim()">Add habit</button>
     </form>
   </section>
 </template>

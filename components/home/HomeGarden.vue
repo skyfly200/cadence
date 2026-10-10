@@ -1,5 +1,5 @@
 <template>
-  <div v-if="open" class="fixed inset-0 z-[35] overflow-y-auto bg-[#EEF5F3] text-slate-800 dark:bg-[#1D1A2F] dark:text-slate-100" role="dialog" aria-label="Garden">
+  <div v-if="open" class="fixed inset-0 z-[35] overflow-y-auto bg-sage text-slate-800 dark:bg-dusk dark:text-slate-100" role="dialog" aria-label="Garden">
     <div class="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-8 pt-4 md:max-w-xl">
       <header class="flex items-center gap-3">
         <h1 class="min-w-0 flex-1 font-serif text-xl font-semibold">{{ tab === 'season' ? 'Garden' : 'Pressed book' }}</h1>
@@ -13,7 +13,7 @@
 
       <!-- this season -->
       <section v-if="tab === 'season'" class="mt-4">
-        <div class="overflow-hidden rounded-3xl bg-white p-3 shadow-sm dark:bg-[#2A2645]">
+        <div class="overflow-hidden rounded-3xl bg-white p-3 shadow-sm dark:bg-dusk-card">
           <GardenScene :pieces="garden.pieces" :resting="garden.resting" :motion="motion" label="Your garden this season" />
           <p class="mt-2 px-1 font-serif text-lg">{{ garden.season.name }} {{ garden.season.year }}</p>
           <p class="px-1 text-sm text-slate-600 dark:text-slate-300">
@@ -24,7 +24,7 @@
         </div>
 
         <ul v-if="named.length" class="mt-4 space-y-2">
-          <li v-for="p in named" :key="p.id" class="flex items-center gap-3 rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-[#2A2645]">
+          <li v-for="p in named" :key="p.id" class="flex items-center gap-3 rounded-2xl bg-white px-3 py-2 shadow-sm dark:bg-dusk-card">
             <svg viewBox="-20 -46 40 50" class="size-10 shrink-0" aria-hidden="true"><GardenPiece :kind="p.kind" :stage="p.stage" :blooms="p.blooms" :id="p.id" /></svg>
             <span class="min-w-0 flex-1"><span class="block break-words text-[15px]">{{ p.title }}</span><span class="text-xs text-slate-500 dark:text-slate-400">{{ WORD[p.kind] }}</span></span>
           </li>
@@ -34,7 +34,7 @@
 
       <!-- pressed book -->
       <section v-else class="mt-4 space-y-4">
-        <p v-if="!book.length" class="rounded-3xl bg-white p-5 text-[15px] text-slate-600 shadow-sm dark:bg-[#2A2645] dark:text-slate-300">
+        <p v-if="!book.length" class="rounded-3xl bg-white p-5 text-[15px] text-slate-600 shadow-sm dark:bg-dusk-card dark:text-slate-300">
           Nothing pressed yet. When a season turns, the plants that grew most are pressed here, so nothing you did is lost.
         </p>
         <article v-for="s in book" :key="s.key" class="rounded-3xl bg-amber-50 p-4 shadow-sm dark:bg-[#332E52]">
@@ -86,6 +86,6 @@ const WORD: Record<PieceKind, string> = {
 };
 const tabClass = (t: 'season' | 'book') => [
   'min-h-[44px] rounded-xl text-sm font-medium',
-  tab.value === t ? 'bg-teal-100 text-teal-900 dark:bg-[#3A3560] dark:text-[#FFB59F]' : 'bg-white text-slate-600 dark:bg-[#2A2645] dark:text-slate-300',
+  tab.value === t ? 'bg-teal-100 text-teal-900 dark:bg-dusk-raised dark:text-peach' : 'bg-white text-slate-600 dark:bg-dusk-card dark:text-slate-300',
 ];
 </script>

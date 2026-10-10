@@ -1,12 +1,12 @@
 <template>
-  <div class="min-h-dvh bg-[#EEF5F3] pb-16 text-slate-800 dark:bg-[#1D1A2F] dark:text-slate-100">
+  <div class="min-h-dvh bg-sage pb-16 text-slate-800 dark:bg-dusk dark:text-slate-100">
     <div class="mx-auto w-full max-w-xl px-4 pt-4">
-      <NuxtLink to="/" class="inline-flex min-h-[44px] items-center text-[15px] text-teal-800 underline dark:text-[#B9A6FF]">‹ Back to Cadence</NuxtLink>
+      <NuxtLink to="/" class="inline-flex min-h-[44px] items-center text-[15px] text-teal-800 underline dark:text-lavender">‹ Back to Cadence</NuxtLink>
       <h1 class="mt-2 font-serif text-2xl font-semibold">What Cadence knows and does</h1>
       <p class="mt-2 text-[15px] text-slate-600 dark:text-slate-300">Plain answers about where your things live, what is ever sent anywhere, and the switches that are yours.</p>
 
       <!-- AI switch -->
-      <section class="mt-5 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
+      <section class="mt-5 rounded-3xl bg-white p-5 shadow-sm dark:bg-dusk-card">
         <h2 class="font-serif text-lg">AI</h2>
         <label class="mt-2 flex min-h-[44px] items-start gap-3">
           <input type="checkbox" class="mt-1 size-5 shrink-0" :checked="aiOn" :disabled="aiBusy" @change="toggleAi(($event.target as HTMLInputElement).checked)" />
@@ -16,7 +16,7 @@
       </section>
 
       <!-- Where things live -->
-      <section class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
+      <section class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-dusk-card">
         <h2 class="font-serif text-lg">Where your things live</h2>
         <ul class="mt-2 list-disc space-y-2 pl-5 text-[15px]">
           <li><strong>On this device:</strong> everything you capture and plan, plus your display, sound and clock choices. Signed out, nothing leaves the device.</li>
@@ -29,7 +29,7 @@
       </section>
 
       <!-- What each feature sends -->
-      <section class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
+      <section class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-dusk-card">
         <h2 class="font-serif text-lg">What each feature sends</h2>
         <ul class="mt-2 list-disc space-y-2 pl-5 text-[15px]">
           <li><strong>Capture, Now, Plan, Habits:</strong> nothing to any AI. The ranking and the Why now lines run on your device.</li>
@@ -41,18 +41,18 @@
       </section>
 
       <!-- Export -->
-      <section class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
+      <section class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-dusk-card">
         <h2 class="font-serif text-lg">Export everything</h2>
         <p class="mt-2 text-[15px] text-slate-600 dark:text-slate-400">One file with everything on this device: your Home items and history, and the classic view's data.</p>
-        <button class="mt-3 min-h-[44px] rounded-2xl bg-[#E07A45] px-5 font-semibold text-white" @click="exportData">Download my data</button>
+        <button class="mt-3 min-h-[44px] rounded-2xl bg-ember px-5 font-semibold text-white" @click="exportData">Download my data</button>
       </section>
 
       <!-- Delete -->
-      <section class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
+      <section class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-dusk-card">
         <h2 class="font-serif text-lg">Delete everything</h2>
         <template v-if="deletion.pending">
           <p class="mt-2 text-[15px]">Your data will be deleted on <strong>{{ purgeDate }}</strong>. Until then it is hidden on your devices and nothing new is saved. Changed your mind? You can undo.</p>
-          <button class="mt-3 min-h-[44px] rounded-2xl bg-[#E07A45] px-5 font-semibold text-white disabled:opacity-50" :disabled="deleteBusy" @click="undoDelete">Undo, keep my data</button>
+          <button class="mt-3 min-h-[44px] rounded-2xl bg-ember px-5 font-semibold text-white disabled:opacity-50" :disabled="deleteBusy" @click="undoDelete">Undo, keep my data</button>
         </template>
         <template v-else-if="app.signedIn">
           <p class="mt-2 text-[15px] text-slate-600 dark:text-slate-400">This clears your items and history from this device and from your account. You have 7 days to undo it, then it is gone for good. Your sign-in stays, so you can start fresh.</p>
