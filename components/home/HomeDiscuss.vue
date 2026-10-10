@@ -29,11 +29,11 @@
       </div>
       <textarea
         ref="box" v-model="input" rows="2" maxlength="1000" :disabled="busy"
-        class="mt-2 w-full rounded-2xl border border-stone-200 bg-stone-50 p-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
+        class="mt-2 w-full rounded-2xl border border-stone-200 bg-stone-50 p-3 text-[16px] outline-none dark:border-white/10 dark:bg-dusk"
         placeholder="Say it or type it." @keydown.ctrl.enter="send" @keydown.meta.enter="send"
       />
       <p v-if="error" class="mt-2 text-sm text-amber-700 dark:text-amber-300">{{ error }}</p>
-      <button type="button" class="mt-3 min-h-[44px] w-full rounded-2xl bg-[#E07A45] font-semibold text-white disabled:opacity-50" :disabled="!input.trim() || busy" @click="send">Send</button>
+      <button type="button" class="mt-3 min-h-[44px] w-full rounded-2xl bg-ember font-semibold text-white disabled:opacity-50" :disabled="!input.trim() || busy" @click="send">Send</button>
     </template>
 
     <!-- the summary: nothing is saved until a tap -->
@@ -50,7 +50,7 @@
         <p v-if="!proposalNodes.length" class="mt-3 text-[15px] text-slate-600 dark:text-slate-300">Nothing is saved unless you keep it. You can park what you said as one note.</p>
         <button v-if="!kept.size && !parked" type="button" class="mt-3 min-h-[44px] w-full rounded-2xl bg-stone-100 text-sm font-medium dark:bg-white/10" :disabled="parking" @click="parkAll">Park what I said as one note</button>
         <p v-if="error" class="mt-2 text-sm text-amber-700 dark:text-amber-300">{{ error }}</p>
-        <button type="button" class="mt-3 min-h-[44px] w-full rounded-2xl bg-[#E07A45] font-semibold text-white" @click="finish">Done</button>
+        <button type="button" class="mt-3 min-h-[44px] w-full rounded-2xl bg-ember font-semibold text-white" @click="finish">Done</button>
       </template>
     </template>
   </div>

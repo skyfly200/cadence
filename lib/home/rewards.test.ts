@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { occ } from '../domain/test-helpers';
 import {
-  DEFAULT_REWARD_PREFS, DELIGHTS, DELIGHT_PER_DAY, END_OF_DAY_FROM_HOUR, endOfDayLine, nextDelight, rewardFor, runPraise,
+  DEFAULT_REWARD_PREFS, DEFAULT_VOICE, DELIGHTS, DELIGHT_PER_DAY, END_OF_DAY_FROM_HOUR, endOfDayLine, linePool, nextDelight, rewardFor, runPraise,
   type RewardInput,
 } from './rewards';
 
@@ -21,11 +21,18 @@ describe('rewardFor', () => {
     }
   });
 
-  it('adds the progress update and the weekly tally', () => {
+  it('adds one extra at most: the progress update, else the weekly tally', () => {
     const r = rewardFor({ ...base, moment: 'habit', progress: '2 of 3 this week.', weeklyKept: 14 });
     expect(r.text).toContain('2 of 3 this week.');
-    expect(r.text).toContain('14 things kept this week.');
+    expect(r.text).not.toContain('kept this week');
     expect(rewardFor({ ...base, weeklyKept: 1 }).text).toContain('1 thing kept this week.');
+  });
+
+  it('stays one short line even when everything applies', () => {
+    const r = rewardFor({ ...base, moment: 'habit', met: true, progress: '1 of 1 today.', weeklyKept: 1, run: { periods: 3, period: 'week' }, delight: true });
+    expect(r.text.split('. ').length).toBeLessThanOrEqual(3);
+    expect(r.text).not.toContain('1 of 1 today.');
+    expect(r.text).not.toContain('kept this week');
   });
 
   it('omits the tally when it is switched off or there is nothing kept yet', () => {
@@ -68,6 +75,54 @@ describe('rewardFor', () => {
     const off = rewardFor({ ...base, delight: true, prefs: { ...DEFAULT_REWARD_PREFS, lines: false } });
     for (const d of DELIGHTS) expect(off.text).not.toContain(d);
     for (const d of DELIGHTS) expect(d).not.toMatch(FORBIDDEN);
+  });
+});
+
+describe('tone settings', () => {
+  const moments = ['habit', 'habitMet', 'start', 'done', 'planning', 'capture', 'slogStart', 'slogDone'];
+
+  it('plain by default, the same lines as before', () => {
+    expect(linePool('done')).toEqual(linePool('done', DEFAULT_VOICE));
+    expect(DEFAULT_VOICE).toEqual({ tone: 'plain', literal: false, playful: false });
+  });
+
+  it('direct says just the fact, with no delight', () => {
+    const direct = { ...DEFAULT_VOICE, tone: 'direct' as const };
+    expect(rewardFor({ ...base, moment: 'start', voice: direct }).text).toBe('Started.');
+    expect(rewardFor({ ...base, moment: 'done', voice: direct, delight: true }).text).toBe('Done.');
+  });
+
+  it('gentle has its own lines, falling back to plain where it has none', () => {
+    const gentle = { ...DEFAULT_VOICE, tone: 'gentle' as const };
+    expect(linePool('done', gentle)).not.toEqual(linePool('done'));
+    expect(linePool('planning', gentle)).toEqual(linePool('planning'));
+  });
+
+  it('playful adds lines only when switched on, and never with literal-only', () => {
+    const playful = { ...DEFAULT_VOICE, playful: true };
+    expect(linePool('done', playful).length).toBeGreaterThan(linePool('done').length);
+    expect(linePool('done', { ...playful, literal: true })).toEqual(linePool('done', { ...DEFAULT_VOICE, literal: true }));
+  });
+
+  it('literal-only drops figures of speech and the delight', () => {
+    const literal = { ...DEFAULT_VOICE, literal: true };
+    expect(linePool('done', literal)).not.toContain('That is off your plate.');
+    expect(linePool('capture', literal)).not.toContain('Out of your head and safe.');
+    const r = rewardFor({ ...base, voice: literal, delight: true });
+    for (const d of DELIGHTS) expect(r.text).not.toContain(d);
+  });
+
+  it('every line in every tone stays warm: no points, streaks, loss or "!"', () => {
+    for (const tone of ['gentle', 'plain', 'direct'] as const) {
+      for (const playful of [false, true]) {
+        for (const key of moments) {
+          for (const line of linePool(key, { tone, literal: false, playful })) {
+            expect(line).not.toMatch(FORBIDDEN);
+            expect(line).not.toContain('!');
+          }
+        }
+      }
+    }
   });
 });
 

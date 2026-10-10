@@ -15,6 +15,7 @@ import { getPressedPages, getSeasonDraft, resolveHemisphere, savePressedPages, s
 import type { Hemisphere } from '~/lib/domain';
 import { attachable, movedOrder, newGoal, newStep, partOf } from '~/lib/home/goal-edit';
 import { importedTaskIds } from '~/lib/home/import';
+import { quickKind, type QuickKind } from '~/lib/home/quick-kind';
 import { matchTag, openBlockers } from '~/lib/home/heap';
 import { getTags } from '~/lib/home/prefs';
 import { acceptLink, defaultChoice, nodeFromProposal, type KeepChoice, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
@@ -23,7 +24,7 @@ import { postCapture } from '~/lib/capture-client';
 import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/lib/domain';
 import { heapItems, keptToday, nodeState, reorderIds, stackDays, stopRecords } from '~/lib/home/derive';
 import type { Density } from '~/lib/home/prefs';
-import { applyEdit, deleteNode, type EditInput } from '~/lib/home/edit';
+import { applyEdit, deleteNode, restoreDeleted, type EditInput } from '~/lib/home/edit';
 import { useAppStore } from './app';
 
 const MAX_CAPTURE = 4000; // same limit as the server route
@@ -44,7 +45,7 @@ export const useGraphStore = defineStore('graph', () => {
   /** Which hemisphere the season names follow (from the time zone unless chosen in Settings). */
   const hemisphere = ref<Hemisphere>(resolveHemisphere());
   /** What the last action appended, so it can be undone (every action is undoable). */
-  const lastAction = ref<{ label: string; occurrences: Occurrence[]; addedNodeIds: string[] } | null>(null);
+  const lastAction = ref<{ label: string; occurrences: Occurrence[]; addedNodeIds: string[]; removed?: { nodes: Node[]; links: Link[] } } | null>(null);
 
   function load() {
     nodes.value = getGraphNodes();
@@ -141,13 +142,16 @@ export const useGraphStore = defineStore('graph', () => {
   /**
    * Save a Capture. Signed in and online: through /api/capture (it stores the Idea; we keep the same id here).
    * Otherwise (signed out, offline, or the request failed): saved on this device and carried up by the normal sync.
-   * Text with a date or time becomes a Commitment; everything else stays an Idea.
+   * Text with a date or time becomes a Commitment; everything else stays an Idea. "goal: ..." and a habit
+   * with how often ("stretch every day") become a Goal or a Habit here (one capture box for everything).
    */
   async function capture(text: string, opts: { private?: boolean } = {}): Promise<{ ok: true; reply: string } | { ok: false; message: string }> {
     const title = text.trim();
     if (!title) return { ok: false, message: 'Nothing to add yet.' };
     if (title.length > MAX_CAPTURE) return { ok: false, message: 'That is a bit long to add at once. Try splitting it.' };
     const now = new Date();
+    const quick = opts.private ? null : quickKind(title);
+    if (quick) return captureQuick(quick, now);
     const parsed = parseCapture(title, { now, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
 
     let id: string = uid();
@@ -179,6 +183,20 @@ export const useGraphStore = defineStore('graph', () => {
     }
     asOf.value = now;
     return { ok: true, reply };
+  }
+
+  /** A Goal or Habit typed into the capture box: saved here (the sync carries it up) and undoable. */
+  function captureQuick(q: QuickKind, now: Date): { ok: true; reply: string } {
+    const t = now.toISOString();
+    const id = uid();
+    const node: Node = q.kind === 'goal'
+      ? newGoal(q.title, now, id, false)!
+      : { id, kind: 'habit', title: q.title, private: false, createdAt: t, updatedAt: t, recurrence: { period: q.period, target: q.target }, pin: null, quiet: false };
+    nodes.value = [...nodes.value, node];
+    persistNodes();
+    lastAction.value = { label: 'Added', occurrences: [], addedNodeIds: [id] };
+    asOf.value = now;
+    return { ok: true, reply: q.kind === 'goal' ? `Goal added: ${q.title}.` : `Habit added: ${q.title}.` };
   }
 
   /** "Do this today": turn a parked Idea into a Commitment (no bucket questions). */
@@ -265,6 +283,13 @@ export const useGraphStore = defineStore('graph', () => {
     if (last.addedNodeIds.length) {
       nodes.value = nodes.value.filter((n) => !last.addedNodeIds.includes(n.id));
       persistNodes();
+    }
+    if (last.removed) {
+      const back = restoreDeleted(last.removed, nodes.value, links.value, now.toISOString());
+      nodes.value = back.nodes;
+      links.value = back.links;
+      persistNodes();
+      persistLinks();
     }
     asOf.value = now;
     lastAction.value = null;
@@ -446,13 +471,15 @@ export const useGraphStore = defineStore('graph', () => {
     asOf.value = new Date();
   }
 
+  /** Delete a Node and its Links. Undoable: what was removed is kept for the Undo. */
   function removeNode(nodeId: string) {
     const result = deleteNode(nodeId, nodes.value, links.value);
+    const removed = { nodes: nodes.value.filter((n) => n.id === nodeId), links: links.value.filter((l) => !result.links.includes(l)) };
     nodes.value = result.nodes;
     links.value = result.links;
     persistNodes();
     persistLinks();
-    lastAction.value = null;
+    lastAction.value = { label: 'Delete', occurrences: [], addedNodeIds: [], removed };
     asOf.value = new Date();
   }
 

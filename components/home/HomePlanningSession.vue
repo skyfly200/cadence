@@ -1,5 +1,5 @@
 <template>
-  <div v-if="open" class="fixed inset-0 z-[35] overflow-y-auto bg-[#EEF5F3] text-slate-800 dark:bg-[#1D1A2F] dark:text-slate-100" role="dialog" aria-label="Planning session">
+  <div v-if="open" class="fixed inset-0 z-[35] overflow-y-auto bg-sage text-slate-800 dark:bg-dusk dark:text-slate-100" role="dialog" aria-label="Planning session">
     <div class="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-8 pt-4 md:max-w-xl">
       <header class="flex items-center gap-3">
         <h1 class="min-w-0 flex-1 font-serif text-xl font-semibold">Planning session</h1>
@@ -8,7 +8,7 @@
       <p v-if="privateNote" class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ privateNote }}</p>
 
       <!-- the cards: one at a time, each skippable by moving on -->
-      <section v-if="step === 'triage'" class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
+      <section v-if="step === 'triage'" class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-dusk-card">
         <p class="font-serif text-lg">Things you captured</p>
         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Today puts it on today. Schedule picks a day. Park leaves it in the heap. Backlog pushes it to the bottom of the heap. Drop deletes it.</p>
         <ul class="mt-3 space-y-3">
@@ -22,15 +22,15 @@
               <button :class="[btn, 'col-span-2']" @click="decide(i.id, 'drop')">Drop</button>
             </div>
             <form v-if="scheduling === i.id" class="mt-2 flex gap-2" @submit.prevent="schedule(i.id)">
-              <input v-model="scheduleDate" type="date" :min="todayKey" required :aria-label="`Day for ${i.title}`" class="min-h-[44px] min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-[#1D1A2F]" />
-              <button type="submit" class="min-h-[44px] rounded-xl bg-[#E07A45] px-4 text-sm font-semibold text-white disabled:opacity-50" :disabled="!scheduleDate">Set</button>
+              <input v-model="scheduleDate" type="date" :min="todayKey" required :aria-label="`Day for ${i.title}`" class="min-h-[44px] min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-dusk" />
+              <button type="submit" class="min-h-[44px] rounded-xl bg-ember px-4 text-sm font-semibold text-white disabled:opacity-50" :disabled="!scheduleDate">Set</button>
             </form>
           </li>
         </ul>
         <button class="mt-3 min-h-[44px] w-full rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300" @click="next">Skip these for now</button>
       </section>
 
-      <section v-else-if="step === 'connections'" class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
+      <section v-else-if="step === 'connections'" class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-dusk-card">
         <p class="font-serif text-lg">Could these belong together?</p>
         <ul class="mt-3 space-y-3">
           <li v-for="p in shownConnections" :key="key(p)" class="rounded-2xl border border-slate-200 p-3 dark:border-white/10">
@@ -45,7 +45,7 @@
         <button class="mt-3 min-h-[44px] w-full rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300" @click="next">Next</button>
       </section>
 
-      <section v-else-if="step === 'conflicts'" class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
+      <section v-else-if="step === 'conflicts'" class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-dusk-card">
         <p class="font-serif text-lg">Worth a look</p>
         <ul class="mt-3 space-y-3">
           <li v-for="(c, n) in conflicts" :key="c.line" class="rounded-2xl border border-slate-200 p-3 dark:border-white/10">
@@ -60,9 +60,9 @@
         <button class="mt-3 min-h-[44px] w-full rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300" @click="next">Next</button>
       </section>
 
-      <section v-else-if="step === 'recap'" class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
+      <section v-else-if="step === 'recap'" class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-dusk-card">
         <div v-for="s in recaps" :key="s.title" class="mb-3 last:mb-0">
-          <p class="text-xs font-bold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">{{ s.title }}</p>
+          <p class="text-xs font-bold uppercase tracking-widest text-teal-700 dark:text-lavender">{{ s.title }}</p>
           <p v-for="l in s.lines" :key="l" class="mt-1 text-[15px]">{{ l }}</p>
         </div>
         <div v-if="graph.weeklyTally > 0" class="mb-1 mt-3">
@@ -72,9 +72,9 @@
         <button class="mt-3 min-h-[44px] w-full rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300" @click="next">Next</button>
       </section>
 
-      <section v-else class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
+      <section v-else class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-dusk-card">
         <p class="font-serif text-lg">{{ nothingToSee ? "Nothing to look at. You're clear." : "That's everything for now." }}</p>
-        <button class="mt-4 min-h-[48px] w-full rounded-2xl bg-[#E07A45] font-semibold text-white" @click="finish">Finish</button>
+        <button class="mt-4 min-h-[48px] w-full rounded-2xl bg-ember font-semibold text-white" @click="finish">Finish</button>
       </section>
 
       <details class="mt-4 rounded-2xl bg-white/60 px-4 py-2 text-sm dark:bg-white/5">

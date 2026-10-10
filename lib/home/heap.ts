@@ -12,6 +12,15 @@ export type HeapStatus = 'all' | 'ready' | 'blocked' | 'backlog';
 export interface HeapView { query: string; sort: HeapSort; tag: string; status: HeapStatus }
 export const DEFAULT_HEAP_VIEW: HeapView = { query: '', sort: 'newest', tag: '', status: 'all' };
 
+/**
+ * The view that actually applies at a display density (0 Simple, 1 Balanced, 2 Rich). Controls the density
+ * hides never filter: Simple is the plain list, Balanced adds search, Rich adds sort, filters and tags.
+ */
+export function heapViewFor(view: HeapView, density: 0 | 1 | 2): HeapView {
+  if (density >= 2) return view;
+  return { ...DEFAULT_HEAP_VIEW, query: density >= 1 ? view.query : '' };
+}
+
 export const HEAP_SORTS: { value: HeapSort; label: string }[] = [
   { value: 'newest', label: 'Newest' }, { value: 'oldest', label: 'Oldest' }, { value: 'az', label: 'A to Z' },
   { value: 'shortest', label: 'Shortest' }, { value: 'longest', label: 'Longest' }, { value: 'tag', label: 'Tag' }, { value: 'blocked', label: 'Blocked first' },

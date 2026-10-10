@@ -4,30 +4,30 @@
       <h1 class="min-w-0 flex-1 text-xl font-semibold">Plan</h1>
       <button :class="chip" @click="$emit('open-planning')">Planning session</button>
     </div>
-    <p class="text-sm text-slate-500 dark:text-slate-400">Tick to finish. Drag to a day, the heap, or into place within a day. Swipe a row to delete it.</p>
+    <p class="text-sm text-slate-500 dark:text-slate-400">Tick to finish. Drag to a day, the heap, or into place within a day. Swipe a row to delete it (Undo brings it back).</p>
 
-    <form class="mt-3 flex gap-2" @submit.prevent="addEntry">
+    <form v-if="density >= 2" class="mt-3 flex gap-2" @submit.prevent="addEntry">
       <input
         v-model="newText" type="text" maxlength="4000" placeholder="Add something"
-        class="min-h-[44px] min-w-0 flex-1 rounded-2xl border border-stone-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#2A2645]"
+        class="min-h-[44px] min-w-0 flex-1 rounded-2xl border border-stone-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-dusk-card"
       />
-      <button type="submit" class="min-h-[44px] rounded-2xl bg-[#E07A45] px-5 font-semibold text-white disabled:opacity-50" :disabled="!newText.trim() || adding">Add</button>
+      <button type="submit" class="min-h-[44px] rounded-2xl bg-ember px-5 font-semibold text-white disabled:opacity-50" :disabled="!newText.trim() || adding">Add</button>
     </form>
     <p v-if="addError" class="mt-1 text-sm text-amber-700 dark:text-amber-300">{{ addError }}</p>
 
     <template v-if="graph.loaded">
       <!-- The Stack: every day, always there; empty days stay slim -->
-      <h2 class="mt-4 text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">Your stack</h2>
+      <h2 class="mt-4 text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-lavender">Your stack</h2>
       <div class="lg:grid lg:grid-cols-3 lg:gap-x-3 xl:grid-cols-4">
       <div
         v-for="(day, i) in graph.stack" :key="day.key" :data-drop="day.key"
-        :class="['mt-2 rounded-xl border border-transparent px-2 transition-colors data-[over]:border-[#E07A45] data-[over]:bg-amber-50 dark:data-[over]:bg-white/10', day.items.length ? 'py-2' : dragging ? 'py-4' : 'py-1']"
+        :class="['mt-2 rounded-xl border border-transparent px-2 transition-colors data-[over]:border-ember data-[over]:bg-amber-50 dark:data-[over]:bg-white/10', day.items.length ? 'py-2' : dragging ? 'py-4' : 'py-1']"
       >
         <p :class="['text-sm', day.items.length ? 'font-semibold' : 'text-slate-400']">{{ label(day, i) }}</p>
         <ul v-if="day.items.length" class="mt-1 space-y-1.5">
           <li
             v-for="it in day.items" :key="it.id" :data-drop="it.time ? undefined : `before:${it.id}`"
-            class="flex items-center gap-2 rounded-lg bg-white px-2 py-1 shadow-sm transition-colors data-[over]:ring-2 data-[over]:ring-[#E07A45] dark:bg-[#2A2645]"
+            class="flex flex-wrap items-center gap-x-2 rounded-lg bg-white px-2 py-1 shadow-sm transition-colors data-[over]:ring-2 data-[over]:ring-ember dark:bg-dusk-card"
           >
             <button :class="tick" :aria-label="`Mark ${it.title} done`" title="Done" @click="done(it.id)"><Check class="size-4" /></button>
             <span v-if="it.time" class="grid size-8 shrink-0 place-items-center text-slate-300" title="Has its own time"><Clock class="size-4" /></span>
@@ -37,8 +37,13 @@
               <PlanMeta :meta="metaOf(it.id)" />
             </span>
             <span v-if="it.time" class="shrink-0 text-xs text-slate-400">{{ timeLabel(it.time) }}</span>
-            <button :class="icon" :aria-label="`Edit ${it.title}`" title="Edit" @click="$emit('edit', it.id)"><Pencil class="size-4" /></button>
-            <button :class="[icon, 'text-red-600 dark:text-red-400']" :aria-label="`Delete ${it.title}`" title="Delete" @click="remove(it.id)"><Trash2 class="size-4" /></button>
+            <button :class="[icon, 'hidden lg:grid']" :aria-label="`Edit ${it.title}`" title="Edit" @click="$emit('edit', it.id)"><Pencil class="size-4" /></button>
+            <button :class="[icon, 'hidden text-red-600 lg:grid dark:text-red-400']" :aria-label="`Delete ${it.title}`" title="Delete" @click="remove(it.id)"><Trash2 class="size-4" /></button>
+            <button :class="[icon, 'lg:hidden']" :aria-label="`More for ${it.title}`" :aria-expanded="moreFor === it.id" @click="toggleMore(it.id)"><Ellipsis class="size-4" /></button>
+            <div v-if="moreFor === it.id" class="flex basis-full gap-2 pb-1 lg:hidden">
+              <button :class="chip" @click="moreFor = null; $emit('edit', it.id)">Edit</button>
+              <button :class="[chip, 'text-red-700 dark:text-red-300']" @click="remove(it.id)">Delete</button>
+            </div>
           </li>
         </ul>
       </div>
@@ -46,9 +51,9 @@
 
       <!-- The Heap: captured things not yet placed -->
       <div class="mt-6 flex items-center justify-between gap-2">
-        <h2 class="text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">The heap · {{ graph.heap.length }}</h2>
+        <h2 class="text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-lavender">The heap</h2>
         <div class="flex gap-2">
-          <button v-if="graph.heap.length" :class="chip" :disabled="tidying" @click="tidy"><Sparkles class="mr-1 inline size-4" />{{ tidying ? 'Looking…' : 'Tidy' }}</button>
+          <button v-if="density >= 2 && graph.heap.length" :class="chip" :disabled="tidying" @click="tidy"><Sparkles class="mr-1 inline size-4" />{{ tidying ? 'Looking…' : 'Tidy' }}</button>
           <button v-if="graph.heap.length && !sorting" :class="chip" @click="startSort">Sort</button>
         </div>
       </div>
@@ -67,12 +72,12 @@
         </li>
       </ul>
 
-      <div v-if="graph.heap.length" class="mt-2 space-y-2">
+      <div v-if="density >= 1 && graph.heap.length" class="mt-2 space-y-2">
         <div class="relative">
           <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <input v-model="view.query" type="search" placeholder="Search the heap" aria-label="Search the heap" :class="[field, 'w-full pl-9']" />
         </div>
-        <div class="flex flex-wrap gap-2">
+        <div v-if="density >= 2" class="flex flex-wrap gap-2">
           <select v-model="view.sort" aria-label="Sort the heap" :class="field">
             <option v-for="o in HEAP_SORTS" :key="o.value" :value="o.value">Sort: {{ o.label }}</option>
           </select>
@@ -85,7 +90,7 @@
           </select>
           <button :class="chip" :aria-expanded="editingTags" @click="editingTags = !editingTags"><Tag class="mr-1 inline size-4" />Tags</button>
         </div>
-        <div v-if="editingTags" class="rounded-xl bg-white p-3 shadow-sm dark:bg-[#2A2645]">
+        <div v-if="density >= 2 && editingTags" class="rounded-xl bg-white p-3 shadow-sm dark:bg-dusk-card">
           <p class="text-xs text-slate-500 dark:text-slate-400">Your tags (a name in an item's title tags it automatically).</p>
           <div class="mt-2 flex flex-wrap gap-1.5">
             <span v-for="t in tags" :key="t" class="inline-flex items-center gap-1 rounded-full bg-stone-100 py-1 pl-3 pr-1 text-sm dark:bg-white/10">
@@ -100,9 +105,8 @@
       </div>
 
       <!-- Sorting: one at a time, one tap each -->
-      <div v-if="sorting && current" class="mt-2 rounded-[1.5rem] bg-white p-5 shadow-sm dark:bg-[#2A2645]">
-        <p class="text-xs text-slate-400">{{ queue.length }} left</p>
-        <p class="mt-1 break-words font-serif text-xl">{{ current.title }}</p>
+      <div v-if="sorting && current" class="mt-2 rounded-[1.5rem] bg-white p-5 shadow-sm dark:bg-dusk-card">
+        <p class="break-words font-serif text-xl">{{ current.title }}</p>
         <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">When?</p>
         <div class="mt-2 flex flex-wrap gap-1.5">
           <button v-for="(d, j) in graph.stack" :key="d.key" :class="chip" @click="sortTo(d.key)">{{ label(d, j, true) }}</button>
@@ -114,20 +118,26 @@
       </div>
       <p v-else-if="sorting" class="mt-2 text-[15px] text-slate-500 dark:text-slate-400">All sorted.</p>
 
-      <div data-drop="heap" :class="['mt-2 min-h-[56px] rounded-xl border border-dashed border-transparent p-1 transition-colors data-[over]:border-[#E07A45] data-[over]:bg-amber-50 dark:data-[over]:bg-white/10', dragging && 'border-slate-300 dark:border-white/20']">
+      <div data-drop="heap" :class="['mt-2 min-h-[56px] rounded-xl border border-dashed border-transparent p-1 transition-colors data-[over]:border-ember data-[over]:bg-amber-50 dark:data-[over]:bg-white/10', dragging && 'border-slate-300 dark:border-white/20']">
         <ul v-if="shownHeap.length" class="space-y-1.5">
-          <li v-for="h in shownHeap" :key="h.id" :class="['flex items-center gap-2 rounded-lg bg-white px-2 py-1 shadow-sm dark:bg-[#2A2645]', h.backlog && 'opacity-60']">
+          <li v-for="h in shownHeap" :key="h.id" :class="['flex flex-wrap items-center gap-x-2 rounded-lg bg-white px-2 py-1 shadow-sm dark:bg-dusk-card', h.backlog && 'opacity-60']">
             <button :class="tick" :aria-label="`Mark ${h.title} done`" title="Done" @click="done(h.id)"><Check class="size-4" /></button>
             <button :class="grip" aria-label="Drag onto a day" @pointerdown.prevent="drag($event, h.id, h.title)">⠿</button>
             <span class="min-w-0 flex-1 touch-pan-y" @pointerdown="swipe($event, h.id)">
               <span class="block break-words text-[15px]">{{ h.title }}</span>
               <PlanMeta :meta="metaOf(h.id)" :backlog="h.backlog" />
             </span>
-            <button :class="icon" :aria-label="h.backlog ? `Bring ${h.title} back up` : `Push ${h.title} to the backlog`" :title="h.backlog ? 'Bring back up' : 'Push down (backlog)'" @click="toggleBacklog(h.id, !h.backlog)">
+            <button :class="[icon, 'hidden lg:grid']" :aria-label="h.backlog ? `Bring ${h.title} back up` : `Push ${h.title} to the backlog`" :title="h.backlog ? 'Bring back up' : 'Push down (backlog)'" @click="toggleBacklog(h.id, !h.backlog)">
               <ArrowUpFromLine v-if="h.backlog" class="size-4" /><ArrowDownToLine v-else class="size-4" />
             </button>
-            <button :class="icon" :aria-label="`Edit ${h.title}`" title="Edit" @click="$emit('edit', h.id)"><Pencil class="size-4" /></button>
-            <button :class="[icon, 'text-red-600 dark:text-red-400']" :aria-label="`Delete ${h.title}`" title="Delete" @click="remove(h.id)"><Trash2 class="size-4" /></button>
+            <button :class="[icon, 'hidden lg:grid']" :aria-label="`Edit ${h.title}`" title="Edit" @click="$emit('edit', h.id)"><Pencil class="size-4" /></button>
+            <button :class="[icon, 'hidden text-red-600 lg:grid dark:text-red-400']" :aria-label="`Delete ${h.title}`" title="Delete" @click="remove(h.id)"><Trash2 class="size-4" /></button>
+            <button :class="[icon, 'lg:hidden']" :aria-label="`More for ${h.title}`" :aria-expanded="moreFor === h.id" @click="toggleMore(h.id)"><Ellipsis class="size-4" /></button>
+            <div v-if="moreFor === h.id" class="flex basis-full flex-wrap gap-2 pb-1 lg:hidden">
+              <button :class="chip" @click="moreFor = null; $emit('edit', h.id)">Edit</button>
+              <button :class="chip" @click="moreFor = null; toggleBacklog(h.id, !h.backlog)">{{ h.backlog ? 'Bring back up' : 'Push down' }}</button>
+              <button :class="[chip, 'text-red-700 dark:text-red-300']" @click="remove(h.id)">Delete</button>
+            </div>
           </li>
         </ul>
         <p v-else-if="graph.heap.length" class="px-2 py-3 text-[15px] text-slate-500 dark:text-slate-400">Nothing matches.</p>
@@ -139,18 +149,21 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
-import { ArrowDownToLine, ArrowUpFromLine, Check, Clock, Pencil, Search, Sparkles, Tag, Trash2, X } from 'lucide-vue-next';
+import { ArrowDownToLine, ArrowUpFromLine, Check, Clock, Ellipsis, Pencil, Search, Sparkles, Tag, Trash2, X } from 'lucide-vue-next';
 import { aiFetch } from '~/lib/ai-client';
 import { useGraphStore } from '~/stores/graph';
 import { useAppStore } from '~/stores/app';
 import { useRewards } from '~/composables/useRewards';
 import { startDrag } from '~/lib/home/drag';
 import { startSwipe } from '~/lib/home/swipe';
-import { addTag, DEFAULT_HEAP_VIEW, HEAP_SORTS, tagOptions, viewHeap } from '~/lib/home/heap';
+import { addTag, DEFAULT_HEAP_VIEW, HEAP_SORTS, heapViewFor, tagOptions, viewHeap } from '~/lib/home/heap';
 import { wouldCreateCycle } from '~/lib/home/edit';
 import { getAiOn, getTags, setTags } from '~/lib/home/prefs';
 import type { LinkProposal } from '~/lib/home/proposals';
 import type { StackDay } from '~/lib/home/derive';
+import type { Density } from '~/lib/home/prefs';
+
+const props = defineProps<{ density: Density }>();
 
 const emit = defineEmits<{ (e: 'said', msg: string): void; (e: 'edit', nodeId: string): void; (e: 'open-planning'): void }>();
 const graph = useGraphStore();
@@ -158,11 +171,14 @@ const app = useAppStore();
 const { reward } = useRewards();
 
 const chip = 'min-h-[44px] rounded-xl bg-stone-100 px-3 text-sm font-medium disabled:opacity-50 dark:bg-white/10';
-const field = 'min-h-[44px] rounded-xl border border-stone-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#2A2645]';
+const field = 'min-h-[44px] rounded-xl border border-stone-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-dusk-card';
 const grip = 'grid size-9 shrink-0 touch-none cursor-grab place-items-center text-xl text-slate-400 active:cursor-grabbing';
 const tick = 'grid size-9 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-teal-50 hover:text-teal-700 dark:hover:bg-white/10';
 const icon = 'grid size-9 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-stone-100 dark:text-slate-300 dark:hover:bg-white/10';
 const dragging = ref(false);
+/** The row whose "⋯" actions are open (phone only; wider screens show the icons). */
+const moreFor = ref<string | null>(null);
+const toggleMore = (id: string) => { moreFor.value = moreFor.value === id ? null : id; };
 const sorting = ref(false);
 const queue = ref<string[]>([]);
 
@@ -172,7 +188,8 @@ const tags = ref(getTags());
 const tagText = ref('');
 const editingTags = ref(false);
 const tagChoices = computed(() => tagOptions(graph.heap, tags.value));
-const shownHeap = computed(() => viewHeap(graph.heap, view));
+// Hidden controls never filter: Simple shows the plain list, Balanced adds search, Rich adds the rest.
+const shownHeap = computed(() => viewHeap(graph.heap, heapViewFor(view, props.density)));
 function newTag() { tags.value = addTag(tags.value, tagText.value); setTags(tags.value); tagText.value = ''; }
 function removeTag(t: string) { tags.value = tags.value.filter((x) => x !== t); setTags(tags.value); if (view.tag === t) view.tag = ''; }
 
@@ -261,7 +278,7 @@ function done(id: string) {
   emit('said', reward('done', { slog: n?.kind === 'commitment' && n.slog }));
 }
 function toggleBacklog(id: string, on: boolean) { graph.setBacklog(id, on); emit('said', on ? 'Pushed down the heap.' : 'Back up.'); }
-function remove(id: string) { graph.removeNode(id); emit('said', 'Deleted.'); }
+function remove(id: string) { moreFor.value = null; graph.removeNode(id); emit('said', 'Deleted.'); }
 function swipe(e: PointerEvent, id: string) {
   const row = (e.currentTarget as HTMLElement).closest('li');
   if (row) startSwipe(e, row, () => remove(id));

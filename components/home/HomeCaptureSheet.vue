@@ -1,13 +1,13 @@
 <template>
   <div v-if="open" class="fixed inset-0 z-50 flex items-end bg-stone-900/30" @click.self="$emit('close')">
-    <div class="mx-auto w-full max-w-md rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-[#2A2645]" role="dialog" aria-label="Capture">
+    <div class="mx-auto w-full max-w-md rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-dusk-card" role="dialog" aria-label="Capture">
       <CrisisCard v-if="crisis" :resources="crisis" @okay="dismissCrisis" @not-meant="dismissCrisis" />
       <div v-else-if="mode === 'disclose'" role="region" aria-label="Before we talk">
         <p class="font-serif text-xl">Before we talk</p>
         <p class="mt-2 text-[15px] text-slate-700 dark:text-slate-200">This sends this conversation and the relevant part of your list to Claude.</p>
         <div class="mt-3 flex gap-2">
           <button type="button" class="min-h-[44px] rounded-2xl bg-stone-100 px-4 text-sm dark:bg-white/10" @click="mode = 'form'">Not now</button>
-          <button type="button" class="min-h-[44px] flex-1 rounded-2xl bg-[#E07A45] font-semibold text-white" @click="acceptDisclosure">Continue</button>
+          <button type="button" class="min-h-[44px] flex-1 rounded-2xl bg-ember font-semibold text-white" @click="acceptDisclosure">Continue</button>
         </div>
       </div>
       <HomeDiscuss v-else-if="mode === 'discuss'" :initial="draft" @close="$emit('close')" @said="(m: string) => $emit('said', m)" @crisis="onDiscussCrisis" />
@@ -30,7 +30,7 @@
       <div class="relative mt-3">
         <textarea
           ref="box" v-model="draft" rows="3" maxlength="4000"
-          class="w-full rounded-2xl border border-stone-200 bg-stone-50 p-3 pr-11 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
+          class="w-full rounded-2xl border border-stone-200 bg-stone-50 p-3 pr-11 text-[16px] outline-none dark:border-white/10 dark:bg-dusk"
           placeholder="Say it or type it. I'll park it." @keydown.ctrl.enter="add" @keydown.meta.enter="add"
         />
         <button
@@ -45,7 +45,7 @@
       <div class="mt-3 flex gap-2">
         <button type="button" class="min-h-[44px] rounded-2xl bg-stone-100 px-4 text-sm dark:bg-white/10" @click="$emit('close')">Close</button>
         <button v-if="discussAvailable" type="button" class="min-h-[44px] rounded-2xl bg-stone-100 px-4 text-sm font-medium dark:bg-white/10" :disabled="busy" @click="startDiscuss">Discuss</button>
-        <button type="button" class="min-h-[44px] flex-1 rounded-2xl bg-[#E07A45] font-semibold text-white disabled:opacity-50" :disabled="!draft.trim() || busy" @click="add">{{ busy ? 'Adding…' : 'Add' }}</button>
+        <button type="button" class="min-h-[44px] flex-1 rounded-2xl bg-ember font-semibold text-white disabled:opacity-50" :disabled="!draft.trim() || busy" @click="add">{{ busy ? 'Adding…' : 'Add' }}</button>
       </div>
       </template>
     </div>

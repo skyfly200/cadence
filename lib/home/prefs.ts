@@ -5,7 +5,7 @@
  */
 import type { TimeFormat } from '~/lib/domain/clock';
 import { cleanPlaylistMinutes, DEFAULT_MUSIC, providerById, type MusicConfig } from './music';
-import type { DelightState, RewardPrefs } from './rewards';
+import { DEFAULT_VOICE, type DelightState, type RewardPrefs, type VoicePrefs } from './rewards';
 import { recordSetting } from './signals-state';
 
 export type Density = 0 | 1 | 2; // Simple, Balanced (default), Rich
@@ -22,7 +22,8 @@ function write(key: string, value: string): void {
 }
 
 export function getDensity(): Density {
-  const v = Number(read(DENSITY_KEY));
+  const raw = read(DENSITY_KEY);
+  const v = raw === null ? NaN : Number(raw); // unset is Balanced, not Number(null) = 0 (Simple)
   return v === 0 || v === 1 || v === 2 ? v : 1;
 }
 export function setDensity(d: Density): void { write(DENSITY_KEY, String(d)); }
@@ -157,6 +158,23 @@ export function getRewardPrefs(): RewardPrefs {
   return { lines: read(REWARD_KEYS.lines) !== 'false', tally: read(REWARD_KEYS.tally) !== 'false', sound: read(REWARD_KEYS.sound) !== 'false' };
 }
 export function setRewardPref(key: keyof RewardPrefs, on: boolean): void { write(REWARD_KEYS[key], String(on)); }
+
+const VOICE_KEY = 'cadence:voice';
+/** The coach's tone (gentle, plain, direct), literal-only and playful switches, per device. Plain until changed. */
+export function getVoice(): VoicePrefs {
+  try {
+    const v = JSON.parse(read(VOICE_KEY) ?? 'null');
+    if (v && typeof v === 'object') {
+      return {
+        tone: v.tone === 'gentle' || v.tone === 'direct' ? v.tone : 'plain',
+        literal: v.literal === true,
+        playful: v.playful === true,
+      };
+    }
+  } catch { /* fall through */ }
+  return { ...DEFAULT_VOICE };
+}
+export function setVoice(v: VoicePrefs): void { write(VOICE_KEY, JSON.stringify(v)); }
 
 const EOD_KEY = 'cadence:endOfDayLine';
 /** The end-of-day "here is what you kept" line on Home is opt-in: off until switched on. */
