@@ -6,7 +6,7 @@
 import { dayKey, habitProgress, inQuiet, keptRun, type NudgeSettings, type Period } from '~/lib/domain';
 import { playChime } from '~/lib/home/chime';
 import { loadState } from '~/lib/home/nudge-state';
-import { getDelightState, getRewardPrefs, setDelightState } from '~/lib/home/prefs';
+import { getDelightState, getRewardPrefs, getVoice, setDelightState } from '~/lib/home/prefs';
 import { nextDelight, rewardFor, type Moment } from '~/lib/home/rewards';
 import { useAppStore } from '~/stores/app';
 import { useGraphStore } from '~/stores/graph';
@@ -61,7 +61,7 @@ export function useRewards() {
       if (d.show) setDelightState(d.state);
     }
 
-    const r = rewardFor({ moment, prefs, slog: opt.slog, met, progress, weeklyKept: graph.weeklyTally, run, ack: opt.ack, pick: Math.random(), delight });
+    const r = rewardFor({ moment, prefs, voice: getVoice(), slog: opt.slog, met, progress, weeklyKept: graph.weeklyTally, run, ack: opt.ack, pick: Math.random(), delight });
     if (r.tone !== 'none' && soundAllowed(now, tz)) playChime(r.tone);
     return r.text;
   }

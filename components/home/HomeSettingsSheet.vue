@@ -1,9 +1,12 @@
 <template>
   <div v-if="open" class="fixed inset-0 z-50 flex items-end bg-stone-900/30" @click.self="$emit('close')">
-    <div class="mx-auto w-full max-w-md rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-dusk-card" role="dialog" aria-label="Display and account">
-      <p class="font-serif text-xl">Display</p>
+    <div class="mx-auto max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-dusk-card" role="dialog" aria-label="Settings">
+      <p class="font-serif text-2xl">Settings</p>
 
-      <p class="mt-4 text-sm font-medium">How much to show</p>
+      <!-- Six groups, each closed until opened (depth on demand) -->
+      <details :class="group">
+        <summary :class="summary">Display<ChevronDown :class="chevron" /></summary>
+      <p class="mt-1 text-sm font-medium">How much to show</p>
       <div class="mt-1.5 grid grid-cols-3 gap-2">
         <button
           v-for="(n, i) in ['Simple', 'Balanced', 'Rich']" :key="n"
@@ -32,15 +35,28 @@
         </div>
       </ClientOnly>
 
-      <p class="mt-5 font-serif text-xl">Notifications</p>
+      <p class="mt-4 text-sm font-medium">Go deeper</p>
+      <label class="mt-1 flex min-h-[44px] items-center gap-3">
+        <input type="checkbox" v-model="trips" class="h-5 w-5 rounded" @change="setTripsOn(trips)" />
+        <span class="text-sm">Trips and Map (trip planner and map in Go deeper)</span>
+      </label>
 
-      <p v-if="pushBlocked" class="mt-3 text-sm text-slate-600 dark:text-slate-400">
+      <div class="mt-3 grid gap-2">
+        <button class="min-h-[44px] rounded-xl border border-slate-200 text-sm dark:border-white/10" @click="$emit('welcome')">Show the welcome again</button>
+        <NuxtLink to="/classic" class="grid min-h-[44px] place-items-center rounded-xl border border-slate-200 text-sm dark:border-white/10">Classic view (the old app)</NuxtLink>
+      </div>
+      </details>
+
+      <details :class="group">
+        <summary :class="summary">Nudges and sound<ChevronDown :class="chevron" /></summary>
+      <p class="mt-1 text-sm font-medium">Notifications</p>
+      <p v-if="pushBlocked" class="mt-1 text-sm text-slate-600 dark:text-slate-400">
         Notifications are blocked in your browser settings.
       </p>
-      <p v-else-if="pushUnsupported" class="mt-3 text-sm text-slate-600 dark:text-slate-400">
+      <p v-else-if="pushUnsupported" class="mt-1 text-sm text-slate-600 dark:text-slate-400">
         Notifications are not supported on this device.
       </p>
-      <label v-else class="mt-3 flex items-center gap-3">
+      <label v-else class="mt-1 flex items-center gap-3">
         <input
           type="checkbox"
           :checked="pushEnabled"
@@ -50,9 +66,6 @@
         />
         <span class="text-sm">When Cadence is closed</span>
       </label>
-
-      <p class="mt-5 font-serif text-xl">Nudges</p>
-
       <div class="mt-3 space-y-2">
         <label v-for="kind in NUDGE_KINDS" :key="kind" class="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 dark:border-white/10">
           <input
@@ -76,8 +89,30 @@
         <input :id="`vol-${k.kind}`" type="range" min="0" max="100" step="5" v-model.number="sound[k.kind].volume" :disabled="!sound[k.kind].on" class="flex-1" @change="onVolume(k.kind)" />
         <button class="text-xs text-blue-600 dark:text-blue-400 disabled:opacity-40" :disabled="!sound[k.kind].on" @click="preview(k.kind)">Test</button>
       </div>
+      <label class="mt-2 flex min-h-[44px] items-center gap-3">
+        <input type="checkbox" v-model="inCar" class="h-5 w-5 rounded" @change="setInCar(inCar)" />
+        <span class="text-sm">In the car: speak nudges aloud at full volume (mute and quiet hours still apply)</span>
+      </label>
 
-      <p class="mt-4 text-sm font-medium">Music for focus</p>
+      <label class="mt-2 flex min-h-[44px] items-start gap-3">
+        <input type="checkbox" v-model="cloudVoice" class="mt-1 h-5 w-5 rounded" @change="setCloudVoiceOn(cloudVoice)" />
+        <span class="text-sm">Cloud voice for nudges (needs sign-in and a voice service on the server). The nudge line is sent to that service to be spoken; Private items never are. Otherwise your browser's voice is used.</span>
+      </label>
+      <div v-if="stoppedOrSilenced.length > 0" class="mt-3">
+        <p class="text-sm font-medium">Muted items</p>
+        <div class="mt-1.5 space-y-1">
+          <div v-for="item in stoppedOrSilenced" :key="item.id" class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 dark:border-white/10">
+            <span class="text-sm">{{ item.title }}</span>
+            <button class="text-xs text-blue-600 dark:text-blue-400" @click="onRestore(item)">Turn back on</button>
+          </div>
+        </div>
+      </div>
+
+      </details>
+
+      <details :class="group">
+        <summary :class="summary">Focus and music<ChevronDown :class="chevron" /></summary>
+      <p class="mt-1 text-sm font-medium">Music for focus</p>
       <select v-model="music.provider" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-dusk" aria-label="Music app" @change="saveMusic">
         <option v-for="p in MUSIC_PROVIDERS" :key="p.id" :value="p.id">{{ p.name }}</option>
       </select>
@@ -91,29 +126,29 @@
         class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-dusk" @change="music.playlistMinutes = cleanPlaylistMinutes(music.playlistMinutes); saveMusic()"
       />
       <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Music as the timer: with "Open music" on, a focus session can last as long as the playlist.</p>
+      </details>
 
-      <div v-if="stoppedOrSilenced.length > 0" class="mt-3">
-        <p class="text-sm font-medium">Muted items</p>
-        <div class="mt-1.5 space-y-1">
-          <div v-for="item in stoppedOrSilenced" :key="item.id" class="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 dark:border-white/10">
-            <span class="text-sm">{{ item.title }}</span>
-            <button class="text-xs text-blue-600 dark:text-blue-400" @click="onRestore(item)">Turn back on</button>
-          </div>
-        </div>
+      <details :class="group">
+        <summary :class="summary">Coach and AI<ChevronDown :class="chevron" /></summary>
+      <p class="mt-1 text-sm font-medium">Tone</p>
+      <div class="mt-1.5 grid grid-cols-3 gap-2">
+        <button
+          v-for="t in TONES" :key="t.v"
+          :class="['min-h-[44px] rounded-xl border text-sm', voice.tone === t.v ? 'border-ember bg-amber-50 font-semibold text-amber-900 dark:bg-white/10 dark:text-peach' : 'border-slate-200 dark:border-white/10']"
+          :aria-pressed="voice.tone === t.v" @click="voice.tone = t.v; saveVoice()"
+        >{{ t.l }}</button>
       </div>
+      <label class="mt-2 flex min-h-[44px] items-center gap-3">
+        <input v-model="voice.literal" type="checkbox" class="h-5 w-5 rounded" @change="saveVoice" />
+        <span class="text-sm">Literal only (no figures of speech)</span>
+      </label>
+      <label class="flex min-h-[44px] items-center gap-3">
+        <input v-model="voice.playful" type="checkbox" class="h-5 w-5 rounded" :disabled="voice.literal" @change="saveVoice" />
+        <span class="text-sm">Playful lines now and then</span>
+      </label>
 
-      <ConnectedAssistants />
-
-      <div class="mt-5 grid gap-2">
-        <button class="min-h-[44px] rounded-xl border border-slate-200 text-sm dark:border-white/10" @click="$emit('account')">
-          Account and sync <span class="text-slate-400">· {{ signedIn ? 'signed in' : 'signed out' }}</span>
-        </button>
-        <NuxtLink to="/privacy" class="grid min-h-[44px] place-items-center rounded-xl border border-slate-200 text-sm dark:border-white/10">What Cadence knows and does</NuxtLink>
-        <NuxtLink to="/classic" class="grid min-h-[44px] place-items-center rounded-xl border border-slate-200 text-sm dark:border-white/10">Classic view (the old app)</NuxtLink>
-      </div>
-
-      <p class="mt-5 font-serif text-xl">Rewards</p>
-      <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">A warm word when you start, finish, log or capture something. Switch off whatever you do not want.</p>
+      <p class="mt-4 text-sm font-medium">Rewards</p>
+      <p class="text-sm text-slate-600 dark:text-slate-300">A warm word when you start, finish, log or capture something. Switch off whatever you do not want.</p>
       <label v-for="r in REWARD_TOGGLES" :key="r.key" class="mt-2 flex items-center gap-3">
         <input type="checkbox" v-model="rewards[r.key]" class="h-5 w-5 rounded" @change="setRewardPref(r.key, rewards[r.key])" />
         <span class="text-sm">{{ r.label }}</span>
@@ -123,24 +158,25 @@
         <span class="text-sm">An end-of-day line on Home, "here is what you kept"</span>
       </label>
 
-      <label class="mt-2 flex min-h-[44px] items-center gap-3">
-        <input type="checkbox" v-model="inCar" class="h-5 w-5 rounded" @change="setInCar(inCar)" />
-        <span class="text-sm">In the car: speak nudges aloud at full volume (mute and quiet hours still apply)</span>
-      </label>
-
-      <label class="mt-2 flex min-h-[44px] items-start gap-3">
-        <input type="checkbox" v-model="cloudVoice" class="mt-1 h-5 w-5 rounded" @change="setCloudVoiceOn(cloudVoice)" />
-        <span class="text-sm">Cloud voice for nudges (needs sign-in and a voice service on the server). The nudge line is sent to that service to be spoken; Private items never are. Otherwise your browser's voice is used.</span>
-      </label>
-
-      <p class="mt-5 font-serif text-xl">Go deeper</p>
-      <label class="mt-1.5 flex min-h-[44px] items-center gap-3">
-        <input type="checkbox" v-model="trips" class="h-5 w-5 rounded" @change="setTripsOn(trips)" />
-        <span class="text-sm">Trips and Map (trip planner and map in Go deeper)</span>
-      </label>
-
-      <p class="mt-5 font-serif text-xl">Garden</p>
+      <p class="mt-4 text-sm font-medium">AI</p>
       <label class="mt-1.5 flex min-h-[44px] items-start gap-3">
+        <input type="checkbox" class="mt-1 size-5 shrink-0" :checked="aiOn" :disabled="aiBusy" @change="toggleAi(($event.target as HTMLInputElement).checked)" />
+        <span class="text-sm">Use AI<br /><span class="text-slate-600 dark:text-slate-400">Off, Cadence still works fully on your device.</span></span>
+      </label>
+      <p v-if="aiNote" class="mt-1 text-sm text-amber-700 dark:text-amber-300">{{ aiNote }}</p>
+
+      <p class="mt-4 text-sm font-medium">Help lines</p>
+      <p class="text-sm text-slate-600 dark:text-slate-300">If something you write sounds heavy, Cadence shows local help lines. Which country?</p>
+      <select v-model="helpCountry" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-dusk" aria-label="Country for help lines" @change="saveHelpCountry">
+        <option value="">From this device</option>
+        <option v-for="c in COUNTRY_CHOICES" :key="c.code" :value="c.code">{{ c.label }}</option>
+        <option value="ZZ">Somewhere else</option>
+      </select>
+      </details>
+
+      <details :class="group">
+        <summary :class="summary">Garden and signals<ChevronDown :class="chevron" /></summary>
+      <label class="mt-1 flex min-h-[44px] items-start gap-3">
         <input v-model="gardenMotion" type="checkbox" class="mt-1 size-5 shrink-0" @change="setGardenMotion(gardenMotion)">
         <span class="text-sm text-slate-600 dark:text-slate-300"><span class="font-medium text-slate-800 dark:text-slate-100">Gentle shimmer</span><br>A slow glow on the garden's flowers. Off by default, and never if your device asks for less motion.</span>
       </label>
@@ -153,25 +189,28 @@
         </select>
       </label>
 
-      <p class="mt-5 font-serif text-xl">Help lines</p>
-      <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">If something you write sounds heavy, Cadence shows local help lines. Which country?</p>
-      <select v-model="helpCountry" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-dusk" aria-label="Country for help lines" @change="saveHelpCountry">
-        <option value="">From this device</option>
-        <option v-for="c in COUNTRY_CHOICES" :key="c.code" :value="c.code">{{ c.label }}</option>
-        <option value="ZZ">Somewhere else</option>
-      </select>
-
-      <HomeImport :signed-in="signedIn" />
-
-      <p class="mt-5 font-serif text-xl">Signals</p>
-      <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">A private page for you: is Cadence helping, and which features earn their place? Worked out on this device only.</p>
+      <p class="mt-4 text-sm font-medium">Signals</p>
+      <p class="text-sm text-slate-600 dark:text-slate-300">A private page for you: is Cadence helping, and which features earn their place? Worked out on this device only.</p>
       <label class="mt-2 flex items-center gap-3">
         <input v-model="signalsOn" type="checkbox" class="h-5 w-5 rounded" @change="setSignalsOn(signalsOn)" />
         <span class="text-sm">Show the Signals page</span>
       </label>
       <button v-if="signalsOn" class="mt-2 min-h-[44px] w-full rounded-xl border border-slate-200 text-sm dark:border-white/10" @click="signalsOpen = true">Open Signals</button>
+      </details>
 
-      <button class="mt-4 min-h-[44px] w-full rounded-2xl bg-stone-100 text-sm dark:bg-white/10" @click="$emit('close')">Close</button>
+      <details :class="group">
+        <summary :class="summary">Account and data<ChevronDown :class="chevron" /></summary>
+      <div class="mt-1 grid gap-2">
+        <button class="min-h-[44px] rounded-xl border border-slate-200 text-sm dark:border-white/10" @click="$emit('account')">
+          Account and sync <span class="text-slate-400">· {{ signedIn ? 'signed in' : 'signed out' }}</span>
+        </button>
+        <NuxtLink to="/privacy" class="grid min-h-[44px] place-items-center rounded-xl border border-slate-200 text-sm dark:border-white/10">What Cadence knows and does</NuxtLink>
+      </div>
+      <ConnectedAssistants />
+      <HomeImport :signed-in="signedIn" />
+      </details>
+
+      <button class="mt-5 min-h-[44px] w-full rounded-2xl bg-stone-100 text-sm dark:bg-white/10" @click="$emit('close')">Close</button>
     </div>
   </div>
   <HomeSignals :open="signalsOpen" @close="signalsOpen = false" />
@@ -179,12 +218,14 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, onMounted } from 'vue';
+import { ChevronDown } from 'lucide-vue-next';
+import { useAiSwitch } from '~/composables/useAiSwitch';
 import type { TimeFormat } from '~/lib/domain';
 import { cleanPlaylistMinutes, MUSIC_PROVIDERS, parsePlaylist } from '~/lib/home/music';
 import { COUNTRY_CHOICES } from '~/lib/domain/crisis';
 import { getCountryOverride, setCountryOverride } from '~/lib/home/crisis-state';
-import { getEndOfDayOn, getMusic, getRewardPrefs, getSoundOn, getCloudVoiceOn, getInCar, getTripsOn, getVolume, setInCar, setCloudVoiceOn, setEndOfDayOn, setTripsOn, setMusic, setRewardPref, setSoundOn, setVolume, speechVolume, toneGain, type Density, type SoundKind } from '~/lib/home/prefs';
-import { DEFAULT_REWARD_PREFS, type RewardPrefs } from '~/lib/home/rewards';
+import { getEndOfDayOn, getMusic, getRewardPrefs, getVoice, setVoice, getSoundOn, getCloudVoiceOn, getInCar, getTripsOn, getVolume, setInCar, setCloudVoiceOn, setEndOfDayOn, setTripsOn, setMusic, setRewardPref, setSoundOn, setVolume, speechVolume, toneGain, type Density, type SoundKind } from '~/lib/home/prefs';
+import { DEFAULT_REWARD_PREFS, DEFAULT_VOICE, type RewardPrefs, type ToneDial, type VoicePrefs } from '~/lib/home/rewards';
 import { getGardenMotion, getHemisphereChoice, resolveHemisphere, setGardenMotion, setHemisphereChoice, type HemisphereChoice } from '~/lib/home/garden-state';
 import type { NudgeKind } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
@@ -206,11 +247,16 @@ const emit = defineEmits<{
   (e: 'update:density', d: Density): void;
   (e: 'update:timeFormat', f: TimeFormat): void;
   (e: 'account'): void;
+  (e: 'welcome'): void;
   (e: 'toggle-kind', kind: NudgeKind, enabled: boolean): void;
   (e: 'toggle-mute', muted: boolean): void;
   (e: 'restore-node', nodeId: string): void;
   (e: 'restore-kind', kind: NudgeKind): void;
 }>();
+
+const group = 'group border-t border-slate-200 py-1 dark:border-white/10 [&[open]]:pb-4';
+const summary = 'flex min-h-[48px] cursor-pointer list-none items-center justify-between font-serif text-lg [&::-webkit-details-marker]:hidden';
+const chevron = 'size-5 text-slate-400 transition-transform group-open:rotate-180';
 
 const colorMode = useColorMode();
 const graph = useGraphStore();
@@ -268,11 +314,15 @@ const REWARD_TOGGLES: { key: keyof RewardPrefs; label: string }[] = [
   { key: 'sound', label: 'A soft tone' },
 ];
 const rewards = reactive<RewardPrefs>({ ...DEFAULT_REWARD_PREFS });
+const TONES: { v: ToneDial; l: string }[] = [{ v: 'gentle', l: 'Gentle' }, { v: 'plain', l: 'Plain' }, { v: 'direct', l: 'Direct' }];
+const voice = reactive<VoicePrefs>({ ...DEFAULT_VOICE });
+function saveVoice(): void { setVoice({ ...voice }); }
+const { aiOn, aiBusy, aiNote, toggleAi, loadAi } = useAiSwitch();
 const endOfDay = ref(false);
 const trips = ref(false);
 const inCar = ref(false);
 const cloudVoice = ref(false);
-onMounted(() => { Object.assign(rewards, getRewardPrefs()); endOfDay.value = getEndOfDayOn(); trips.value = getTripsOn(); inCar.value = getInCar(); cloudVoice.value = getCloudVoiceOn(); });
+onMounted(() => { Object.assign(rewards, getRewardPrefs()); Object.assign(voice, getVoice()); void loadAi(); endOfDay.value = getEndOfDayOn(); trips.value = getTripsOn(); inCar.value = getInCar(); cloudVoice.value = getCloudVoiceOn(); });
 
 const gardenMotion = ref(getGardenMotion());
 const hemisphereChoice = ref<HemisphereChoice>(getHemisphereChoice());

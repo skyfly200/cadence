@@ -89,7 +89,7 @@ The primary thing on Home: the single next thing Cadence suggests, with a way to
 _Avoid_: Dashboard, today list, task card
 
 **Lens**:
-One of four views (Now, Today, Habits, Goals) reachable through a fixed, visible bottom bar; only one is shown at a time.
+One of four views (Now, Plan, Habits, Goals) reachable through a fixed, visible bottom bar; only one is shown at a time.
 _Avoid_: Tab, page, panel
 
 **Capture surface**:

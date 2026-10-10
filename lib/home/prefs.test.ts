@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DEFAULT_VOLUME, addPlanningReviewed, finishPlanning, getDiscussDisclosed, getPlanningFinished, setDiscussDisclosed, getPlanningNudged, setPlanningNudged, getPlanningReminder, getPlanningReviewed, getRecapOn, getSoundOn, getVolume,
   greeting, setPlanningReminder, setRecapOn, setVolume, speechLevel, speechVolume, toneGain, toneLevel,
-  addSlogDismissed, getDelightState, getEndOfDayOn, getTripsOn, getInCar, setInCar, getCloudVoiceOn, setCloudVoiceOn, speechLevel, setSoundOn, getWelcomed, setWelcomed, getRewardPrefs, getSlogDismissed, setDelightState, setEndOfDayOn, setTripsOn, setRewardPref,
+  addSlogDismissed, getDelightState, getEndOfDayOn, getTripsOn, getInCar, setInCar, getCloudVoiceOn, setCloudVoiceOn, speechLevel, setSoundOn, getWelcomed, setWelcomed, getRewardPrefs, getSlogDismissed, setDelightState, setEndOfDayOn, setTripsOn, setRewardPref, getVoice, setVoice, getDensity, setDensity,
 } from './prefs';
 
 describe('volume', () => {
@@ -97,6 +97,20 @@ describe('planning prefs', () => {
   });
 });
 
+describe('density', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it('is Balanced until chosen, then remembers the choice', () => {
+    expect(getDensity()).toBe(1);
+    const map = new Map<string, string>();
+    vi.stubGlobal('window', { localStorage: { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => void map.set(k, v) } });
+    expect(getDensity()).toBe(1);
+    setDensity(0);
+    expect(getDensity()).toBe(0);
+    setDensity(2);
+    expect(getDensity()).toBe(2);
+  });
+});
+
 describe('greeting', () => {
   const at = (h: number) => new Date(2026, 9, 3, h, 0);
   it('welcomes you back after days away, at any hour', () => {
@@ -134,6 +148,15 @@ describe('reward preferences', () => {
     expect(getRewardPrefs()).toEqual({ lines: true, tally: false, sound: false });
     setEndOfDayOn(true);
     expect(getEndOfDayOn()).toBe(true);
+  });
+
+  it('keeps the tone settings, plain until changed, and ignores a bad stored value', () => {
+    expect(getVoice()).toEqual({ tone: 'plain', literal: false, playful: false });
+    stub();
+    setVoice({ tone: 'gentle', literal: true, playful: false });
+    expect(getVoice()).toEqual({ tone: 'gentle', literal: true, playful: false });
+    window.localStorage.setItem('cadence:voice', '{"tone":"loud","playful":"yes"}');
+    expect(getVoice()).toEqual({ tone: 'plain', literal: false, playful: false });
   });
 
   it('remembers the first-run welcome, and shows it again when storage is blocked', () => {

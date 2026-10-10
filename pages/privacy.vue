@@ -87,8 +87,8 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useAppStore } from '~/stores/app';
 import { exportAllData } from '~/lib/local-storage';
 import { buildExport, exportFilename } from '~/lib/export';
-import { getAiOn, setAiOn } from '~/lib/home/prefs';
-import { getAiEnabledFromServer, setAiEnabledOnServer, sendDeletionAction, type DeletionState } from '~/lib/account-client';
+import { sendDeletionAction, type DeletionState } from '~/lib/account-client';
+import { useAiSwitch } from '~/composables/useAiSwitch';
 import { wipeLocalCache } from '~/lib/deletion';
 
 useHead({ title: 'What Cadence knows and does' });
@@ -96,31 +96,13 @@ useHead({ title: 'What Cadence knows and does' });
 const app = useAppStore();
 const token = () => app.session?.access_token as string | undefined;
 
-const aiOn = ref(true);
-const aiBusy = ref(false);
-const aiNote = ref('');
+const { aiOn, aiBusy, aiNote, toggleAi, loadAi } = useAiSwitch();
 const deletion = reactive<DeletionState>({ pending: false, requestedAt: null, purgeAt: null });
 const deleteBusy = ref(false);
 const deleteNote = ref('');
 const confirming = ref(false);
 
 const purgeDate = computed(() => (deletion.purgeAt ? new Date(deletion.purgeAt).toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }) : ''));
-
-async function toggleAi(on: boolean) {
-  aiNote.value = '';
-  const before = aiOn.value;
-  aiOn.value = on;
-  setAiOn(on);
-  if (!app.signedIn) return; // signed out: the device switch is the whole story
-  aiBusy.value = true;
-  const r = await setAiEnabledOnServer(on, token());
-  aiBusy.value = false;
-  if (r.status !== 'ok') {
-    aiOn.value = before;
-    setAiOn(before);
-    aiNote.value = r.status === 'failed' ? r.message : 'Sign in again to change this.';
-  }
-}
 
 function exportData() {
   const doc = buildExport(exportAllData());
@@ -162,12 +144,8 @@ function wipeHere() {
 }
 
 onMounted(async () => {
-  aiOn.value = getAiOn();
   await app.initAuth();
-  if (app.signedIn) {
-    const [r, ai] = await Promise.all([sendDeletionAction('status', token()), getAiEnabledFromServer(token())]);
-    if (r.status === 'ok') apply(r.data);
-    if (ai.status === 'ok') { aiOn.value = ai.data.enabled; setAiOn(ai.data.enabled); } // show what the server will enforce
-  }
+  const [r] = await Promise.all([app.signedIn ? sendDeletionAction('status', token()) : null, loadAi()]);
+  if (r?.status === 'ok') apply(r.data);
 });
 </script>

@@ -40,14 +40,14 @@ A uniform model: a **Period** (day, week, month, quarter, every 4 months, every 
 
 Phone first (Android), desktop as a wider layout. Reference prototype: variant D on branch `prototype/ui-concepts` (`npm run prototype`, `/?variant=D`).
 
-- **Home:** the **Now card** (the one next thing: a rounded white card with a small illustration, a serif title, a one-line reason, and **Start**, **Not now**, **Park**), a day-river layout (the day flows down a rail, earlier items collapse into "Kept earlier"), a light strip of what is coming (about three items), a progress bar ("3 of 6 done today") and a small habits line ("Habits · 1 of 3 today") that opens the Habits lens.
-- **Four Lenses** behind a visible labelled bottom bar: Now, Today, Habits, Goals; one shown at a time; fixed position; 5 to 7 items per lens with a quiet "more", never auto-reordering. The **capture button** is raised in the middle of the bar.
+- **Home:** the **Now card** (the one next thing: a rounded white card with a small illustration, a serif title, a one-line reason, and two choices: **Start** (or **Start with me**, the Focus together session) and **Not now** (with "or send it to the heap" under it)), a day-river layout (the day flows down a rail, earlier items collapse into "Kept earlier"), a light strip of what is coming (about three items), a progress bar ("3 of 6 done today") and a small habits line ("Habits · 1 of 3 today") that opens the Habits lens.
+- **Four Lenses** behind a visible labelled bottom bar: Now, Plan, Habits, Goals; one shown at a time; fixed position; 5 to 7 items per lens with a quiet "more", never auto-reordering. (Early drafts called Plan "Today"; the app ships Plan, so the spec follows it.) The **capture button** (+) is raised in the middle of the bar: a tap opens the capture box with the keyboard up, holding it opens the mic. The same box takes Habits ("stretch every day") and Goals ("goal: ..."); the per-lens Add forms show only at Rich density.
 - **Capture sheet:** "What's on your mind?", a mic, **Add**, and **Discuss** (turns the same sheet into a short conversation in place).
 - **Progress that celebrates is allowed** ("3 of 5 done", rings, weekly totals, goals with a point per milestone on the bar); counts of what is left, late or piling up are banned. No badges, no red-for-late, no confirm dialogs (every action undoable; the only soft confirmation is the 7-day delete).
 - **Returning after a break:** the normal Home under a warm greeting ("Welcome back. Nothing is on fire."); Cadence never mentions how long the user was away.
 - **Look:** a richer soft palette (cool sage and teal base with the warm Now card as focal point), light illustration, 16px body text and 44px touch targets. **Dark scheme** (dusk palette, glowing flowers in the Garden) is an option; light is the default and follows the system setting.
-- **Density setting:** Simple, Balanced (default), Rich. **Motion** stays at the current level with a toggle (and honours the OS reduced-motion setting automatically); **sound** is on by default at gentle volume with one mute that also stops the mic.
-- **Go deeper:** a planned entry in the Today lens opens optional views (a simplified timeline, an Eisenhower matrix, Trips and Map when enabled). Not designed yet.
+- **Density setting:** Simple, Balanced (default), Rich. It shapes Home and the Plan, Habits and Goals lenses: Simple shows the Heap as a plain list with Sort, Balanced adds search, Rich adds the heap filters, tags, Tidy and the per-lens Add forms. **Motion** stays at the current level with a toggle (and honours the OS reduced-motion setting automatically); **sound** is on by default at gentle volume with one mute that also stops the mic.
+- **Go deeper:** an entry in the header menu (and the desktop rail) opens optional views (a simplified timeline, an Eisenhower matrix, Trips and Map when enabled). Not designed yet.
 
 ## 5. Coach voice [02]
 
@@ -56,7 +56,7 @@ An unnamed voice with one consistent style (the user may name it). Default regis
 - Names patterns neutrally and offers choices ("This has moved four times. Shrink it, park it, or keep it?"); never uses *behind, overdue, failed, lazy* or *should*.
 - Learns goals one small question at a time; no long interview. Career coaching means career direction (goals, skills, next steps), shown in the Goals lens.
 - **Limits:** not therapy; no diagnosis; no medication or medical advice; no manipulation; says when it does not know; honest that it is an app (no claimed feelings); on crisis language drops the coaching voice and points to real help (on-device rules only, a calm card with local help lines and no AI check; ticket 24).
-- **Tone settings:** a dial (gentle, plain, direct), a literal-only switch, an opt-in playful switch.
+- **Tone settings:** a dial (gentle, plain, direct), a literal-only switch, an opt-in playful switch. Built in Settings > Coach and AI; so far they shape the reward lines only (not nudges or AI wording).
 
 ## 6. Nudges and audio [09]
 
