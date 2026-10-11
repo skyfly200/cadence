@@ -108,7 +108,7 @@
     <HomeSettingsSheet
       :open="settingsOpen" :density="density" :time-format="graph.timeFormat" :signed-in="app.signedIn" :nudge-state="nudges.state.value" :muted="nudges.state.value.muted"
       @close="settingsOpen = false" @update:density="setDensityValue" @update:time-format="setTimeFormatValue" @account="settingsOpen = false; authOpen = true" @welcome="settingsOpen = false; welcomeOpen = true"
-      @toggle-kind="onToggleNudgeKind" @toggle-mute="onToggleNudgeMute" @restore-node="nudges.onRestoreNode" @restore-kind="nudges.onRestoreKind"
+      @toggle-kind="onToggleNudgeKind" @toggle-mute="nudges.onToggleMute" @restore-node="nudges.onRestoreNode" @restore-kind="nudges.onRestoreKind"
     />
     <NudgeToast
       :nudge="toast ? null : nudges.currentNudge.value" :disclosed="nudges.state.value.disclosed" :muted="nudges.state.value.muted"
