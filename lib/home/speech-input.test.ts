@@ -57,6 +57,23 @@ describe('joinTranscript', () => {
     expect(joinTranscript('note:', makeResults(['Call', 'call mom']))).toBe('note: call mom');
   });
 
+  it('does not repeat when a result carries everything said so far, across earlier results', () => {
+    expect(joinTranscript('', makeResults(['buy milk', 'call mom', 'buy milk call mom and the dentist']))).toBe('buy milk call mom and the dentist');
+  });
+
+  it('ignores case and punctuation when checking for a repeat', () => {
+    expect(joinTranscript('', makeResults(['Buy milk.', 'buy milk and eggs']))).toBe('buy milk and eggs');
+  });
+
+  it('drops a result that repeats words already heard', () => {
+    expect(joinTranscript('', makeResults(['buy milk and', 'buy milk']))).toBe('buy milk and');
+    expect(joinTranscript('', makeResults(['buy milk and eggs', 'and eggs']))).toBe('buy milk and eggs');
+  });
+
+  it('keeps only the new words when a result starts with the end of what was heard', () => {
+    expect(joinTranscript('', makeResults(['buy milk and eggs', 'and eggs then call mom']))).toBe('buy milk and eggs then call mom');
+  });
+
   it('still joins genuinely separate results', () => {
     expect(joinTranscript('', makeResults(['buy milk', 'and call mom']))).toBe('buy milk and call mom');
   });
