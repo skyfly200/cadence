@@ -121,6 +121,11 @@ const DISCUSS_DISCLOSED_KEY = 'cadence:discussDisclosed';
 export function getDiscussDisclosed(): boolean { return read(DISCUSS_DISCLOSED_KEY) === 'true'; }
 export function setDiscussDisclosed(on: boolean): void { write(DISCUSS_DISCLOSED_KEY, String(on)); }
 
+const SPEAK_REPLIES_KEY = 'cadence:speakReplies';
+/** Whether Cadence's replies in a conversation are also said aloud (per device). Text only unless turned on. */
+export function getSpeakReplies(): boolean { return read(SPEAK_REPLIES_KEY) === 'true'; }
+export function setSpeakReplies(on: boolean): void { write(SPEAK_REPLIES_KEY, String(on)); }
+
 const PLANNING_FINISHED_KEY = 'cadence:planningFinished';
 const PLANNING_REVIEWED_KEY = 'cadence:planningReviewed';
 /** When the last Planning session was finished (ISO), or null if none yet. */

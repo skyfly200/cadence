@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  DEFAULT_VOLUME, addPlanningReviewed, finishPlanning, getDiscussDisclosed, getPlanningFinished, setDiscussDisclosed, getPlanningNudged, setPlanningNudged, getPlanningReminder, getPlanningReviewed, getRecapOn, getSoundOn, getVolume,
+  DEFAULT_VOLUME, addPlanningReviewed, finishPlanning, getDiscussDisclosed, getSpeakReplies, setSpeakReplies, getPlanningFinished, setDiscussDisclosed, getPlanningNudged, setPlanningNudged, getPlanningReminder, getPlanningReviewed, getRecapOn, getSoundOn, getVolume,
   greeting, setPlanningReminder, setRecapOn, setVolume, speechLevel, speechVolume, toneGain, toneLevel,
   addSlogDismissed, getDelightState, getEndOfDayOn, getTripsOn, getInCar, setInCar, getCloudVoiceOn, setCloudVoiceOn, speechLevel, setSoundOn, getWelcomed, setWelcomed, getRewardPrefs, getSlogDismissed, setDelightState, setEndOfDayOn, setTripsOn, setRewardPref,
 } from './prefs';
@@ -27,6 +27,20 @@ describe('volume', () => {
     expect(speechVolume(0)).toBe(0);
     expect(speechVolume(70)).toBeCloseTo(0.7);
     expect(speechVolume(100)).toBe(1);
+  });
+});
+
+describe('spoken replies', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('are off until turned on, then remembered on this device', () => {
+    const map = new Map<string, string>();
+    vi.stubGlobal('window', { localStorage: { getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => void map.set(k, v) } });
+    expect(getSpeakReplies()).toBe(false);
+    setSpeakReplies(true);
+    expect(getSpeakReplies()).toBe(true);
+    setSpeakReplies(false);
+    expect(getSpeakReplies()).toBe(false);
   });
 });
 
