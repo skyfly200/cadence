@@ -46,6 +46,15 @@ describe('runAi', () => {
     const failing: AiProvider = { complete: async () => { throw new Error('boom'); } };
     expect(await runAi({ provider: failing, store: createMemoryAiStore() }, 'u1', req)).toEqual({ ok: false, reason: 'unavailable' });
   });
+
+  it('retries a failed fast call on the strong model, and says unavailable only if that fails too', async () => {
+    const tiers: string[] = [];
+    const flaky: AiProvider = { complete: async (r) => { tiers.push(r.tier); if (r.tier === 'fast') throw new Error('no such model'); return 'ok'; } };
+    expect(await runAi({ provider: flaky, store: createMemoryAiStore() }, 'u1', req)).toEqual({ ok: true, text: 'ok' });
+    expect(tiers).toEqual(['fast', 'strong']);
+    const dead: AiProvider = { complete: async () => { throw new Error('down'); } };
+    expect(await runAi({ provider: dead, store: createMemoryAiStore() }, 'u1', req)).toEqual({ ok: false, reason: 'unavailable' });
+  });
 });
 
 describe('createOpenAiCompatProvider', () => {

@@ -29,6 +29,7 @@
                 Edit
               </button>
             </div>
+            <p v-if="currentPlace" class="mt-1 flex items-center justify-center gap-1 text-sm text-slate-500 dark:text-slate-400"><MapPin class="size-4 shrink-0" />{{ currentPlace }}</p>
             <p v-if="density >= 1 && graph.rank.reason" class="mt-2 text-center text-[15px] text-stone-600 dark:text-slate-300">{{ whyNowText }}</p>
             <a
               v-if="openApp" :href="openLink(openApp, android)" :target="android ? undefined : '_blank'" rel="noopener"
@@ -100,7 +101,10 @@
               </div>
             </div>
 
-            <button v-if="started && !stayWithMeActive" class="mt-5 min-h-[44px] w-full rounded-2xl bg-emerald-500 py-3.5 text-base font-semibold text-white" @click="onDone">Done ✓</button>
+            <div v-if="started && !stayWithMeActive" class="mt-5 flex gap-2">
+              <button class="min-h-[44px] min-w-0 flex-1 rounded-2xl bg-emerald-500 py-3.5 text-base font-semibold text-white" @click="onDone()">Done ✓</button>
+              <CompleteWhen :compact="false" class="[&>button]:min-h-[44px] [&>button]:rounded-2xl [&>button]:bg-stone-100 dark:[&>button]:bg-white/10" @pick="onDone($event)" />
+            </div>
             <button v-if="started" class="mt-2 min-h-[44px] w-full rounded-2xl bg-stone-100 py-3 text-sm font-medium dark:bg-white/10" @click="onStop">Stop for now</button>
           </template>
 
@@ -131,6 +135,8 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onBeforeUnmount, onMounted } from 'vue';
+import { MapPin } from 'lucide-vue-next';
+import { placeOf } from '~/lib/home/edit';
 import { appForItem, isAndroidUa, openLink } from '~/lib/home/apps';
 import { focusDurations, musicTarget } from '~/lib/home/music';
 import { useGraphStore } from '~/stores/graph';
@@ -167,6 +173,7 @@ let stayWithMeTimer: ReturnType<typeof setInterval> | null = null;
 let audioContext: AudioContext | null = null;
 
 const current = computed(() => graph.rank.now);
+const currentPlace = computed(() => (current.value ? placeOf(current.value.node.id, graph.nodes, graph.links) : null));
 const android = ref(false);
 onMounted(() => { android.value = isAndroidUa(navigator.userAgent); music.value = getMusic(); });
 const music = ref(getMusic());
@@ -242,16 +249,17 @@ function onStart() {
   }
   emit('said', reward('start', { slog: isSlog(node) }));
 }
-function onDone() {
+function onDone(on?: Date) {
   const node = current.value?.node;
   if (!node) return;
   stopRitual();
   // A habit is logged (and counts toward its period); a Commitment is finished.
   if (node.kind === 'habit') {
+    if (on) { graph.logHabitOn(node.id, on); emit('said', reward('habit', { habitId: node.id })); return; }
     const r = graph.tapHabit(node.id);
     emit('said', r?.logged ? reward('habit', { habitId: node.id }) : 'Undone.');
   } else {
-    graph.complete(node.id);
+    graph.complete(node.id, on);
     emit('said', reward('done', { slog: isSlog(node) }));
   }
 }

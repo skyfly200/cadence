@@ -1,6 +1,6 @@
 <template>
   <div v-if="open && node" class="fixed inset-0 z-50 flex items-end bg-stone-900/30" @click.self="$emit('close')">
-    <div class="mx-auto flex max-h-[92dvh] w-full max-w-md flex-col rounded-t-[2rem] bg-white dark:bg-[#2A2645]" role="dialog" :aria-label="`Edit ${node.title}`">
+    <div class="mx-auto flex max-h-[92dvh] w-full max-w-md flex-col md:mb-6 md:max-w-[94vw] md:rounded-[2rem] md:max-h-[calc(100dvh-3rem)] rounded-t-[2rem] bg-white dark:bg-[#2A2645]" role="dialog" :aria-label="`Edit ${node.title}`">
       <p class="shrink-0 px-5 pt-5 font-serif text-xl">Edit</p>
       <div class="min-h-0 flex-1 overflow-y-auto px-5 pb-2">
 
@@ -69,8 +69,8 @@
         />
       </div>
 
-      <!-- Location (if commitment) -->
-      <div v-if="node.kind === 'commitment'" class="mt-4">
+      <!-- Location (commitment or idea) -->
+      <div v-if="node.kind === 'commitment' || node.kind === 'idea'" class="mt-4">
         <label class="text-sm font-medium">Location</label>
         <HomePlaceField v-model="draft.location" class="mt-1" @coords="draft.locationCoords = $event" />
       </div>
@@ -185,7 +185,7 @@ import { computed, ref, watch, reactive } from 'vue';
 import { Trash2, X } from 'lucide-vue-next';
 import { useGraphStore } from '~/stores/graph';
 import { PERIODS, type Commitment, type Idea, type Node, type Period } from '~/lib/domain';
-import { dependencyOptions, toDatetimeLocal, wouldCreateCycle } from '~/lib/home/edit';
+import { dependencyOptions, placeOf, toDatetimeLocal, wouldCreateCycle } from '~/lib/home/edit';
 import { cleanLink } from '~/lib/home/apps';
 import { tagOptions } from '~/lib/home/heap';
 import { getTags } from '~/lib/home/prefs';
@@ -247,6 +247,8 @@ watch(
     }
 
     if (c.kind === 'idea') {
+      draft.location = placeOf(c.id, graph.nodes, graph.links) ?? '';
+      draft.locationCoords = null;
       const reqLink = graph.links.find((l) => l.type === 'requires' && l.fromId === c.id);
       draft.dependencyId = reqLink?.toId ?? '';
     }
@@ -256,10 +258,7 @@ watch(
       draft.deadline = c.deadline ? toDatetimeLocal(c.deadline) : '';
       draft.durationMinutes = c.durationMinutes ?? null;
 
-      // Get current location from links
-      const atLink = graph.links.find((l) => l.type === 'at' && l.fromId === c.id);
-      const place = atLink ? graph.nodes.find((n) => n.id === atLink.toId) : null;
-      draft.location = place && place.kind === 'thing' ? place.title : '';
+      draft.location = placeOf(c.id, graph.nodes, graph.links) ?? '';
       draft.locationCoords = null;
 
       // Get current dependency from links
@@ -317,6 +316,8 @@ function save() {
   if (node.value.kind === 'idea') {
     input.estimateMinutes = draft.estimateMinutes || null;
     input.dependencyId = draft.dependencyId || null;
+    input.location = draft.location.trim() || null;
+    input.locationCoords = draft.locationCoords;
   }
   if (node.value.kind === 'habit') {
     input.recurrence = { period: draft.period, target: draft.target };

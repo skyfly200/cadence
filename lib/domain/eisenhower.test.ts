@@ -35,3 +35,18 @@ describe('eisenhower', () => {
     expect(ids(q.later)).toEqual(['laterPlain']);
   });
 });
+
+describe('eisenhower: planned days', () => {
+  const nodes = deepFreeze([
+    goal('g'),
+    commitment('todayPlain', { plannedFor: '2026-03-11' }),
+    commitment('todayGoal', { plannedFor: '2026-03-11' }),
+    commitment('nextMonth', { plannedFor: '2026-04-20' }),
+  ]);
+  const q = eisenhower(nodes, deepFreeze([link('part_of', 'todayGoal', 'g')]), [], now);
+  it('counts an item planned for a day starting within two days as urgent, with no time of its own', () => {
+    expect(ids(q.quick)).toEqual(['todayPlain']);
+    expect(ids(q.do)).toEqual(['todayGoal']);
+  });
+  it('leaves an item planned for a far day not urgent', () => expect(ids(q.later)).toEqual(['nextMonth']));
+});

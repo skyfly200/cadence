@@ -18,7 +18,7 @@
     <template v-if="graph.loaded">
       <!-- The Stack: every day, always there; empty days stay slim -->
       <h2 class="mt-4 text-xs font-semibold uppercase tracking-widest text-teal-700 dark:text-[#B9A6FF]">Your stack</h2>
-      <div class="lg:grid lg:grid-cols-3 lg:gap-x-3 xl:grid-cols-4">
+      <div class="lg:grid lg:grid-cols-2 lg:gap-x-3 xl:grid-cols-3">
       <div
         v-for="(day, i) in graph.stack" :key="day.key" :data-drop="day.key"
         :class="['mt-2 rounded-xl border border-transparent px-2 transition-colors data-[over]:border-[#E07A45] data-[over]:bg-amber-50 dark:data-[over]:bg-white/10', day.items.length ? 'py-2' : dragging ? 'py-4' : 'py-1']"
@@ -30,6 +30,7 @@
             class="flex items-center gap-2 rounded-lg bg-white px-2 py-1 shadow-sm transition-colors data-[over]:ring-2 data-[over]:ring-[#E07A45] dark:bg-[#2A2645]"
           >
             <button :class="tick" :aria-label="`Mark ${it.title} done`" title="Done" @click="done(it.id)"><Check class="size-4" /></button>
+            <CompleteWhen @pick="done(it.id, $event)" />
             <span v-if="it.time" class="grid size-8 shrink-0 place-items-center text-slate-300" title="Has its own time"><Clock class="size-4" /></span>
             <button v-else :class="grip" aria-label="Drag to another day or position" @pointerdown.prevent="drag($event, it.id, it.title)">⠿</button>
             <span class="min-w-0 flex-1 touch-pan-y" @pointerdown="swipe($event, it.id)">
@@ -118,6 +119,7 @@
         <ul v-if="shownHeap.length" class="space-y-1.5">
           <li v-for="h in shownHeap" :key="h.id" :class="['flex items-center gap-2 rounded-lg bg-white px-2 py-1 shadow-sm dark:bg-[#2A2645]', h.backlog && 'opacity-60']">
             <button :class="tick" :aria-label="`Mark ${h.title} done`" title="Done" @click="done(h.id)"><Check class="size-4" /></button>
+            <CompleteWhen @pick="done(h.id, $event)" />
             <button :class="grip" aria-label="Drag onto a day" @pointerdown.prevent="drag($event, h.id, h.title)">⠿</button>
             <span class="min-w-0 flex-1 touch-pan-y" @pointerdown="swipe($event, h.id)">
               <span class="block break-words text-[15px]">{{ h.title }}</span>
@@ -147,7 +149,7 @@ import { useRewards } from '~/composables/useRewards';
 import { startDrag } from '~/lib/home/drag';
 import { startSwipe } from '~/lib/home/swipe';
 import { addTag, DEFAULT_HEAP_VIEW, HEAP_SORTS, tagOptions, viewHeap } from '~/lib/home/heap';
-import { wouldCreateCycle } from '~/lib/home/edit';
+import { placeOf, wouldCreateCycle } from '~/lib/home/edit';
 import { getAiOn, getTags, setTags } from '~/lib/home/prefs';
 import type { LinkProposal } from '~/lib/home/proposals';
 import type { StackDay } from '~/lib/home/derive';
@@ -181,7 +183,7 @@ const titleOf = (id: string) => nodeById.value.get(id)?.title ?? '';
 function metaOf(id: string) {
   const n = nodeById.value.get(id);
   const own = n && n.kind === 'commitment' ? n.durationMinutes : null;
-  return { category: n?.category ?? null, minutes: own ?? n?.estimateMinutes ?? null, blockedBy: graph.blockers.get(id) ?? [] };
+  return { category: n?.category ?? null, minutes: own ?? n?.estimateMinutes ?? null, place: placeOf(id, graph.nodes, graph.links), blockedBy: graph.blockers.get(id) ?? [] };
 }
 
 // ── AI help with the heap ──
@@ -255,9 +257,9 @@ function drag(e: PointerEvent, id: string, title: string) {
   });
 }
 
-function done(id: string) {
+function done(id: string, on?: Date) {
   const n = nodeById.value.get(id);
-  graph.finish(id);
+  graph.finish(id, on);
   emit('said', reward('done', { slog: n?.kind === 'commitment' && n.slog }));
 }
 function toggleBacklog(id: string, on: boolean) { graph.setBacklog(id, on); emit('said', on ? 'Pushed down the heap.' : 'Back up.'); }

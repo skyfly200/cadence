@@ -40,6 +40,15 @@ export function toDatetimeLocal(iso: string, timeZone?: string): string {
   return `${p.y}-${two(p.m)}-${two(p.d)}T${two(p.h)}:${two(p.mi)}`;
 }
 
+// ── Where it happens ─────────────────────────────────────────────
+
+/** The name of the place an item is at (its 'at' link to a place Thing), or null. */
+export function placeOf(nodeId: string, nodes: readonly Node[], links: readonly Link[]): string | null {
+  const to = links.find((l) => l.type === 'at' && l.fromId === nodeId)?.toId;
+  const place = to ? nodes.find((n) => n.id === to) : null;
+  return place && place.kind === 'thing' ? place.title : null;
+}
+
 // ── Dependency options ───────────────────────────────────────────
 
 export interface DependencyOption { id: string; title: string; done: boolean }

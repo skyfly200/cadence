@@ -1,18 +1,30 @@
 <template>
-  <svg :class="['g-scene block w-full', motion ? 'shimmer' : '', resting ? 'opacity-80' : '']" viewBox="0 0 320 180" preserveAspectRatio="xMidYMax meet" role="img" :aria-label="label">
-    <rect x="0" y="0" width="320" height="180" rx="18" class="fill-sky-100/70 dark:fill-[#262244]" />
-    <path d="M0 150 Q 80 138 160 148 T 320 144 V 180 H 0 Z" class="fill-emerald-200 dark:fill-[#2E2A52]" />
-    <path d="M0 164 Q 100 154 200 162 T 320 160 V 180 H 0 Z" class="fill-emerald-300/80 dark:fill-[#34305C]" />
-    <g v-for="p in pieces" :key="p.id" :transform="`translate(${12 + p.x * 296} ${58 + p.y * 104})`">
+  <svg :class="['g-scene block w-full', motion ? 'shimmer' : '', resting ? 'opacity-80' : '']" :viewBox="`0 0 ${W} ${H}`" preserveAspectRatio="xMidYMax meet" role="img" :aria-label="label">
+    <rect x="0" y="0" :width="W" :height="H" rx="18" class="fill-sky-100/70 dark:fill-[#262244]" />
+    <circle :cx="W - 56" cy="38" r="16" class="fill-amber-200/80 dark:fill-[#FFB59F]/40" />
+    <path :d="`M0 ${H * 0.62} Q ${W * 0.25} ${H * 0.55} ${W * 0.5} ${H * 0.61} T ${W} ${H * 0.58} V ${H} H 0 Z`" class="fill-emerald-200 dark:fill-[#2E2A52]" />
+    <path :d="`M0 ${H * 0.78} Q ${W * 0.3} ${H * 0.72} ${W * 0.6} ${H * 0.77} T ${W} ${H * 0.75} V ${H} H 0 Z`" class="fill-emerald-300/80 dark:fill-[#34305C]" />
+    <g v-for="p in sorted" :key="p.id" :transform="`translate(${PAD + p.x * (W - 2 * PAD)} ${TOP + p.y * SPAN}) scale(${ZOOM})`">
       <GardenPiece :kind="p.kind" :stage="p.stage" :blooms="p.blooms" :scale="p.scale" :id="p.id" />
     </g>
   </svg>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { GardenPiece as Piece } from '~/lib/domain';
 
-defineProps<{ pieces: readonly Piece[]; motion?: boolean; resting?: boolean; label?: string }>();
+const props = defineProps<{ pieces: readonly Piece[]; motion?: boolean; resting?: boolean; label?: string }>();
+
+const W = 480;
+const H = 300;
+const PAD = 36;
+/** Pieces sit in a band across the lower hills, drawn larger than their own units. */
+const TOP = 150;
+const SPAN = 130;
+const ZOOM = 2.2;
+/** Back to front, so nearer pieces draw over the ones behind. */
+const sorted = computed(() => [...props.pieces].sort((a, b) => a.y - b.y));
 </script>
 
 <style scoped>

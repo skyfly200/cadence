@@ -1,6 +1,8 @@
 /**
  * The optional Eisenhower view ("Go deeper"). Quadrants are derived, never asked for:
- * - **Urgent**: a deadline or fixed time within URGENT_HOURS from now (or already past).
+ * - **Urgent**: a deadline or fixed time within URGENT_HOURS from now (or already past), or a day it
+ *   was planned for in the Stack that starts within that time (an item put on today or tomorrow is urgent
+ *   even with no time of its own).
  * - **Important**: part of a Goal (a part-of path leads to one), or tagged as a slog.
  * Done and parked items are left out. Pure and framework-free.
  */
@@ -36,6 +38,8 @@ export function eisenhower(nodes: readonly Node[], links: readonly Link[], occs:
   const horizon = now.getTime() + URGENT_HOURS * 3600_000;
   const when = (c: Commitment): number => {
     const t = [c.fixedTime, c.deadline].filter((x): x is string => !!x).map(Date.parse);
+    const day = c.plannedFor ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(c.plannedFor) : null;
+    if (day) t.push(new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3])).getTime()); // start of that local day
     return t.length ? Math.min(...t) : Infinity;
   };
 

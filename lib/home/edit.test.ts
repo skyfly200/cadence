@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Commitment, Idea, Link, Thing } from '../domain';
-import { applyEdit, dependencyOptions, deleteNode, toDatetimeLocal, getOrCreatePlace, wouldCreateCycle } from './edit';
+import { applyEdit, dependencyOptions, deleteNode, placeOf, toDatetimeLocal, getOrCreatePlace, wouldCreateCycle } from './edit';
 
 const NOW = '2026-10-03T15:00:00.000Z';
 
@@ -442,5 +442,18 @@ describe('applyEdit: tag, estimate and backlog', () => {
     const r = applyEdit('i1', { dependencyId: 'c1' }, [idea('i1'), commitment('c1')], [], () => {}, () => {});
     expect(r.links).toMatchObject([{ type: 'requires', fromId: 'i1', toId: 'c1' }]);
     expect(dependencyOptions('c1', [idea('i1'), commitment('c1')], [], []).map((o) => o.id)).toEqual(['i1']);
+  });
+});
+
+describe('placeOf', () => {
+  const nodes = [commitment('c'), idea('i'), thing('p', 'place', 'Dentist'), thing('who', 'person', 'Sam')];
+  it('names the place an item is at, for a commitment or an idea', () => {
+    const links = [link('l1', 'at', 'c', 'p'), link('l2', 'at', 'i', 'p')];
+    expect(placeOf('c', nodes, links)).toBe('Dentist');
+    expect(placeOf('i', nodes, links)).toBe('Dentist');
+  });
+  it('is null with no at link, or when the link points at something that is not a Thing', () => {
+    expect(placeOf('c', nodes, [])).toBeNull();
+    expect(placeOf('c', nodes, [link('l', 'at', 'c', 'i')])).toBeNull();
   });
 });

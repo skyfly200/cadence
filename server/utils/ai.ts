@@ -97,9 +97,17 @@ export interface AiDeps {
   dailyCap?: number;
 }
 
+/** Why a call failed, for the server log only: the error text, never the prompt or anything the person wrote. */
+function logFailure(tier: ModelTier, e: unknown) {
+  console.error(`[ai] ${tier} call failed:`, e instanceof Error ? e.message : String(e));
+}
+
 /** Run one AI call for a user, or say calmly why it did not run. Never throws. */
 export async function runAi(deps: AiDeps, userId: string, req: AiRequest): Promise<AiResult> {
-  if (!deps.provider) return { ok: false, reason: 'unavailable' };
+  if (!deps.provider) {
+    console.error('[ai] no provider configured: set ANTHROPIC_API_KEY, or AI_BASE_URL with AI_MODEL_FAST and AI_MODEL_STRONG');
+    return { ok: false, reason: 'unavailable' };
+  }
   try {
     if (!(await deps.store.isAiOn(userId))) return { ok: false, reason: 'ai_off' };
     const now = (deps.now ?? Date.now)();
@@ -107,8 +115,16 @@ export async function runAi(deps: AiDeps, userId: string, req: AiRequest): Promi
     if (used >= (deps.dailyCap ?? DEFAULT_DAILY_CALL_CAP)) return { ok: false, reason: 'over_cap' };
     // Recorded before the call so a failing provider cannot be hammered past the cap.
     await deps.store.recordUse(userId, new Date(now).toISOString(), req.tier);
-    return { ok: true, text: await deps.provider.complete(req) };
-  } catch {
+    try {
+      return { ok: true, text: await deps.provider.complete(req) };
+    } catch (e) {
+      if (req.tier !== 'fast') throw e;
+      // The small model may be unavailable on this account or endpoint: try the strong one before giving up.
+      logFailure(req.tier, e);
+      return { ok: true, text: await deps.provider.complete({ ...req, tier: 'strong' }) };
+    }
+  } catch (e) {
+    logFailure(req.tier, e);
     return { ok: false, reason: 'unavailable' };
   }
 }

@@ -1,6 +1,6 @@
 <template>
   <div v-if="open" class="fixed inset-0 z-50 flex items-end bg-stone-900/30" @click.self="$emit('close')">
-    <div class="mx-auto w-full max-w-md rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-[#2A2645]" role="dialog" aria-label="Display and account">
+    <div class="mx-auto w-full max-w-md md:mb-6 md:max-w-[94vw] md:rounded-[2rem] rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-[#2A2645]" role="dialog" aria-label="Display and account">
       <p class="font-serif text-xl">Display</p>
 
       <p class="mt-4 text-sm font-medium">How much to show</p>

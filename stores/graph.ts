@@ -210,14 +210,15 @@ export const useGraphStore = defineStore('graph', () => {
     asOf.value = now;
     lastAction.value = null;
   }
-  const complete = (id: string) => act(id, 'done', 'Done');
+  /** `on` back-dates it to a day that has passed; the log is append-only, so this just stamps the record. */
+  const complete = (id: string, on?: Date) => act(id, 'done', 'Done', on ? { at: on.toISOString() } : {});
   /** Finish something from the Plan: an Idea becomes a Commitment and a parked one comes back first, then it is done. */
-  function finish(id: string) {
+  function finish(id: string, on?: Date) {
     const node = nodes.value.find((n) => n.id === id);
     if (!node || (node.kind !== 'idea' && node.kind !== 'commitment')) return;
     if (node.kind === 'idea') promote(id);
     else bringBack(id);
-    complete(id);
+    complete(id, on);
   }
   const park = (id: string) => act(id, 'parked', 'Sent to the heap');
   const notNow = (id: string) => act(id, 'moved', 'Moved to later');
@@ -426,6 +427,16 @@ export const useGraphStore = defineStore('graph', () => {
     return { met: habitProgress(habit, occurrences.value, now).met, logged: added.some((o) => o.type === 'logged') };
   }
 
+  /** Log one for a day that has passed. It only adds: undoing a past day is done by tapping it again for that period. */
+  function logHabitOn(id: string, on: Date): boolean {
+    if (!habits.value.some((h) => h.id === id)) return false;
+    const o = occ(id, 'logged', on);
+    append([o]);
+    asOf.value = new Date();
+    lastAction.value = { label: 'Habit', occurrences: [o], addedNodeIds: [] };
+    return true;
+  }
+
   function refresh() { asOf.value = new Date(); }
 
   function persistLinks() {
@@ -458,7 +469,7 @@ export const useGraphStore = defineStore('graph', () => {
 
   return {
     nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat, hemisphere,
-    rank, heap, blockers, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, garden, pressed, attachableTo,
+    rank, heap, blockers, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, garden, pressed, logHabitOn, attachableTo,
     load, refresh, capture, promote, plan, start, stop, complete, finish, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, keepProposedNode, importedTaskCount, removeImportedTasks, setBacklog, moveGoal, autoTagHeap, applyHeapAi, addStep, tapHabit, edit, removeNode,
   };
 });

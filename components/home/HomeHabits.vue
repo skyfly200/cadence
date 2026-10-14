@@ -25,7 +25,10 @@
             v-if="appFor(row.habit)" :href="openLink(appFor(row.habit)!, android)" :target="android ? undefined : '_blank'" rel="noopener"
             class="flex min-h-[44px] items-center justify-center rounded-xl bg-stone-100 text-xs font-medium dark:bg-white/10"
           >Open {{ appFor(row.habit)!.name }} ↗</a>
-          <button class="min-h-[32px] text-xs text-blue-600 dark:text-blue-400" @click="$emit('edit', row.habit.id)">Edit</button>
+          <div class="flex items-center justify-between">
+            <button class="min-h-[32px] text-xs text-blue-600 dark:text-blue-400" @click="$emit('edit', row.habit.id)">Edit</button>
+            <span class="flex items-center text-xs text-slate-500 dark:text-slate-400">Log earlier<CompleteWhen label="Log" @pick="logOn(row.habit.id, $event)" /></span>
+          </div>
         </div>
       </div>
     </div>
@@ -94,6 +97,9 @@ function add() {
     target.value = 1;
     emit('said', 'Habit added.');
   }
+}
+function logOn(id: string, at: Date) {
+  if (graph.logHabitOn(id, at)) emit('said', reward('habit', { habitId: id }));
 }
 function tap(id: string) {
   const r = graph.tapHabit(id);

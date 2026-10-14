@@ -1,6 +1,6 @@
 <template>
   <div v-if="open" class="fixed inset-0 z-[60] flex items-end bg-stone-900/30" @click.self="$emit('close')">
-    <div class="mx-auto max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-[#2A2645]" role="dialog" aria-label="Signals">
+    <div class="mx-auto max-h-[92dvh] w-full max-w-md overflow-y-auto md:mb-6 md:max-w-[94vw] md:rounded-[2rem] md:max-h-[calc(100dvh-3rem)] rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-[#2A2645]" role="dialog" aria-label="Signals">
       <p class="font-serif text-xl">Signals</p>
       <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
         For you, while you test whether Cadence helps. Worked out on this device from your own log; nothing leaves it. None of this is a score.

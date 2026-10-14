@@ -1,6 +1,6 @@
 <template>
   <div v-if="open" class="fixed inset-0 z-50 flex items-end bg-stone-900/30" @click.self="$emit('close')">
-    <div class="mx-auto w-full max-w-md rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-[#2A2645]" role="dialog" aria-label="Capture">
+    <div class="mx-auto w-full max-w-md md:mb-6 md:max-w-[94vw] md:rounded-[2rem] rounded-t-[2rem] bg-white p-5 pb-8 dark:bg-[#2A2645]" role="dialog" aria-label="Capture">
       <CrisisCard v-if="crisis" :resources="crisis" @okay="dismissCrisis" @not-meant="dismissCrisis" />
       <div v-else-if="mode === 'disclose'" role="region" aria-label="Before we talk">
         <p class="font-serif text-xl">Before we talk</p>
