@@ -64,6 +64,26 @@ describe('createSystemOneTriage', () => {
   });
 });
 
+describe('limits', () => {
+  it('gives up on a hung server at the overall deadline and returns what it has', async () => {
+    const hang = vi.fn((_u: unknown, init?: RequestInit) => new Promise<Response>((_res, rej) => init!.signal!.addEventListener('abort', () => rej(new Error('aborted')))));
+    const t = createSystemOneTriage({ baseUrl: 'http://x', fetch: hang as unknown as typeof fetch, concurrency: 2, timeoutMs: 5000, deadlineMs: 60 });
+    const started = Date.now();
+    const out = await t.classify(Array.from({ length: 10 }, (_, i) => ({ id: `n${i}`, title: `t${i}` })), []);
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(out.size).toBe(0);
+    expect(hang.mock.calls.length).toBeLessThanOrEqual(2); // each worker started one, then the deadline stopped the rest
+  });
+  it('sends the checkpoint name only when one is configured', async () => {
+    const f = vi.fn(async () => new Response(JSON.stringify(ans(null, ['quick', 1]))));
+    await createSystemOneTriage({ baseUrl: 'http://x', fetch: f as unknown as typeof fetch, model: 'english' }).classify([{ id: 'a', title: 't' }], []);
+    await createSystemOneTriage({ baseUrl: 'http://x', fetch: f as unknown as typeof fetch }).classify([{ id: 'a', title: 't' }], []);
+    const bodies = f.mock.calls.map((c) => JSON.parse(String((c as unknown as [string, RequestInit])[1].body)));
+    expect(bodies[0].model).toBe('english');
+    expect('model' in bodies[1]).toBe(false);
+  });
+});
+
 describe('triageFromEnv', () => {
   it('is null unless TRIAGE_BASE_URL is set', () => {
     expect(triageFromEnv({})).toBeNull();

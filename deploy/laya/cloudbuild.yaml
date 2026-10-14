@@ -1,0 +1,29 @@
+# Builds Laya's own Docker image with the English checkpoint baked in (from ModelScope, so the image never
+# needs huggingface.co at run time) and pushes it to Artifact Registry. See deploy/laya/README.md.
+#
+#   gcloud builds submit --no-source --config deploy/laya/cloudbuild.yaml
+#
+# Laya's source is cloned fresh in the first step; pin _LAYA_REF to a tag or branch you have tested.
+substitutions:
+  _REGION: us-central1
+  _REPO: laya
+  _LAYA_REF: main
+  # Checkpoints to bake: english, multilingual, typed-decisions, all, or a space-separated list.
+  _MODELS: english
+
+steps:
+  - name: gcr.io/cloud-builders/git
+    args: ['clone', '--depth=1', '--branch=${_LAYA_REF}', 'https://github.com/NandhaKishorM/laya', 'laya-src']
+  - name: gcr.io/cloud-builders/docker
+    dir: laya-src
+    args:
+      - build
+      - --build-arg=MODELSCOPE_MODEL=${_MODELS}
+      - --tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/laya:latest
+      - .
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/laya:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY

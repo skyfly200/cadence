@@ -59,19 +59,27 @@ export function parseAnswers(body: unknown, tags: readonly string[]): TriageAnsw
   };
 }
 
-export interface TriageOptions { baseUrl: string; apiKey?: string; fetch?: typeof fetch; concurrency?: number; timeoutMs?: number }
+export interface TriageOptions {
+  baseUrl: string; apiKey?: string; fetch?: typeof fetch; concurrency?: number;
+  /** Longest one item may take. */
+  timeoutMs?: number;
+  /** Longest the whole batch may take; items not reached by then are left out and Claude covers them. */
+  deadlineMs?: number;
+  /** Forces a checkpoint by name (for example `english`), for a server that only has some of them. */
+  model?: string;
+}
 
 /** The Jev wire-protocol client, hosted or self-hosted. */
 export function createSystemOneTriage(opts: TriageOptions): Triage {
   const url = `${opts.baseUrl.replace(/\/+$/, '')}/v1/systemone`;
   const f = opts.fetch ?? fetch;
-  const one = async (title: string, tags: readonly string[]): Promise<TriageAnswer | null> => {
+  const one = async (title: string, tags: readonly string[], budgetMs: number): Promise<TriageAnswer | null> => {
     try {
       const res = await f(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(opts.apiKey ? { Authorization: `Bearer ${opts.apiKey}` } : {}) },
-        body: JSON.stringify({ state: title, questions: buildQuestions(tags) }),
-        signal: AbortSignal.timeout(opts.timeoutMs ?? 8000),
+        body: JSON.stringify({ state: title, questions: buildQuestions(tags), ...(opts.model ? { model: opts.model } : {}) }),
+        signal: AbortSignal.timeout(Math.min(opts.timeoutMs ?? 8000, budgetMs)),
       });
       return res.ok ? parseAnswers(await res.json(), tags) : null;
     } catch { return null; }
@@ -80,9 +88,12 @@ export function createSystemOneTriage(opts: TriageOptions): Triage {
     async classify(items, tags) {
       const out = new Map<string, TriageAnswer>();
       const queue = items.slice(0, MAX_ITEMS);
+      const until = Date.now() + (opts.deadlineMs ?? 12_000);
       const worker = async () => {
         for (let it = queue.shift(); it; it = queue.shift()) {
-          const a = await one(it.title, tags);
+          const left = until - Date.now();
+          if (left <= 0) return;
+          const a = await one(it.title, tags, left);
           if (a) out.set(it.id, a);
         }
       };
@@ -92,8 +103,8 @@ export function createSystemOneTriage(opts: TriageOptions): Triage {
   };
 }
 
-/** The triage client from TRIAGE_BASE_URL and TRIAGE_API_KEY, or null when not set. */
+/** The triage client from TRIAGE_BASE_URL, TRIAGE_API_KEY and TRIAGE_MODEL (optional), or null when not set. */
 export function triageFromEnv(env: Record<string, string | undefined>, fetchImpl?: typeof fetch): Triage | null {
   const baseUrl = env.TRIAGE_BASE_URL?.trim();
-  return baseUrl ? createSystemOneTriage({ baseUrl, apiKey: env.TRIAGE_API_KEY || undefined, fetch: fetchImpl }) : null;
+  return baseUrl ? createSystemOneTriage({ baseUrl, apiKey: env.TRIAGE_API_KEY || undefined, model: env.TRIAGE_MODEL?.trim() || undefined, fetch: fetchImpl }) : null;
 }
