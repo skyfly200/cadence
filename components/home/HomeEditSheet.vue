@@ -1,6 +1,6 @@
 <template>
   <div v-if="open && node" class="fixed inset-0 z-50 flex items-end bg-stone-900/30" @click.self="$emit('close')">
-    <div class="mx-auto flex max-h-[92dvh] w-full max-w-md flex-col rounded-t-[2rem] bg-white dark:bg-[#2A2645]" role="dialog" :aria-label="`Edit ${node.title}`">
+    <div class="mx-auto flex max-h-[92dvh] w-full max-w-md flex-col rounded-t-[2rem] bg-white dark:bg-dusk-card" role="dialog" :aria-label="`Edit ${node.title}`">
       <p class="shrink-0 px-5 pt-5 font-serif text-xl">Edit</p>
       <div class="min-h-0 flex-1 overflow-y-auto px-5 pb-2">
 
@@ -10,7 +10,7 @@
         <input
           v-model="draft.title"
           type="text"
-          class="mt-1 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
+          class="mt-1 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-dusk"
           placeholder="Title"
         />
       </div>
@@ -22,7 +22,7 @@
           <input
             v-model="draft.fixedTime"
             type="datetime-local"
-            class="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
+            class="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-dusk"
           />
           <button
             v-if="draft.fixedTime"
@@ -43,7 +43,7 @@
           <input
             v-model="draft.deadline"
             type="datetime-local"
-            class="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
+            class="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-dusk"
           />
           <button
             v-if="draft.deadline"
@@ -64,7 +64,7 @@
           v-model.number="draft.durationMinutes"
           type="number"
           min="1"
-          class="mt-1 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
+          class="mt-1 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-dusk"
           placeholder="30"
         />
       </div>
@@ -79,9 +79,9 @@
       <div v-if="node.kind === 'habit'" class="mt-4">
         <label class="text-sm font-medium">How often</label>
         <div class="mt-1 flex items-center gap-2">
-          <input v-model.number="draft.target" type="number" min="1" max="99" aria-label="Times" class="min-h-[44px] w-16 rounded-xl border border-stone-200 bg-stone-50 px-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]" />
+          <input v-model.number="draft.target" type="number" min="1" max="99" aria-label="Times" class="min-h-[44px] w-16 rounded-xl border border-stone-200 bg-stone-50 px-3 text-[16px] outline-none dark:border-white/10 dark:bg-dusk" />
           <span class="text-sm text-stone-500 dark:text-slate-400">times per</span>
-          <select v-model="draft.period" aria-label="Period" class="min-h-[44px] flex-1 rounded-xl border border-stone-200 bg-stone-50 px-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]">
+          <select v-model="draft.period" aria-label="Period" class="min-h-[44px] flex-1 rounded-xl border border-stone-200 bg-stone-50 px-2 text-[16px] outline-none dark:border-white/10 dark:bg-dusk">
             <option v-for="p in PERIODS" :key="p" :value="p">{{ PERIOD_LABEL[p] }}</option>
           </select>
         </div>
@@ -89,7 +89,7 @@
         <div class="mt-1 flex gap-1">
           <button
             v-for="(d, i) in DAY_LETTERS" :key="i" type="button" :aria-pressed="draft.weekdays.includes(i)" :aria-label="DAY_NAMES[i]"
-            :class="['min-h-[44px] flex-1 rounded-xl border text-sm', draft.weekdays.includes(i) ? 'border-[#E07A45] bg-amber-50 font-semibold text-amber-900 dark:bg-white/10 dark:text-[#FFB59F]' : 'border-slate-200 dark:border-white/10']"
+            :class="['min-h-[44px] flex-1 rounded-xl border text-sm', draft.weekdays.includes(i) ? 'border-ember bg-amber-50 font-semibold text-amber-900 dark:bg-white/10 dark:text-peach' : 'border-slate-200 dark:border-white/10']"
             @click="toggleDay(i)"
           >{{ d }}</button>
         </div>
@@ -102,7 +102,7 @@
           v-model="draft.link"
           type="url"
           inputmode="url"
-          class="mt-1 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
+          class="mt-1 w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-dusk"
           placeholder="GitHub, Netlify, Docs, Notion, Trello…"
         />
         <p v-if="linkError" class="mt-1 text-sm text-amber-700 dark:text-amber-300">{{ linkError }}</p>
@@ -128,14 +128,14 @@
       <div v-if="node.kind === 'idea' || node.kind === 'commitment'" class="mt-2 grid grid-cols-2 gap-3">
         <div>
           <label class="text-sm font-medium" for="edit-tag">Tag</label>
-          <select id="edit-tag" v-model="draft.category" class="mt-1 min-h-[44px] w-full rounded-xl border border-stone-200 bg-stone-50 px-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]">
+          <select id="edit-tag" v-model="draft.category" class="mt-1 min-h-[44px] w-full rounded-xl border border-stone-200 bg-stone-50 px-2 text-[16px] outline-none dark:border-white/10 dark:bg-dusk">
             <option value="">None</option>
             <option v-for="t in tagChoices" :key="t" :value="t">{{ t }}</option>
           </select>
         </div>
         <div v-if="node.kind === 'idea'">
           <label class="text-sm font-medium" for="edit-est">Time guess (min)</label>
-          <input id="edit-est" v-model.number="draft.estimateMinutes" type="number" min="1" placeholder="30" class="mt-1 min-h-[44px] w-full rounded-xl border border-stone-200 bg-stone-50 px-3 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]" />
+          <input id="edit-est" v-model.number="draft.estimateMinutes" type="number" min="1" placeholder="30" class="mt-1 min-h-[44px] w-full rounded-xl border border-stone-200 bg-stone-50 px-3 text-[16px] outline-none dark:border-white/10 dark:bg-dusk" />
         </div>
       </div>
 
@@ -145,7 +145,7 @@
         <div class="mt-1 space-y-2">
           <select
             v-model="draft.dependencyId"
-            class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
+            class="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-dusk"
           >
             <option value="">None</option>
             <option v-for="other in availableDependencies" :key="other.id" :value="other.id" :class="other.done ? 'text-slate-400' : ''">
@@ -173,7 +173,7 @@
             @click="startDelete"
           ><Trash2 class="size-5" /></button>
           <button type="button" class="min-h-[44px] flex-1 rounded-2xl bg-stone-100 text-sm dark:bg-white/10" @click="$emit('close')">Cancel</button>
-          <button type="button" class="min-h-[44px] flex-1 rounded-2xl bg-[#E07A45] text-sm font-semibold text-white" @click="save">Save</button>
+          <button type="button" class="min-h-[44px] flex-1 rounded-2xl bg-ember text-sm font-semibold text-white" @click="save">Save</button>
         </div>
       </div>
     </div>

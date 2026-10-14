@@ -3,7 +3,7 @@
     <div class="flex gap-2">
       <input
         :value="modelValue" type="text" autocomplete="off" role="combobox" :aria-expanded="results.length > 0" aria-label="Location"
-        class="min-w-0 flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
+        class="min-w-0 flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-[16px] outline-none dark:border-white/10 dark:bg-dusk"
         placeholder="Search for a place"
         @input="onInput(($event.target as HTMLInputElement).value)" @focus="void requestLocation()"
       />
@@ -18,7 +18,7 @@
         @click="clear"
       ><X class="mx-auto size-4" /></button>
     </div>
-    <ul v-if="results.length" class="absolute inset-x-0 z-10 mt-1 max-h-48 overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg dark:border-white/10 dark:bg-[#2A2645]" role="listbox">
+    <ul v-if="results.length" class="absolute inset-x-0 z-10 mt-1 max-h-48 overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg dark:border-white/10 dark:bg-dusk-card" role="listbox">
       <li v-for="(p, i) in results" :key="i" role="option">
         <button type="button" class="block min-h-[44px] w-full truncate px-3 text-left text-sm hover:bg-stone-100 dark:hover:bg-white/10" @click="pick(p)">{{ p.label }}</button>
       </li>

@@ -237,3 +237,21 @@ export function deleteNode(
   const newLinks = links.filter((l) => l.fromId !== nodeId && l.toId !== nodeId);
   return { nodes: newNodes, links: newLinks };
 }
+
+/**
+ * Put back what deleteNode removed (the Undo after a delete). Anything already present again (a sync
+ * brought it back) is left alone; restored rows get `stamp` as updatedAt so they win the next sync.
+ */
+export function restoreDeleted(
+  removed: { nodes: readonly Node[]; links: readonly Link[] },
+  nodes: readonly Node[],
+  links: readonly Link[],
+  stamp: string,
+): EditResult {
+  const haveNodes = new Set(nodes.map((n) => n.id));
+  const haveLinks = new Set(links.map((l) => l.id));
+  return {
+    nodes: [...nodes, ...removed.nodes.filter((n) => !haveNodes.has(n.id)).map((n) => ({ ...n, updatedAt: stamp }))],
+    links: [...links, ...removed.links.filter((l) => !haveLinks.has(l.id)).map((l) => ({ ...l, updatedAt: stamp }))],
+  };
+}

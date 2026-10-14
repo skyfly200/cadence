@@ -1,5 +1,5 @@
 <template>
-  <button class="mt-3 block w-full overflow-hidden rounded-2xl bg-white p-2 text-left shadow-sm dark:bg-[#2A2645]" :aria-label="`Open the garden. ${caption}`" @click="$emit('open')">
+  <button class="mt-3 block w-full overflow-hidden rounded-2xl bg-white p-2 text-left shadow-sm dark:bg-dusk-card" :aria-label="`Open the garden. ${caption}`" @click="$emit('open')">
     <GardenScene :pieces="graph.garden.pieces" :resting="graph.garden.resting" :motion="motion" label="Your garden this season" class="max-h-28" />
     <span class="mt-1 flex items-center justify-between gap-2 px-1 text-xs text-slate-600 dark:text-slate-300">
       <span>{{ caption }}</span>

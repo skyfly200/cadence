@@ -2,6 +2,17 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Cadence's palette (SPEC section 4: cool sage and teal base, warm Now card, dusk for dark). */
+@theme {
+  --color-sage: #EEF5F3;
+  --color-ember: #E07A45;
+  --color-dusk: #1D1A2F;
+  --color-dusk-card: #2A2645;
+  --color-dusk-raised: #3A3560;
+  --color-lavender: #B9A6FF;
+  --color-peach: #FFB59F;
+}
+
 @theme inline {
   --breakpoint-xs: 480px;
   --color-background: var(--background);
