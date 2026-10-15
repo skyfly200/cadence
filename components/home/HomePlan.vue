@@ -27,23 +27,28 @@
         <ul v-if="day.items.length" class="mt-1 space-y-1.5">
           <li
             v-for="it in day.items" :key="it.id" :data-drop="it.time ? undefined : `before:${it.id}`"
-            class="flex flex-wrap items-center gap-x-2 rounded-lg bg-white px-2 py-1 shadow-sm transition-colors data-[over]:ring-2 data-[over]:ring-ember dark:bg-dusk-card"
+            class="flex items-stretch gap-1 rounded-lg bg-white px-1 py-1 shadow-sm transition-colors data-[over]:ring-2 data-[over]:ring-ember dark:bg-dusk-card"
           >
-            <button :class="tick" :aria-label="`Mark ${it.title} done`" title="Done" @click="done(it.id)"><Check class="size-4" /></button>
-            <CompleteWhen @pick="done(it.id, $event)" />
-            <span v-if="it.time" class="grid size-8 shrink-0 place-items-center text-slate-300" title="Has its own time"><Clock class="size-4" /></span>
+            <span v-if="it.time" class="grid w-8 shrink-0 place-items-center text-slate-300" title="Has its own time"><Clock class="size-4" /></span>
             <button v-else :class="grip" aria-label="Drag to another day or position" @pointerdown.prevent="drag($event, it.id, it.title)">⠿</button>
-            <span class="min-w-0 flex-1 touch-pan-y" @pointerdown="swipe($event, it.id)">
-              <span class="block break-words text-[15px]">{{ it.title }}</span>
-              <PlanMeta :meta="metaOf(it.id)" />
-            </span>
-            <span v-if="it.time" class="shrink-0 text-xs text-slate-400">{{ timeLabel(it.time) }}</span>
-            <button :class="[icon, 'hidden lg:grid']" :aria-label="`Edit ${it.title}`" title="Edit" @click="$emit('edit', it.id)"><Pencil class="size-4" /></button>
-            <button :class="[icon, 'hidden text-red-600 lg:grid dark:text-red-400']" :aria-label="`Delete ${it.title}`" title="Delete" @click="remove(it.id)"><Trash2 class="size-4" /></button>
-            <button :class="[icon, 'lg:hidden']" :aria-label="`More for ${it.title}`" :aria-expanded="moreFor === it.id" @click="toggleMore(it.id)"><Ellipsis class="size-4" /></button>
-            <div v-if="moreFor === it.id" class="flex basis-full gap-2 pb-1 lg:hidden">
-              <button :class="chip" @click="moreFor = null; $emit('edit', it.id)">Edit</button>
-              <button :class="[chip, 'text-red-700 dark:text-red-300']" @click="remove(it.id)">Delete</button>
+            <div class="min-w-0 flex-1">
+              <span class="block touch-pan-y px-1 pt-1" @pointerdown="swipe($event, it.id)">
+                <span class="block break-words text-[15px]">{{ it.title }}</span>
+                <PlanMeta :meta="metaOf(it.id)" />
+              </span>
+              <div class="mt-1 flex flex-wrap items-center gap-x-2">
+                <button :class="tick" :aria-label="`Mark ${it.title} done`" title="Done" @click="done(it.id)"><Check class="size-4" /></button>
+                <CompleteWhen @pick="done(it.id, $event)" />
+                <span v-if="it.time" class="min-w-0 flex-1 text-xs text-slate-400">{{ timeLabel(it.time) }}</span>
+                <span v-else class="flex-1" />
+                <button :class="[icon, 'hidden lg:grid']" :aria-label="`Edit ${it.title}`" title="Edit" @click="$emit('edit', it.id)"><Pencil class="size-4" /></button>
+                <button :class="[icon, 'hidden text-red-600 lg:grid dark:text-red-400']" :aria-label="`Delete ${it.title}`" title="Delete" @click="remove(it.id)"><Trash2 class="size-4" /></button>
+                <button :class="[icon, 'lg:hidden']" :aria-label="`More for ${it.title}`" :aria-expanded="moreFor === it.id" @click="toggleMore(it.id)"><Ellipsis class="size-4" /></button>
+                <div v-if="moreFor === it.id" class="flex basis-full gap-2 pb-1 lg:hidden">
+                  <button :class="chip" @click="moreFor = null; $emit('edit', it.id)">Edit</button>
+                  <button :class="[chip, 'text-red-700 dark:text-red-300']" @click="remove(it.id)">Delete</button>
+                </div>
+              </div>
             </div>
           </li>
         </ul>
@@ -121,24 +126,29 @@
 
       <div data-drop="heap" :class="['mt-2 min-h-[56px] rounded-xl border border-dashed border-transparent p-1 transition-colors data-[over]:border-ember data-[over]:bg-amber-50 dark:data-[over]:bg-white/10', dragging && 'border-slate-300 dark:border-white/20']">
         <ul v-if="shownHeap.length" class="space-y-1.5">
-          <li v-for="h in shownHeap" :key="h.id" :class="['flex flex-wrap items-center gap-x-2 rounded-lg bg-white px-2 py-1 shadow-sm dark:bg-dusk-card', h.backlog && 'opacity-60']">
-            <button :class="tick" :aria-label="`Mark ${h.title} done`" title="Done" @click="done(h.id)"><Check class="size-4" /></button>
-            <CompleteWhen @pick="done(h.id, $event)" />
+          <li v-for="h in shownHeap" :key="h.id" :class="['flex items-stretch gap-1 rounded-lg bg-white px-1 py-1 shadow-sm dark:bg-dusk-card', h.backlog && 'opacity-60']">
             <button :class="grip" aria-label="Drag onto a day" @pointerdown.prevent="drag($event, h.id, h.title)">⠿</button>
-            <span class="min-w-0 flex-1 touch-pan-y" @pointerdown="swipe($event, h.id)">
-              <span class="block break-words text-[15px]">{{ h.title }}</span>
-              <PlanMeta :meta="metaOf(h.id)" :backlog="h.backlog" />
-            </span>
-            <button :class="[icon, 'hidden lg:grid']" :aria-label="h.backlog ? `Bring ${h.title} back up` : `Push ${h.title} to the backlog`" :title="h.backlog ? 'Bring back up' : 'Push down (backlog)'" @click="toggleBacklog(h.id, !h.backlog)">
-              <ArrowUpFromLine v-if="h.backlog" class="size-4" /><ArrowDownToLine v-else class="size-4" />
-            </button>
-            <button :class="[icon, 'hidden lg:grid']" :aria-label="`Edit ${h.title}`" title="Edit" @click="$emit('edit', h.id)"><Pencil class="size-4" /></button>
-            <button :class="[icon, 'hidden text-red-600 lg:grid dark:text-red-400']" :aria-label="`Delete ${h.title}`" title="Delete" @click="remove(h.id)"><Trash2 class="size-4" /></button>
-            <button :class="[icon, 'lg:hidden']" :aria-label="`More for ${h.title}`" :aria-expanded="moreFor === h.id" @click="toggleMore(h.id)"><Ellipsis class="size-4" /></button>
-            <div v-if="moreFor === h.id" class="flex basis-full flex-wrap gap-2 pb-1 lg:hidden">
-              <button :class="chip" @click="moreFor = null; $emit('edit', h.id)">Edit</button>
-              <button :class="chip" @click="moreFor = null; toggleBacklog(h.id, !h.backlog)">{{ h.backlog ? 'Bring back up' : 'Push down' }}</button>
-              <button :class="[chip, 'text-red-700 dark:text-red-300']" @click="remove(h.id)">Delete</button>
+            <div class="min-w-0 flex-1">
+              <span class="block touch-pan-y px-1 pt-1" @pointerdown="swipe($event, h.id)">
+                <span class="block break-words text-[15px]">{{ h.title }}</span>
+                <PlanMeta :meta="metaOf(h.id)" :backlog="h.backlog" />
+              </span>
+              <div class="mt-1 flex flex-wrap items-center gap-x-2">
+                <button :class="tick" :aria-label="`Mark ${h.title} done`" title="Done" @click="done(h.id)"><Check class="size-4" /></button>
+                <CompleteWhen @pick="done(h.id, $event)" />
+                <span class="flex-1" />
+                <button :class="[icon, 'hidden lg:grid']" :aria-label="h.backlog ? `Bring ${h.title} back up` : `Push ${h.title} to the backlog`" :title="h.backlog ? 'Bring back up' : 'Push down (backlog)'" @click="toggleBacklog(h.id, !h.backlog)">
+                  <ArrowUpFromLine v-if="h.backlog" class="size-4" /><ArrowDownToLine v-else class="size-4" />
+                </button>
+                <button :class="[icon, 'hidden lg:grid']" :aria-label="`Edit ${h.title}`" title="Edit" @click="$emit('edit', h.id)"><Pencil class="size-4" /></button>
+                <button :class="[icon, 'hidden text-red-600 lg:grid dark:text-red-400']" :aria-label="`Delete ${h.title}`" title="Delete" @click="remove(h.id)"><Trash2 class="size-4" /></button>
+                <button :class="[icon, 'lg:hidden']" :aria-label="`More for ${h.title}`" :aria-expanded="moreFor === h.id" @click="toggleMore(h.id)"><Ellipsis class="size-4" /></button>
+                <div v-if="moreFor === h.id" class="flex basis-full flex-wrap gap-2 pb-1 lg:hidden">
+                  <button :class="chip" @click="moreFor = null; $emit('edit', h.id)">Edit</button>
+                  <button :class="chip" @click="moreFor = null; toggleBacklog(h.id, !h.backlog)">{{ h.backlog ? 'Bring back up' : 'Push down' }}</button>
+                  <button :class="[chip, 'text-red-700 dark:text-red-300']" @click="remove(h.id)">Delete</button>
+                </div>
+              </div>
             </div>
           </li>
         </ul>
@@ -174,7 +184,7 @@ const { reward } = useRewards();
 
 const chip = 'min-h-[44px] rounded-xl bg-stone-100 px-3 text-sm font-medium disabled:opacity-50 dark:bg-white/10';
 const field = 'min-h-[44px] rounded-xl border border-stone-200 bg-white px-3 text-[16px] outline-none dark:border-white/10 dark:bg-dusk-card';
-const grip = 'grid size-9 shrink-0 touch-none cursor-grab place-items-center text-xl text-slate-400 active:cursor-grabbing';
+const grip = 'grid w-8 shrink-0 touch-none cursor-grab place-items-center text-xl text-slate-400 active:cursor-grabbing';
 const tick = 'grid size-9 shrink-0 place-items-center rounded-full text-slate-400 hover:bg-teal-50 hover:text-teal-700 dark:hover:bg-white/10';
 const icon = 'grid size-9 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-stone-100 dark:text-slate-300 dark:hover:bg-white/10';
 const dragging = ref(false);
