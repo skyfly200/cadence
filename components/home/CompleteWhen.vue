@@ -7,7 +7,7 @@
     ><ChevronDown class="size-4" /></button>
     <div
       v-if="open" role="menu"
-      class="absolute right-0 top-full z-30 mt-1 w-56 rounded-xl border border-stone-200 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-[#2A2645]"
+      class="absolute right-0 top-full z-30 mt-1 w-56 rounded-xl border border-stone-200 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-dusk-card"
     >
       <p class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{{ label }} for…</p>
       <button v-for="d in days" :key="d.key" type="button" role="menuitem" class="block min-h-[44px] w-full rounded-lg px-3 text-left text-sm hover:bg-stone-100 dark:hover:bg-white/10" @click="choose(d.at)">{{ d.label }}</button>
@@ -15,7 +15,7 @@
         <span class="text-slate-500 dark:text-slate-400">Another day</span>
         <input
           type="date" :max="todayKey" aria-label="Pick another day"
-          class="mt-1 min-h-[44px] w-full rounded-lg border border-stone-200 bg-stone-50 px-2 text-[16px] outline-none dark:border-white/10 dark:bg-[#1D1A2F]"
+          class="mt-1 min-h-[44px] w-full rounded-lg border border-stone-200 bg-stone-50 px-2 text-[16px] outline-none dark:border-white/10 dark:bg-dusk"
           @change="pickDate(($event.target as HTMLInputElement).value)"
         />
       </label>

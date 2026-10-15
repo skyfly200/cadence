@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Commitment, Idea, Link, Thing } from '../domain';
-import { applyEdit, dependencyOptions, deleteNode, placeOf, toDatetimeLocal, getOrCreatePlace, wouldCreateCycle } from './edit';
+import { applyEdit, dependencyOptions, deleteNode, placeOf, restoreDeleted, toDatetimeLocal, getOrCreatePlace, wouldCreateCycle } from './edit';
 
 const NOW = '2026-10-03T15:00:00.000Z';
 
@@ -455,5 +455,27 @@ describe('placeOf', () => {
   it('is null with no at link, or when the link points at something that is not a Thing', () => {
     expect(placeOf('c', nodes, [])).toBeNull();
     expect(placeOf('c', nodes, [link('l', 'at', 'c', 'i')])).toBeNull();
+  });
+});
+
+describe('restoreDeleted', () => {
+  it('puts back the node and its links after a delete, stamped so they win the next sync', () => {
+    const c1 = commitment('c1');
+    const c2 = commitment('c2');
+    const l1 = link('l1', 'requires', 'c1', 'c2');
+    const l2 = link('l2', 'part_of', 'c2', 'goal');
+    const after = deleteNode('c1', [c1, c2], [l1, l2]);
+    const back = restoreDeleted({ nodes: [c1], links: [l1] }, after.nodes, after.links, '2026-10-04T00:00:00.000Z');
+    expect(back.nodes.map((n) => n.id)).toEqual(['c2', 'c1']);
+    expect(back.nodes[1]).toEqual({ ...c1, updatedAt: '2026-10-04T00:00:00.000Z' });
+    expect(back.links.map((l) => l.id)).toEqual(['l2', 'l1']);
+  });
+
+  it('does not duplicate anything that is already back', () => {
+    const c1 = commitment('c1');
+    const l1 = link('l1', 'requires', 'c1', 'c2');
+    const back = restoreDeleted({ nodes: [c1], links: [l1] }, [c1], [l1], NOW);
+    expect(back.nodes).toEqual([c1]);
+    expect(back.links).toEqual([l1]);
   });
 });

@@ -1,17 +1,17 @@
 <template>
-  <div class="min-h-dvh bg-[#EEF5F3] pb-16 text-slate-800 dark:bg-[#1D1A2F] dark:text-slate-100">
+  <div class="min-h-dvh bg-sage pb-16 text-slate-800 dark:bg-dusk dark:text-slate-100">
     <div class="mx-auto w-full max-w-md px-4 pt-6">
       <h1 class="font-serif text-2xl font-semibold">Connect an assistant</h1>
 
       <p v-if="state === 'loading'" class="mt-4 text-[15px] text-slate-600 dark:text-slate-300">One moment.</p>
 
       <!-- sign in first, with the app's own sign-in -->
-      <section v-else-if="state === 'signin'" class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
+      <section v-else-if="state === 'signin'" class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-dusk-card">
         <p class="mb-3 text-[15px]">Sign in to your Cadence account to continue.</p>
         <AuthDialog @done="check" />
       </section>
 
-      <section v-else-if="state === 'ask'" class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
+      <section v-else-if="state === 'ask'" class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-dusk-card">
         <p class="text-[17px]"><strong>{{ clientName }}</strong> would like to connect to your Cadence.</p>
         <fieldset class="mt-4 space-y-2">
           <legend class="sr-only">What it may do</legend>
@@ -26,15 +26,15 @@
         </fieldset>
         <p class="mt-3 text-sm text-slate-600 dark:text-slate-400">Items you mark Private are never shown to it. You can disconnect it any time in Settings.</p>
         <div class="mt-4 flex gap-3">
-          <button class="min-h-[44px] flex-1 rounded-xl bg-teal-700 px-4 text-[15px] font-medium text-white disabled:opacity-60 dark:bg-[#B9A6FF] dark:text-[#1D1A2F]" :disabled="busy" @click="allow">Allow</button>
+          <button class="min-h-[44px] flex-1 rounded-xl bg-teal-700 px-4 text-[15px] font-medium text-white disabled:opacity-60 dark:bg-lavender dark:text-dusk" :disabled="busy" @click="allow">Allow</button>
           <button class="min-h-[44px] flex-1 rounded-xl border border-slate-300 px-4 text-[15px] dark:border-white/20" :disabled="busy" @click="deny">Not now</button>
         </div>
         <p v-if="note" class="mt-3 text-sm text-amber-700 dark:text-amber-300">{{ note }}</p>
       </section>
 
-      <section v-else class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-[#2A2645]">
+      <section v-else class="mt-4 rounded-3xl bg-white p-5 shadow-sm dark:bg-dusk-card">
         <p class="text-[15px]">This connection request could not be read. Start again from the assistant.</p>
-        <NuxtLink to="/" class="mt-3 inline-flex min-h-[44px] items-center text-[15px] text-teal-800 underline dark:text-[#B9A6FF]">Back to Cadence</NuxtLink>
+        <NuxtLink to="/" class="mt-3 inline-flex min-h-[44px] items-center text-[15px] text-teal-800 underline dark:text-lavender">Back to Cadence</NuxtLink>
       </section>
     </div>
   </div>

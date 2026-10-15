@@ -19,7 +19,7 @@ export function startDrag(e: PointerEvent, opts: DragOptions): void {
 
   const ghost = document.createElement('div');
   ghost.textContent = opts.label;
-  ghost.className = 'rounded-lg bg-white px-3 py-2 text-[15px] shadow-lg ring-2 ring-[#E07A45] dark:bg-[#2A2645] dark:text-slate-100';
+  ghost.className = 'rounded-lg bg-white px-3 py-2 text-[15px] shadow-lg ring-2 ring-ember dark:bg-dusk-card dark:text-slate-100';
   Object.assign(ghost.style, { position: 'fixed', zIndex: '60', pointerEvents: 'none', maxWidth: '75vw', transform: 'translate(-50%, -120%)' });
   document.body.appendChild(ghost);
 

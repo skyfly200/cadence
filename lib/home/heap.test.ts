@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Idea, Link, Occurrence } from '../domain';
 import type { HeapItem } from './derive';
-import { addTag, DEFAULT_HEAP_VIEW, matchTag, openBlockers, tagOptions, viewHeap } from './heap';
+import { addTag, DEFAULT_HEAP_VIEW, heapViewFor, matchTag, openBlockers, tagOptions, viewHeap } from './heap';
 
 const item = (id: string, over: Partial<HeapItem> = {}): HeapItem => ({ id, title: id, kind: 'idea', at: '2026-10-01T00:00:00.000Z', category: null, minutes: null, backlog: false, blockedBy: [], ...over });
 const view = (over: Partial<typeof DEFAULT_HEAP_VIEW>) => ({ ...DEFAULT_HEAP_VIEW, ...over });
@@ -60,5 +60,18 @@ describe('tags', () => {
   });
   it('offers the list plus any tag in use', () => {
     expect(tagOptions([item('a', { category: 'Work' }), item('b', { category: 'Jev' })], ['Jev', 'Laya'])).toEqual(['Jev', 'Laya', 'Work']);
+  });
+});
+
+describe('heapViewFor', () => {
+  const view = { query: 'tax', sort: 'az' as const, tag: 'Work', status: 'blocked' as const };
+  it('keeps everything in Rich', () => {
+    expect(heapViewFor(view, 2)).toEqual(view);
+  });
+  it('keeps only the search in Balanced, so hidden filters never hide items', () => {
+    expect(heapViewFor(view, 1)).toEqual({ ...DEFAULT_HEAP_VIEW, query: 'tax' });
+  });
+  it('is the plain list in Simple', () => {
+    expect(heapViewFor(view, 0)).toEqual(DEFAULT_HEAP_VIEW);
   });
 });

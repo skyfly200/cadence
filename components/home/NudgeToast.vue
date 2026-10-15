@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div v-if="nudge" class="fixed inset-x-0 bottom-40 z-40 mx-auto flex w-fit max-w-sm flex-col gap-2 rounded-2xl bg-white p-4 shadow-lg dark:bg-[#2A2645]" role="alert">
+    <div v-if="nudge" class="fixed inset-x-0 bottom-28 z-40 lg:bottom-6 mx-auto flex w-fit max-w-sm flex-col gap-2 rounded-2xl bg-white p-4 shadow-lg dark:bg-dusk-card" role="alert">
       <div>
         <p class="font-semibold text-slate-900 dark:text-slate-100">{{ nudge.title }}</p>
         <p v-if="nudge.body" class="mt-1 text-sm text-slate-700 dark:text-slate-300">{{ nudge.body }}</p>
@@ -10,20 +10,20 @@
       </div>
       <div class="mt-2 flex gap-2">
         <button
-          class="flex-1 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 dark:bg-white/10 dark:text-slate-300"
+          class="flex-1 min-h-[44px] rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 dark:bg-white/10 dark:text-slate-300"
           @click="onNotNow"
         >
           Not now
         </button>
         <button
-          class="flex-1 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 dark:bg-white/10 dark:text-slate-300"
+          class="flex-1 min-h-[44px] rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 dark:bg-white/10 dark:text-slate-300"
           @click="openStop"
         >
           Stop these
         </button>
         <button
           v-if="!muted"
-          class="rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 dark:bg-white/10 dark:text-slate-300"
+          class="min-h-[44px] rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 dark:bg-white/10 dark:text-slate-300"
           title="Mute sound and speech"
           @click="onMute"
         >
@@ -31,7 +31,7 @@
         </button>
         <button
           v-else
-          class="rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-900 dark:bg-amber-900/30 dark:text-amber-200"
+          class="min-h-[44px] rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-900 dark:bg-amber-900/30 dark:text-amber-200"
           title="Unmute sound and speech"
           @click="onUnmute"
         >
@@ -43,19 +43,19 @@
         <div v-if="showStopMenu" class="mt-3 border-t border-slate-200 pt-3 dark:border-white/10">
           <p class="text-xs font-medium text-slate-600 dark:text-slate-400">Stop</p>
           <button
-            class="mt-2 block w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm dark:border-white/10 dark:bg-white/5"
+            class="mt-2 block min-h-[44px] w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm dark:border-white/10 dark:bg-white/5"
             @click="onStopKind"
           >
             All {{ kindLabel }}
           </button>
           <button
             v-if="nudge.nodeId && nodeTitle"
-            class="mt-1 block w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm dark:border-white/10 dark:bg-white/5"
+            class="mt-1 block min-h-[44px] w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm dark:border-white/10 dark:bg-white/5"
             @click="onStopNode"
           >
             Just &quot;{{ nodeTitle }}&quot;
           </button>
-          <button class="mt-2 text-xs text-slate-500 dark:text-slate-400" @click="showStopMenu = false">
+          <button class="mt-2 min-h-[44px] px-1 text-xs text-slate-500 dark:text-slate-400" @click="showStopMenu = false">
             Cancel
           </button>
         </div>
@@ -69,7 +69,7 @@ import { computed, ref } from 'vue';
 import type { Nudge } from '~/lib/domain';
 import { useGraphStore } from '~/stores/graph';
 
-defineProps<{
+const props = defineProps<{
   nudge: Nudge | null;
   disclosed: boolean;
   muted: boolean;
