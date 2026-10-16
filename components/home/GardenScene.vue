@@ -1,10 +1,10 @@
 <template>
-  <svg :class="['g-scene block w-full', motion ? 'shimmer' : '', resting ? 'opacity-80' : '']" :viewBox="`0 0 ${W} ${H}`" preserveAspectRatio="xMidYMax meet" role="img" :aria-label="label">
-    <rect x="0" y="0" :width="W" :height="H" rx="18" class="fill-sky-100/70 dark:fill-[#262244]" />
-    <circle :cx="W - 56" cy="38" r="16" class="fill-amber-200/80 dark:fill-[#FFB59F]/40" />
-    <path :d="`M0 ${H * 0.62} Q ${W * 0.25} ${H * 0.55} ${W * 0.5} ${H * 0.61} T ${W} ${H * 0.58} V ${H} H 0 Z`" class="fill-emerald-200 dark:fill-[#2E2A52]" />
-    <path :d="`M0 ${H * 0.78} Q ${W * 0.3} ${H * 0.72} ${W * 0.6} ${H * 0.77} T ${W} ${H * 0.75} V ${H} H 0 Z`" class="fill-emerald-300/80 dark:fill-[#34305C]" />
-    <g v-for="p in sorted" :key="p.id" :transform="`translate(${PAD + p.x * (W - 2 * PAD)} ${TOP + p.y * SPAN}) scale(${ZOOM})`">
+  <svg :class="['g-scene block w-full', motion ? 'shimmer' : '', resting ? 'opacity-80' : '']" :viewBox="`0 0 ${layout.width} ${layout.height}`" preserveAspectRatio="xMidYMax meet" role="img" :aria-label="label">
+    <rect x="0" y="0" :width="layout.width" :height="layout.height" rx="18" class="fill-sky-100/70 dark:fill-[#262244]" />
+    <circle :cx="layout.width - 56" cy="38" r="16" class="fill-amber-200/80 dark:fill-[#FFB59F]/40" />
+    <path :d="`M0 ${TOP - 25} Q ${layout.width * 0.25} ${TOP - 55} ${layout.width * 0.5} ${TOP - 28} T ${layout.width} ${TOP - 38} V ${layout.height} H 0 Z`" class="fill-emerald-200 dark:fill-[#2E2A52]" />
+    <path :d="`M0 ${TOP + 40} Q ${layout.width * 0.3} ${TOP + 15} ${layout.width * 0.6} ${TOP + 35} T ${layout.width} ${TOP + 28} V ${layout.height} H 0 Z`" class="fill-emerald-300/80 dark:fill-[#34305C]" />
+    <g v-for="p in drawn" :key="p.id" :transform="`translate(${p.x} ${p.y}) scale(${ZOOM})`">
       <GardenPiece :kind="p.kind" :stage="p.stage" :blooms="p.blooms" :scale="p.scale" :id="p.id" />
     </g>
   </svg>
@@ -13,18 +13,17 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { GardenPiece as Piece } from '~/lib/domain';
+import { TOP, ZOOM, layoutGarden } from '~/lib/home/garden-layout';
 
 const props = defineProps<{ pieces: readonly Piece[]; motion?: boolean; resting?: boolean; label?: string }>();
 
-const W = 480;
-const H = 300;
-const PAD = 36;
-/** Pieces sit in a band across the lower hills, drawn larger than their own units. */
-const TOP = 150;
-const SPAN = 130;
-const ZOOM = 2.2;
+/** Every piece gets its own spot, and the scene grows taller when the garden is getting full. */
+const layout = computed(() => layoutGarden(props.pieces));
 /** Back to front, so nearer pieces draw over the ones behind. */
-const sorted = computed(() => [...props.pieces].sort((a, b) => a.y - b.y));
+const drawn = computed(() => {
+  const at = new Map(layout.value.placed.map((p) => [p.id, p]));
+  return props.pieces.map((p) => ({ ...p, x: at.get(p.id)!.x, y: at.get(p.id)!.y })).sort((a, b) => a.y - b.y);
+});
 </script>
 
 <style scoped>

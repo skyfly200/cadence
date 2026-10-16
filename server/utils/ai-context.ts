@@ -19,7 +19,10 @@ export function aiDeps(event: H3Event): { ok: true; deps: AiDeps } | { ok: false
   const missing: string[] = [];
   if (!serviceRoleKey) missing.push('SUPABASE_SERVICE_ROLE_KEY');
   if (!supabaseUrl) missing.push('NUXT_PUBLIC_SUPABASE_URL');
-  if (missing.length) return { ok: false, missing };
+  if (missing.length) {
+    console.error(`[ai] not configured: missing ${missing.join(', ')} (set it for functions/runtime, then redeploy)`);
+    return { ok: false, missing };
+  }
 
   const fast = env.AI_MODEL_FAST;
   const strong = env.AI_MODEL_STRONG;
