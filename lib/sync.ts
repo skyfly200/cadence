@@ -16,6 +16,7 @@
  * is a no-op and the app runs exactly as the local-first version did.
  */
 import { applyServerPages, pushPressed } from './home/pressed-sync';
+import { applyServerMemories, pushMemories } from './home/memory-sync';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { GRAPH_TABLE_NAMES, pullGraph, pushGraph, resetGraphBaseline } from './graph-sync';
 import { deletionHold } from './deletion';
@@ -144,6 +145,7 @@ async function pullKv(sb: SupabaseClient, userId: string) {
     }
   }
   applyServerPages((data || []) as { key: string; data: unknown }[]);
+  applyServerMemories((data || []) as { key: string; data: unknown }[]);
 }
 
 export async function pullAll(sb: SupabaseClient, userId: string) {
@@ -179,6 +181,7 @@ async function pushKv(sb: SupabaseClient, userId: string) {
   if (error) throw error;
   for (const r of (data || []) as any[]) setKvTs(r.key, r.updated_at);
   await pushPressed(sb, userId);
+  await pushMemories(sb, userId);
 }
 
 export async function pushAll(sb: SupabaseClient, userId: string) {

@@ -25,6 +25,7 @@ import type { Commitment, Habit, Idea, Link, Node, Occurrence, Period } from '~/
 import { heapItems, keptToday, nodeState, reorderIds, stackDays, stopRecords } from '~/lib/home/derive';
 import type { Density } from '~/lib/home/prefs';
 import { applyEdit, deleteNode, restoreDeleted, type EditInput } from '~/lib/home/edit';
+import { addMemory, editMemory, forgetMemory, getMemories, liveMemories, markUsed, saveMemories, type Memory, type MemoryOrigin } from '~/lib/home/memory';
 import { useAppStore } from './app';
 
 const MAX_CAPTURE = 4000; // same limit as the server route
@@ -35,6 +36,8 @@ export const useGraphStore = defineStore('graph', () => {
   const nodes = ref<Node[]>([]);
   const links = ref<Link[]>([]);
   const occurrences = ref<Occurrence[]>([]);
+  /** What Cadence remembers about the person (tombstones included, for sync). */
+  const memories = ref<Memory[]>([]);
   /** "Now" for derivations. Refreshed when Home opens and after each action, never on a timer. */
   const asOf = ref(new Date());
   const loaded = ref(false);
@@ -51,6 +54,7 @@ export const useGraphStore = defineStore('graph', () => {
     nodes.value = getGraphNodes();
     links.value = getGraphLinks();
     occurrences.value = getGraphOccurrences();
+    memories.value = getMemories();
     asOf.value = new Date();
     loaded.value = true;
     adoptDated();
@@ -464,6 +468,26 @@ export const useGraphStore = defineStore('graph', () => {
 
   function refresh() { asOf.value = new Date(); }
 
+  // ── memory ─────────────────────────────────────────────────
+
+  const memoryList = computed(() => liveMemories(memories.value).slice().reverse());
+
+  function persistMemories(list: Memory[], push = true) {
+    memories.value = list;
+    saveMemories(list);
+    if (push) app.queuePush();
+  }
+  /** Remember one thing; returns the memory (an existing one when the same words are already kept). */
+  function remember(text: string, origin: MemoryOrigin): Memory | null {
+    const r = addMemory(memories.value, text, origin, new Date(), uid());
+    if (r.list.length !== memories.value.length) persistMemories(r.list);
+    return r.memory;
+  }
+  function editMemoryText(id: string, change: { text?: string; private?: boolean }) { persistMemories(editMemory(memories.value, id, change, new Date())); }
+  function forget(id: string) { persistMemories(forgetMemory(memories.value, id, new Date())); }
+  /** Not a content change, so it is saved here but not pushed on its own. */
+  function memoriesUsed(ids: string[]) { if (ids.length) persistMemories(markUsed(memories.value, ids, new Date()), false); }
+
   function persistLinks() {
     saveGraphLinks(links.value);
     app.queuePush();
@@ -495,8 +519,9 @@ export const useGraphStore = defineStore('graph', () => {
   }
 
   return {
-    nodes, links, occurrences, asOf, loaded, lastAction, density, timeFormat, hemisphere,
+    nodes, links, occurrences, memories, memoryList, asOf, loaded, lastAction, density, timeFormat, hemisphere,
     rank, heap, blockers, stack, kept, habits, habitsPiece, weeklyTally, habitRows, currentState, goalList, garden, pressed, logHabitOn, attachableTo,
     load, refresh, capture, promote, plan, start, stop, complete, finish, park, notNow, bringBack, undoLast, createHabit, createGoal, attachTo, acceptConnection, keepProposedNode, importedTaskCount, removeImportedTasks, setBacklog, moveGoal, autoTagHeap, applyHeapAi, addStep, tapHabit, edit, removeNode,
+    remember, editMemoryText, forget, memoriesUsed,
   };
 });

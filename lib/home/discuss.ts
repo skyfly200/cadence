@@ -5,7 +5,7 @@
 import type { Turn } from '../../server/utils/discuss';
 
 /** How many things a person can say in one conversation (the server enforces the same cap). */
-export const MAX_TURNS = 6;
+export const MAX_TURNS = 40;
 const MAX_SUMMARY_TEXT = 4000;
 
 /** What the person said, joined for the summary call; the end is kept if it is too long. */

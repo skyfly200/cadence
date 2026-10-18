@@ -128,6 +128,14 @@ _Avoid_: Reset, wipe, cycle
 The archive of plants pressed at each Season turn, so nothing the user did is lost.
 _Avoid_: History, archive, trophy case
 
+**Memory**:
+A short sentence Cadence keeps about the person (a preference, a person in their life, a routine), said in Discuss with "remember that…" or offered by Cadence and kept with a tap. Kept on the device and in the person's own account; only the few that fit a conversation are sent with it, and each can be edited, made Private or forgotten.
+_Avoid_: Profile, knowledge graph, fact
+
+**Context layer**:
+What a Discuss turn may see, chosen on the device: a base layer every turn (today, the next three weeks, the Heap, open Goals, a few Memories) and lookups the AI asks for when it needs more (more Memories, the whole Life graph, recent Occurrences, the calendar, and server-held sources such as GitHub).
+_Avoid_: Prompt, RAG, retrieval
+
 **Private**:
 A flag on any Node that keeps it out of every AI call and out of anything an assistant can read, while it still works normally inside the app.
 _Avoid_: Hidden, secret, sensitive

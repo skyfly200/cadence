@@ -117,7 +117,8 @@ const AI_KEY = 'cadence:aiOn';
 export function getAiOn(): boolean { return read(AI_KEY) !== 'false'; }
 export function setAiOn(on: boolean): void { write(AI_KEY, String(on)); }
 
-const DISCUSS_DISCLOSED_KEY = 'cadence:discussDisclosed';
+// v2: Discuss now also sends memories and can look up more of the list and the calendar, so the note shows again.
+const DISCUSS_DISCLOSED_KEY = 'cadence:discussDisclosed:v2';
 /** Whether this device has seen, and accepted, the one-line note on what Discuss sends. */
 export function getDiscussDisclosed(): boolean { return read(DISCUSS_DISCLOSED_KEY) === 'true'; }
 export function setDiscussDisclosed(on: boolean): void { write(DISCUSS_DISCLOSED_KEY, String(on)); }
