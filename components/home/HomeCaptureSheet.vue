@@ -4,7 +4,7 @@
       <CrisisCard v-if="crisis" :resources="crisis" @okay="dismissCrisis" @not-meant="dismissCrisis" />
       <div v-else-if="mode === 'disclose'" role="region" aria-label="Before we talk">
         <p class="font-serif text-xl">Before we talk</p>
-        <p class="mt-2 text-[15px] text-slate-700 dark:text-slate-200">This sends this conversation and the relevant part of your list to Claude.</p>
+        <p class="mt-2 text-[15px] text-slate-700 dark:text-slate-200">This sends the conversation to Claude with today, your next few weeks, the heap and a few things Cadence remembers about you. When it needs more, it can look up the rest of your list or your calendar. Private items never leave this device.</p>
         <div class="mt-3 flex gap-2">
           <button type="button" class="min-h-[44px] rounded-2xl bg-stone-100 px-4 text-sm dark:bg-white/10" @click="notNow">Not now</button>
           <button type="button" class="min-h-[44px] flex-1 rounded-2xl bg-ember font-semibold text-white" @click="acceptDisclosure">Continue</button>

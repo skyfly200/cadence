@@ -23,6 +23,7 @@
           <li><strong>In your account (when signed in):</strong> the same items, so your devices stay in step. Only you can read them.</li>
           <li><strong>Google Calendar (if you connected it):</strong> the sign-in token is kept on the server, encrypted, and never in your browser.</li>
           <li><strong>Google data (Calendar and Docs):</strong> Cadence only reads it, and only to show your events or to import when you press Import. A Doc you pick is read once so its text can be turned into suggestions you choose to keep, and the document itself is not stored. Nothing from your Google account is shared with anyone else or used to train AI models, and Cadence never changes anything in your Google account. Disconnect Google in Settings at any time, and you can also remove Cadence at <a class="underline" href="https://myaccount.google.com/permissions" rel="noopener" target="_blank">myaccount.google.com/permissions</a>.</li>
+          <li><strong>What Cadence remembers about you:</strong> kept on this device and, when signed in, in your account so your devices share it. Only you can read it; no server feature reads the list. See, edit or forget each one in Settings under Coach and AI.</li>
           <li><strong>Notifications:</strong> a reminder is written on your device; the server only holds the time it should arrive and your browser's push address.</li>
           <li><strong>Voice:</strong> tap-to-talk uses your browser's own speech recognition.</li>
         </ul>
@@ -34,6 +35,7 @@
         <ul class="mt-2 list-disc space-y-2 pl-5 text-[15px]">
           <li><strong>Capture, Now, Plan, Habits:</strong> nothing to any AI. The ranking and the Why now lines run on your device.</li>
           <li><strong>Polished Why now line:</strong> when AI is on, the title of your current item and its Why now line go to the AI to be reworded. Private items are never sent.</li>
+          <li><strong>Discuss:</strong> the conversation, today, the next three weeks of your plan, the heap, your open goals and up to eight things Cadence remembers that fit what you are saying. When it needs more, this device looks it up (more memories, the rest of your list, what you did lately, or two days of your calendar) and sends only what matches. The conversation itself is not stored. Private items and memories are never sent.</li>
           <li><strong>AI wording and sorting (when used):</strong> only the few items it needs, sent to the AI provider to answer, on a paid plan with retention off where the provider allows. <strong>Private</strong> items are never included.</li>
           <li><strong>Analytics:</strong> none.</li>
         </ul>

@@ -7,12 +7,20 @@
     </div>
     <p v-if="privateNote" class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ privateNote }}</p>
 
-    <!-- the conversation: one short question at a time -->
+    <!-- the conversation -->
     <template v-if="stage === 'talk'">
       <ul class="mt-3 max-h-56 space-y-2 overflow-y-auto" aria-live="polite">
-        <li v-if="!turns.length" class="text-[15px] text-slate-600 dark:text-slate-300">What's nagging at you?</li>
+        <li v-if="!turns.length" class="text-[15px] text-slate-600 dark:text-slate-300">What's on your mind?</li>
         <li v-for="(t, i) in turns" :key="i" :class="['rounded-2xl px-3 py-2 text-[15px]', t.role === 'user' ? 'ml-8 bg-stone-100 dark:bg-white/10' : 'mr-8 border border-slate-200 dark:border-white/10']">{{ t.text }}</li>
-        <li v-if="busy" class="mr-8 px-3 py-2 text-sm text-slate-500 dark:text-slate-400">…</li>
+        <li v-if="busy" class="mr-8 px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{{ looking || '…' }}</li>
+      </ul>
+      <!-- things to remember: said "remember this" is kept at once (with Forget); anything Cadence offers waits for a tap -->
+      <ul v-if="notes.length" class="mt-2 space-y-1.5" aria-label="To remember">
+        <li v-for="n in notes" :key="n.text" class="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-1.5 text-sm text-amber-950 dark:bg-white/5 dark:text-peach">
+          <span class="min-w-0 flex-1 break-words">{{ n.id ? 'Remembered' : 'Remember' }}: {{ n.text }}</span>
+          <button v-if="n.id" type="button" class="min-h-[36px] shrink-0 rounded-lg px-2 font-medium underline" @click="forgetNote(n)">Forget</button>
+          <button v-else type="button" class="min-h-[36px] shrink-0 rounded-lg bg-white px-3 font-medium dark:bg-white/10" @click="keepNote(n)">Keep</button>
+        </li>
       </ul>
       <div v-if="speechSupported" class="mt-3 flex items-center gap-2">
         <button
@@ -68,10 +76,12 @@ import { getRecognitionCtor, initialState, joinTranscript, messageFor, setListen
 import { browserVoice, sayAloud } from '~/lib/home/talk';
 import { getSpeakReplies, speechLevel } from '~/lib/home/prefs';
 import { MAX_TURNS, heardLine, privateLine, spoken, userText } from '~/lib/home/discuss';
+import { converseTurn } from '~/lib/home/converse';
+import type { CalendarEvent } from '~/lib/home/context-layers';
 import { linksAfterKeeping, type KeepChoice, type LinkProposal, type NodeProposal } from '~/lib/home/proposals';
 import { useAppStore } from '~/stores/app';
 import { useGraphStore } from '~/stores/graph';
-import type { Turn } from '~~/server/utils/discuss';
+import type { Remember, Turn } from '~~/server/utils/discuss';
 
 /**
  * `crisis`: the person's words matched the on-device rules, or an AI reply did (then `text` is null).
@@ -101,6 +111,10 @@ const kept = reactive(new Map<string, string>()); // proposal ref -> saved node 
 const connected = ref(new Set<string>());
 const parked = ref(false);
 const parking = ref(false);
+/** What the AI is looking up right now ("Checking your calendar"), shown in place of the dots. */
+const looking = ref('');
+/** Things to remember from this conversation; `id` once kept. */
+const notes = ref<(Remember & { id?: string })[]>([]);
 
 const SAYS: Record<LinkProposal['type'], string> = { part_of: 'is part of', requires: 'needs first', needs: 'needs', at: 'happens at', with: 'goes with' };
 const linkKey = (p: LinkProposal) => `${p.type}|${p.from}|${p.to}`;
@@ -198,24 +212,56 @@ async function send(opts: { voice?: boolean } = {}) {
   busy.value = true;
   turns.value = next;
   input.value = '';
-  const r = await aiFetch<{ ok: true; crisis: boolean; reply?: string; last?: boolean; privateExcluded?: number }>(
-    '/api/ai/discuss', { messages: next }, { accessToken: app.session?.access_token },
-  );
+  const token = app.session?.access_token;
+  const r = await converseTurn(next, {
+    call: (body) => aiFetch('/api/ai/discuss', body, { accessToken: token }),
+    data: { nodes: graph.nodes, links: graph.links, occurrences: graph.occurrences, memories: graph.memories },
+    opts: { now: new Date(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+    calendar: app.googleCalendar.connected ? (timeMin, timeMax) => readCalendar(timeMin, timeMax, token) : undefined,
+    onLookup: (line) => { looking.value = line; },
+  });
   busy.value = false;
+  looking.value = '';
   if (r.status === 'off') { error.value = 'AI is switched off, so Discuss is not available.'; return; }
   if (r.status === 'signed_out') { error.value = 'Sign in to use Discuss.'; return; }
   if (r.status === 'failed') { error.value = r.message; return; }
-  if (r.data.crisis) { emit('crisis', null); return; }
-  privateExcluded.value = r.data.privateExcluded ?? 0;
-  turns.value = [...next, { role: 'assistant', text: r.data.reply ?? '' }];
-  if (r.data.last || spoken(turns.value) >= MAX_TURNS) { await summarise(); return; }
+  if (r.status === 'crisis') { emit('crisis', null); return; }
+  privateExcluded.value = r.privateExcluded;
+  graph.memoriesUsed(r.memoryIds);
+  for (const m of r.remember) addNote(m);
+  turns.value = [...next, { role: 'assistant', text: r.reply }];
+  if (r.last || spoken(turns.value) >= MAX_TURNS) { await summarise(); return; }
   await nextTick();
   // Spoken replies are optional and never over the one mute; the mic opens again after a spoken turn.
-  if (speakReplies.value && !loadState().muted) await sayAloud(r.data.reply ?? '', { ...browserVoice(window), volume: speechLevel() });
+  if (speakReplies.value && !loadState().muted) await sayAloud(r.reply, { ...browserVoice(window), volume: speechLevel() });
   if (!opts.voice) { box.value?.focus(); return; }
   if (!unmounted && stage.value === 'talk' && !busy.value && !speechState.value.listening) toggleSpeech();
 }
 
+/** Google Calendar for a lookup, through the server (the browser never holds a Google token). */
+async function readCalendar(timeMin: string, timeMax: string, token: string | undefined): Promise<CalendarEvent[] | null> {
+  if (!token) return null;
+  try {
+    const res = await fetch(`/api/google-calendar/events?${new URLSearchParams({ timeMin, timeMax })}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) return null;
+    return ((await res.json()) as { items?: CalendarEvent[] }).items ?? null;
+  } catch { return null; }
+}
+
+/** "Remember that…" is kept at once; anything Cadence offers on its own waits for Keep. */
+function addNote(m: Remember) {
+  if (notes.value.some((n) => n.text === m.text)) return;
+  const id = m.stated ? graph.remember(m.text, 'stated')?.id : undefined;
+  notes.value = [...notes.value, { ...m, id }];
+}
+function keepNote(n: Remember & { id?: string }) {
+  const id = graph.remember(n.text, 'proposed_accepted')?.id;
+  notes.value = notes.value.map((x) => (x === n ? { ...x, id } : x));
+}
+function forgetNote(n: Remember & { id?: string }) {
+  if (n.id) graph.forget(n.id);
+  notes.value = notes.value.filter((x) => x !== n);
+}
 /** "Done" at any point: sum up what was said, or just close if nothing was. */
 async function done() {
   stopListening();

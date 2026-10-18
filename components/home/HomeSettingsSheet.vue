@@ -165,6 +165,8 @@
       </label>
       <p v-if="aiNote" class="mt-1 text-sm text-amber-700 dark:text-amber-300">{{ aiNote }}</p>
 
+      <HomeMemories />
+
       <p class="mt-4 text-sm font-medium">Help lines</p>
       <p class="text-sm text-slate-600 dark:text-slate-300">If something you write sounds heavy, Cadence shows local help lines. Which country?</p>
       <select v-model="helpCountry" class="mt-1.5 min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-3 text-[16px] dark:border-white/10 dark:bg-dusk" aria-label="Country for help lines" @change="saveHelpCountry">
