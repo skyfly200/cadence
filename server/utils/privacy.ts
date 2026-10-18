@@ -18,7 +18,7 @@ export const USER_DATA_TABLES = [
   'cadence_tasks', 'cadence_projects', 'cadence_time_blocks', 'cadence_timer_sessions',
   'cadence_capacity', 'cadence_gamification', 'cadence_trips', 'cadence_habits', 'cadence_brain_dump', 'cadence_kv',
   'cadence_nodes', 'cadence_links', 'cadence_occurrences',
-  'cadence_google_tokens', 'push_subscriptions', 'nudge_queue',
+  'cadence_google_tokens', 'cadence_service_tokens', 'push_subscriptions', 'nudge_queue',
   'ai_usage', 'ai_settings',
   'oauth_grants', 'oauth_codes', 'oauth_tokens',
 ] as const;
