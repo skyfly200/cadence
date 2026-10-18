@@ -24,6 +24,10 @@
       </div>
     </section>
 
+    <section v-else-if="view === 'connected'" class="mt-4">
+      <GithubPanel />
+    </section>
+
     <section v-else class="mt-4">
       <MapView v-if="view === 'map'" />
       <TripsView v-else />
@@ -39,12 +43,13 @@ import { useGraphStore } from '~/stores/graph';
 
 useHead({ title: 'Go deeper · Cadence' });
 
-type View = 'matrix' | 'trips' | 'map';
+type View = 'matrix' | 'connected' | 'trips' | 'map';
 const graph = useGraphStore();
 const view = ref<View>('matrix');
 const tripsOn = ref(false);
 const tabs = computed<{ k: View; n: string }[]>(() => [
   { k: 'matrix', n: 'Matrix' },
+  { k: 'connected', n: 'Connected' },
   ...(tripsOn.value ? [{ k: 'trips' as const, n: 'Trips' }, { k: 'map' as const, n: 'Map' }] : []),
 ]);
 const CELLS: { k: Quadrant; n: string; hint: string }[] = [
