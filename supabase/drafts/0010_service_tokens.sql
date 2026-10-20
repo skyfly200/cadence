@@ -1,6 +1,7 @@
 -- ============================================================================
--- NOT APPLIED YET. Apply before merging the branch that adds GitHub (it adds
--- this table to the delete-everything purge list in server/utils/privacy.ts).
+-- APPLIED 2026-10-20 to the cadence project by hand in the Supabase SQL editor
+-- (the Supabase MCP had no access to the project), so it has no migration name.
+-- The delete-everything purge list in server/utils/privacy.ts names this table.
 -- Needs 0006_deletion_hold.sql first (refuse_while_deleting()).
 --
 -- Encrypted access tokens for outside services (GitHub now; Vercel and Netlify
