@@ -139,6 +139,7 @@ Replace the Nuxt app slice by slice; tag `pre-pivot` (created locally at `ba0ed1
   - **Extraction:** also detects habit cycles ("twice a week", "monthly") into a Habit's recurrence, and place names, which the server resolves with the place search into an address and coordinates (the AI never supplies coordinates); Things get an optional address.
   - **Garden:** pressed pages sync through `cadence_kv`; the Planning recap card opens the Garden; season names follow the hemisphere (time zone, with a Settings override).
   - **Signals:** the slog signal counts a slog-tagged Commitment finished that week; Garden usage is not tracked.
+- **Brand mark (chosen, not yet swapped in):** the sparkle icon looked too much like Google Gemini's logo, so it is being replaced. The chosen mark is five vertical waves in alternating phase on the sage-to-teal tile, tallest in the middle and sized so the tips sit on a regular hexagon (`docs/brand/logo.svg`, with PNG renders in `docs/brand/icons/`). The swap into `public/` (favicon, PWA, Apple touch, maskable and notification icons) waits for the author's go-ahead.
 
 ## 14. How it is built
 
